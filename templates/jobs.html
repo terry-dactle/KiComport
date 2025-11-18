@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>KiComport Jobs</title>
+    <style>
+      :root {
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: #f6f6f6;
+        color: #1b1b1b;
+      }
+      body { margin: 2rem; }
+      h1 { margin-bottom: 0.25rem; }
+      table { border-collapse: collapse; width: 100%; background: #fff; }
+      th, td { border: 1px solid #ddd; padding: 0.5rem; vertical-align: top; }
+      th { background: #f0f0f0; text-align: left; }
+      tr:nth-child(even) { background: #fafafa; }
+      .actions a, .actions form, .actions button { display: inline-block; margin: 0.2rem 0.2rem 0 0; }
+      .actions button { padding: 0.25rem 0.6rem; }
+      .status { font-weight: 600; }
+      section { margin-top: 2rem; }
+      .toolbar, .token-box { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+      .token-box input { padding: 0.3rem; }
+      .token-required { font-size: 0.85rem; color: #c23030; }
+      .status-pill { font-size: 0.85rem; margin-left: 1rem; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+      button.undo-button { background: #fef3c7; border: 1px solid #f59e0b; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <h1>KiComport Jobs</h1>
+    <p>
+      Monitor uploads, analysis, apply/rollback activity, and replay backed-up states. Actions use
+      the HTTP API directly; keep this page behind your Cloudflare / Google Auth tunnel.
+    </p>
+
+    <div class="toolbar">
+      <div>
+        <button id="refresh-btn">Refresh</button>
+        <label>
+          <input type="checkbox" id="auto-refresh" checked /> Auto-refresh (15s)
+        </label>
+        <span id="refresh-status" class="status-pill"></span>
+      </div>
+      <div class="token-box">
+        <input type="password" id="token-input" placeholder="UI token" />
+        <button id="save-token">Save token</button>
+        <button id="clear-token" type="button">Clear token</button>
+        <span class="token-required" id="token-hint"></span>
+      </div>
+    </div>
+
+    <section>
+      <h2>Jobs</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Filename</th>
+            <th>Status</th>
+            <th>Plan Candidates</th>
+            <th>Backups</th>
+            <th>Table Diffs</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="jobs-body"></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>Audit Log (latest <span id="audit-count">0</span>)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>Job ID</th>
+            <th>Details</th>
+            <th>Undo</th>
+          </tr>
+        </thead>
+        <tbody id="audit-body"></tbody>
+      </table>
+    </section>
+
+    <script>
+      const jobsBody = document.getElementById('jobs-body');
+      const auditBody = document.getElementById('audit-body');
+      const auditCount = document.getElementById('audit-count');
+      const refreshBtn = document.getElementById('refresh-btn');
+      const autoRefresh = document.getElementById('auto-refresh');
+      const refreshStatus = document.getElementById('refresh-status');
+      const tokenInput = document.getElementById('token-input');
+      const tokenHint = document.getElementById('token-hint');
+      const saveTokenBtn = document.getElementById('save-token');
+      const clearTokenBtn = document.getElementById('clear-token');
+
+      const REQUIRE_TOKEN = {{ 'true' if require_token else 'false' }};
+      const initialJobs = {{ jobs | tojson }};
+      const initialAudit = {{ audit_entries | tojson }};
+      const TOKEN_KEY = 'kicomport_ui_token';
+
+      function getToken() {
+        return localStorage.getItem(TOKEN_KEY) || '';
+      }
+
+      function setToken(value) {
+        if (value) {
+          localStorage.setItem(TOKEN_KEY, value);
+        } else {
+          localStorage.removeItem(TOKEN_KEY);
+        }
+        tokenInput.value = value;
+        tokenHint.textContent = REQUIRE_TOKEN
+          ? (value ? 'Token applied.' : 'Token required for actions.')
+          : (value ? 'Token set.' : 'Token optional.');
+      }
+
+      function formatBackups(job) {
+        const parts = [];
+        if (job.backup_sym_lib_table) parts.push('sym');
+        if (job.backup_fp_lib_table) parts.push('fp');
+        return parts.join(' ') || '-';
+      }
+
+      function formatDiffs(job) {
+        const diffKeys = job.table_diffs ? Object.keys(job.table_diffs) : [];
+        return diffKeys.length ? diffKeys.join(', ') : '-';
+      }
+
+      function createActionForms(job) {
+        const actions = ['analyze', 'apply', 'rollback'];
+        return actions
+          .map((action) => {
+            return `
+              <form method="post" class="action-form" data-base-action="/imports/${job.id}/${action}">
+                <button type="submit">${action.charAt(0).toUpperCase() + action.slice(1)}</button>
+              </form>`;
+          })
+          .join('');
+      }
+
+      function renderJobs(jobs) {
+        if (!jobs.length) {
+          jobsBody.innerHTML = '<tr><td colspan="7">No jobs yet.</td></tr>';
+          return;
+        }
+        jobsBody.innerHTML = jobs
+          .map((job) => {
+            const planCount = job.plan && job.plan.candidates ? job.plan.candidates.length : '-';
+            return `
+              <tr>
+                <td>${job.id}</td>
+                <td>${job.filename}</td>
+                <td class="status">${job.status}</td>
+                <td>${planCount}</td>
+                <td>${formatBackups(job)}</td>
+                <td>${formatDiffs(job)}</td>
+                <td class="actions">
+                  <a href="/imports/${job.id}" target="_blank">JSON</a>
+                  <a href="/imports/${job.id}/preview" target="_blank">Preview</a>
+                  <a href="/imports/${job.id}/preview/tables" target="_blank">Tables</a>
+                  <a href="/imports/${job.id}/diff" target="_blank">Diff</a>
+                  ${createActionForms(job)}
+                </td>
+              </tr>`;
+          })
+          .join('');
+        applyTokenToForms();
+      }
+
+      function renderAudit(entries) {
+        auditCount.textContent = entries.length;
+        if (!entries.length) {
+          auditBody.innerHTML = '<tr><td colspan="5">No audit entries yet.</td></tr>';
+          return;
+        }
+        auditBody.innerHTML = entries
+          .slice()
+          .reverse()
+          .map((entry) => {
+            const details = JSON.stringify(entry.details || {}, null, 0);
+            const hasBackups = entry.details && (entry.details.sym_backup || entry.details.fp_backup);
+            const undoBtn = hasBackups
+              ? `<button type="button" class="undo-button" data-job="${entry.job_id}" data-event="${entry.event_id || ''}">Undo to this state</button>`
+              : '';
+            return `
+              <tr>
+                <td>${entry.timestamp}</td>
+                <td>${entry.action}</td>
+                <td>${entry.job_id}</td>
+                <td><pre>${details}</pre></td>
+                <td>${undoBtn}</td>
+              </tr>`;
+          })
+          .join('');
+        wireUndoButtons();
+      }
+
+      function tokenHeaders(headers = {}) {
+        const token = getToken();
+        if (token) {
+          headers['X-KiComport-Token'] = token;
+        }
+        return headers;
+      }
+
+      async function fetchData() {
+        if (REQUIRE_TOKEN && !getToken()) {
+          alert('UI token required. Set it before refreshing.');
+          return;
+        }
+        try {
+          refreshStatus.textContent = 'Refreshing...';
+          const response = await fetch('/ui/jobs/data', {
+            headers: tokenHeaders(),
+          });
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+          const data = await response.json();
+          renderJobs(data.jobs || []);
+          renderAudit(data.audit_entries || []);
+          refreshStatus.textContent = 'Last updated ' + new Date().toLocaleTimeString();
+        } catch (error) {
+          console.error(error);
+          refreshStatus.textContent = 'Refresh failed';
+          alert('Failed to refresh: ' + error);
+        }
+      }
+
+      function applyTokenToForms() {
+        const forms = document.querySelectorAll('form.action-form');
+        forms.forEach((form) => {
+          form.addEventListener('submit', (event) => {
+            if (REQUIRE_TOKEN && !getToken()) {
+              event.preventDefault();
+              alert('UI token required. Set it before using actions.');
+              return;
+            }
+            const base = form.dataset.baseAction;
+            if (!base) return;
+            const token = getToken();
+            const url = new URL(base, window.location.origin);
+            if (token) {
+              url.searchParams.set('token', token);
+            }
+            form.action = url.pathname + url.search;
+          });
+        });
+      }
+
+      function wireUndoButtons() {
+        document.querySelectorAll('.undo-button').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (REQUIRE_TOKEN && !getToken()) {
+              alert('UI token required for undo.');
+              return;
+            }
+            const jobId = btn.dataset.job;
+            const eventId = btn.dataset.event;
+            try {
+              btn.disabled = true;
+              const response = await fetch(`/imports/${jobId}/undo`, {
+                method: 'POST',
+                headers: tokenHeaders({ 'Content-Type': 'application/json' }),
+                body: JSON.stringify({ event_id: eventId }),
+              });
+              if (!response.ok) {
+                throw new Error(await response.text());
+              }
+              await fetchData();
+            } catch (error) {
+              alert('Undo failed: ' + error);
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        });
+      }
+
+      refreshBtn.addEventListener('click', fetchData);
+      saveTokenBtn.addEventListener('click', () => setToken(tokenInput.value.trim()));
+      clearTokenBtn.addEventListener('click', () => setToken(''));
+      tokenInput.addEventListener('keyup', (event) => {
+        if (event.key === 'Enter') {
+          setToken(tokenInput.value.trim());
+        }
+      });
+
+      let refreshInterval = setInterval(fetchData, 15000);
+      autoRefresh.addEventListener('change', () => {
+        if (autoRefresh.checked) {
+          fetchData();
+          refreshInterval = setInterval(fetchData, 15000);
+        } else {
+          clearInterval(refreshInterval);
+        }
+      });
+
+      setToken(getToken());
+      renderJobs(initialJobs);
+      renderAudit(initialAudit);
+    </script>
+  </body>
+</html>

@@ -143,6 +143,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+miniconda/
+miniconda.sh
 
 # Spyder project settings
 .spyderproject
@@ -200,6 +202,13 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+
+# KiComport runtime directories
+incoming/
+data/jobs/
+data/audit.log
+logs/
+backup/
 
 # Marimo
 marimo/_static/
