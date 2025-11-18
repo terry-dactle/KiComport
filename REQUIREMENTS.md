@@ -6,7 +6,7 @@ KiComport is a companion service for KiCad that ingests vendor-supplied librarie
 ## Environment
 - Runs in its own container with `/mnt/user/KiCad` from the host mounted at `/kicad`.
 - KiCad itself operates inside `linuxserver/kicad` and uses `/mnt/user/KiCad` as `/config`.
-- KiComport exposes HTTP on port 8080 (commonly mapped to 27888 and published via Cloudflare tunnel).
+- KiComport exposes HTTP on port 27888 by default (remap it however you like when publishing via Cloudflare tunnel).
 
 ## Current Capabilities
 - HTTP endpoints for status/health plus upload/list/get job APIs backed by JSON storage.
