@@ -50,5 +50,5 @@ docker run -d -p 27888:27888 kicomport
 - Provide `KICOMPORT_CONFIG_PATH=/kicad/config/kicomport-config.yaml` so the service loads the shared config file.
 - The FastAPI server listens on port 27888 inside the container (map to whichever host port you prefer).
 - Persist `/data` (jobs + audit log) somewhere durable if running in Docker.
-- Optional UI is available at `/ui/jobs`; if `ui.require_token` is true, append `?token=<value>` or send `X-KiComport-Token` when accessing UI/audit endpoints (handy for Cloudflare Access or OAuth headers).
+- Optional UI is available at `/ui/jobs`; if `ui.require_token` is true, append `?token=<value>` or send `X-KiComport-Token` when accessing UI/audit endpoints (handy when routing through an auth proxy or VPN).
 - `sym-lib-table`/`fp-lib-table` under `paths.root` will be modified on apply; ensure the mount points map back to your KiCad configuration so diffs/backups correspond to real library tables.

@@ -6,7 +6,7 @@ KiComport is a companion service for KiCad that ingests vendor-supplied librarie
 ## Environment
 - Runs in its own container with `/mnt/user/KiCad` from the host mounted at `/kicad`.
 - KiCad itself operates inside `linuxserver/kicad` and uses `/mnt/user/KiCad` as `/config`.
-- KiComport exposes HTTP on port 27888 by default (remap it however you like when publishing via Cloudflare tunnel).
+- KiComport exposes HTTP on port 27888 by default (remap it however you like when publishing via your preferred tunnel or proxy).
 
 ## Current Capabilities
 - HTTP endpoints for status/health plus upload/list/get job APIs backed by JSON storage.
@@ -28,7 +28,7 @@ KiComport is a companion service for KiCad that ingests vendor-supplied librarie
 - Jobs are persisted as JSON files under `data/jobs/<job_id>.json`.
 - Every upload produces a new job referencing a canonical stored file in `incoming/` using MD5 comparisons to avoid duplicates.
 - Backups for `sym-lib-table` and `fp-lib-table` are recorded per job to support undo.
-- Audit log entries are stored under `data/audit.log` and exposed via HTTP for transparency/history; the UI/audit APIs honor the optional `ui.require_token` guard for Cloudflare/OAuth setups.
+- Audit log entries are stored under `data/audit.log` and exposed via HTTP for transparency/history; the UI/audit APIs honor the optional `ui.require_token` guard for deployments that sit behind extra authentication.
 - Apply operations should modify the actual KiCad library table files in place (after backups) so KiCad instances inside the companion container observe the changes in real time.
 - Future AI assistance remains advisory only (ranking/suggestions) and never edits KiCad files directly.
 
@@ -42,4 +42,4 @@ KiComport is a companion service for KiCad that ingests vendor-supplied librarie
 - Development default: `./dev-config.yaml` inside the repo.
 - Environment variable `KICOMPORT_CONFIG_PATH` overrides the config location.
 - Missing or partial config must not prevent the app from starting; sensible defaults are applied and directories (`incoming/`, `logs/`, `backup/`, `data/jobs/`) are created automatically.
-- UI-specific config (`ui.require_token`, `ui.token`) controls whether `/ui/*` and `/audit*` endpoints require a static token (handy for Cloudflare/GAuth deployments).
+- UI-specific config (`ui.require_token`, `ui.token`) controls whether `/ui/*` and `/audit*` endpoints require a static token (handy for setups layered behind external auth).
