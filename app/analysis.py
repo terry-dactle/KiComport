@@ -14,7 +14,7 @@ MODEL_EXTS = {".step", ".stp", ".wrl", ".obj"}
 ARCHIVE_EXTS = {".zip"}
 
 
-def analyze_job(job: ImportJob, config: AppConfig, ollama: Optional[OllamaClient]) -> ImportPlan:
+async def analyze_job(job: ImportJob, config: AppConfig, ollama: Optional[OllamaClient]) -> ImportPlan:
     path = Path(job.stored_path)
     heuristics = config.heuristics
 
@@ -36,13 +36,22 @@ def analyze_job(job: ImportJob, config: AppConfig, ollama: Optional[OllamaClient
                 matches.append(type_name)
         return matches
 
-    def add_candidate(candidate_path: str, kind: str, score: float, name_for_detection: str) -> None:
+    def add_candidate(
+        candidate_path: str,
+        kind: str,
+        score: float,
+        name_for_detection: str,
+        extra_metadata: Optional[Dict[str, str]] = None,
+    ) -> None:
         types = detect_types(name_for_detection)
         if types:
             detected_types.update(types)
         metadata: Dict[str, str] = {}
+        if extra_metadata:
+            metadata.update(extra_metadata)
         if types:
             metadata["component_types"] = ",".join(types)
+        metadata.setdefault("source_path", candidate_path)
         candidates.append(
             PlanCandidate(
                 path=candidate_path,
@@ -70,7 +79,11 @@ def analyze_job(job: ImportJob, config: AppConfig, ollama: Optional[OllamaClient
                 if not kind:
                     continue
                 candidate_name = f"{path.name}:{info.filename}"
-                add_candidate(candidate_name, kind, 0.9, info.filename)
+                metadata = {
+                    "archive_source": str(path),
+                    "archive_member": info.filename,
+                }
+                add_candidate(candidate_name, kind, 0.9, info.filename, metadata)
         add_candidate(str(path), "archive", 0.3, path.name)
     else:
         kind = classify_path(path)
@@ -96,7 +109,7 @@ def analyze_job(job: ImportJob, config: AppConfig, ollama: Optional[OllamaClient
             "candidates": [cand.model_dump() for cand in candidates],
             "detected_types": plan.detected_types,
         }
-        ai_result = ollama.rank_candidates(ai_payload)
+        ai_result = await ollama.rank_candidates_async(ai_payload)
         if ai_result:
             plan.ai_annotations = {k: str(v) for k, v in ai_result.items()}
 

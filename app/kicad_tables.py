@@ -8,8 +8,8 @@ from typing import Dict, Optional
 from .config import AppConfig
 from .models import ImportJob, PlanCandidate
 
-SYMBOL_HEADER = "# KiComport sym-lib-table\n(sym_lib_table)\n"
-FOOTPRINT_HEADER = "# KiComport fp-lib-table\n(fp_lib_table)\n"
+SYMBOL_HEADER = "# KiComport sym-lib-table\n(sym_lib_table\n)\n"
+FOOTPRINT_HEADER = "# KiComport fp-lib-table\n(fp_lib_table\n)\n"
 
 
 def _ensure_table(path: Path, header: str) -> Path:
@@ -20,8 +20,34 @@ def _ensure_table(path: Path, header: str) -> Path:
 
 
 def _append_entry(path: Path, snippet: str) -> str:
+    """Append a library entry while keeping the top-level s-expression valid."""
     before = path.read_text(encoding="utf-8")
-    new_content = before.rstrip() + "\n\n" + snippet.strip() + "\n"
+    lines = before.strip().splitlines()
+    insertion = snippet.strip()
+
+    if lines and lines[-1].strip() == ")":
+        # Insert just before the closing paren of the root table node.
+        new_lines = lines[:-1] + [insertion, ")"]
+        new_content = "\n".join(new_lines) + "\n"
+    else:
+        # Try to keep existing entries by inserting after the root s-expression.
+        root_index = next(
+            (
+                idx
+                for idx, line in enumerate(lines)
+                if line.strip().startswith("(sym_lib_table") or line.strip().startswith("(fp_lib_table")
+            ),
+            None,
+        )
+        if root_index is not None:
+            new_lines = lines[: root_index + 1] + [insertion] + lines[root_index + 1 :]
+            if not any(line.strip() == ")" for line in lines):
+                new_lines.append(")")
+            new_content = "\n".join(new_lines) + "\n"
+        else:
+            # Fallback if the file is malformed; preserve original content.
+            new_content = before.rstrip() + "\n\n" + insertion + "\n"
+
     path.write_text(new_content, encoding="utf-8")
     diff = "\n".join(
         difflib.unified_diff(
@@ -36,12 +62,13 @@ def _append_entry(path: Path, snippet: str) -> str:
 
 
 def _select_candidate(job: ImportJob, kind: str) -> Optional[PlanCandidate]:
-    if not job.plan:
+    """Pick the highest-scoring candidate of the requested kind."""
+    if not job.plan or not job.plan.candidates:
         return None
-    for candidate in job.plan.candidates:
-        if candidate.kind == kind:
-            return candidate
-    return None
+    filtered = [cand for cand in job.plan.candidates if cand.kind == kind]
+    if not filtered:
+        return None
+    return max(filtered, key=lambda cand: cand.score if cand.score is not None else 0.0)
 
 
 def _build_entry(job: ImportJob, candidate: Optional[PlanCandidate], table_kind: str) -> Optional[str]:
@@ -55,14 +82,13 @@ def _build_entry(job: ImportJob, candidate: Optional[PlanCandidate], table_kind:
     if table_kind == "symbol":
         return (
             f"# KiComport job {job.id}\n"
-            f"(lib (name {safe_name}) (type KiComport) "
-            f"(uri \"{uri}\") (description \"{description}\"))"
+            f"(lib (name {safe_name}) (type KiCad) "
+            f"(uri \"{uri}\") (options \"\") (descr \"{description}\"))"
         )
     return (
         f"# KiComport job {job.id}\n"
-        f"(lib (name {safe_name}) (type KiComport) "
-        f"(uri \"{uri}\") (options (pcbnew_plugin KiComport)) "
-        f"(description \"{description}\"))"
+        f"(lib (name {safe_name}) (type KiCad) "
+        f"(uri \"{uri}\") (options \"(pcbnew_plugin KiCad)\") (descr \"{description}\"))"
     )
 
 
@@ -86,15 +112,20 @@ def backup_tables(job: ImportJob, config: AppConfig, timestamp: str) -> Dict[str
     return backups
 
 
-def apply_to_tables(job: ImportJob, config: AppConfig) -> Dict[str, str]:
+def apply_to_tables(
+    job: ImportJob,
+    config: AppConfig,
+    sym_candidate: Optional[PlanCandidate] = None,
+    fp_candidate: Optional[PlanCandidate] = None,
+) -> Dict[str, str]:
     root = Path(config.paths.root)
     table_diffs: Dict[str, str] = {}
 
     sym_path = _ensure_table(root / "sym-lib-table", SYMBOL_HEADER)
     fp_path = _ensure_table(root / "fp-lib-table", FOOTPRINT_HEADER)
 
-    sym_candidate = _select_candidate(job, "symbol")
-    fp_candidate = _select_candidate(job, "footprint")
+    sym_candidate = sym_candidate or _select_candidate(job, "symbol")
+    fp_candidate = fp_candidate or _select_candidate(job, "footprint")
 
     sym_entry = _build_entry(job, sym_candidate, "symbol")
     fp_entry = _build_entry(job, fp_candidate, "footprint")

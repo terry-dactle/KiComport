@@ -9,7 +9,7 @@
         background: #f6f6f6;
         color: #1b1b1b;
       }
-      body { margin: 2rem; }
+      body { margin: 2rem; max-width: 1300px; }
       h1 { margin-bottom: 0.25rem; }
       table { border-collapse: collapse; width: 100%; background: #fff; }
       th, td { border: 1px solid #ddd; padding: 0.5rem; vertical-align: top; }
@@ -25,6 +25,66 @@
       .status-pill { font-size: 0.85rem; margin-left: 1rem; }
       pre { white-space: pre-wrap; overflow-wrap: anywhere; }
       button.undo-button { background: #fef3c7; border: 1px solid #f59e0b; cursor: pointer; }
+      .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+      .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
+      .card h2 { margin-top: 0; }
+      .instructions-list { padding-left: 1rem; margin: 0; }
+      .instructions-list li { margin-bottom: 0.4rem; }
+      .drop-area { border: 2px dashed #94a3b8; border-radius: 0.5rem; padding: 1.5rem; text-align: center; cursor: pointer; background: #f8fafc; display: flex; flex-direction: column; gap: 0.5rem; align-items: center; justify-content: center; transition: background 0.2s ease, border-color 0.2s ease; }
+      .drop-area.highlight { border-color: #0284c7; background: #e0f2fe; }
+      .drop-area button { padding: 0.4rem 0.75rem; border: 1px solid #0284c7; background: #0284c7; color: #fff; border-radius: 0.25rem; cursor: pointer; }
+      .browse-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: center; }
+      .upload-status, .settings-status { font-size: 0.85rem; color: #334155; display: block; margin-top: 0.5rem; }
+      .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 0.5rem; }
+      .form-grid label { display: flex; flex-direction: column; font-size: 0.85rem; color: #475569; gap: 0.25rem; }
+      .form-grid input, .form-grid select { padding: 0.4rem; border: 1px solid #cbd5f5; border-radius: 0.3rem; font-size: 0.95rem; }
+      .settings-card button[type="submit"], .review-card button[type="submit"] { margin-top: 0.75rem; padding: 0.45rem 1rem; border-radius: 0.3rem; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
+      .note { font-size: 0.85rem; color: #475569; margin-top: 0.5rem; }
+      .toggle { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; margin-top: 0.5rem; }
+      .filters { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; }
+      .filters label { display: flex; flex-direction: column; font-size: 0.85rem; color: #475569; gap: 0.25rem; }
+      .filters input, .filters select { padding: 0.4rem; border: 1px solid #cbd5f5; border-radius: 0.3rem; font-size: 0.95rem; }
+      .badge { display: inline-flex; align-items: center; padding: 0.1rem 0.5rem; border-radius: 0.35rem; font-size: 0.8rem; font-weight: 600; text-transform: capitalize; }
+      .badge.pending { background: #fef3c7; color: #92400e; }
+      .badge.approved { background: #dcfce7; color: #166534; }
+      .badge.rejected { background: #fee2e2; color: #b91c1c; }
+      .plan-block { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; }
+      .plan-block strong { font-size: 0.85rem; }
+      .plan-block .ai-note { color: #0f172a; font-weight: 600; }
+      .plan-block .installed-list { color: #475569; }
+      .note-text { font-size: 0.8rem; color: #334155; margin-top: 0.25rem; display: block; }
+      .stepper { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+      .step { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.5rem; padding: 1rem; position: relative; padding-left: 3rem; }
+      .step::before { content: attr(data-step); position: absolute; left: 1rem; top: 1rem; width: 1.8rem; height: 1.8rem; border-radius: 999px; background: #2563eb; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; }
+      .workspace-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; align-items: flex-start; }
+      @media (max-width: 1100px) {
+        .workspace-layout { grid-template-columns: 1fr; }
+      }
+      .workspace-main { display: flex; flex-direction: column; gap: 1.5rem; }
+      .workspace-stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; }
+      .job-detail-card { position: sticky; top: 1rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 1.25rem; box-shadow: 0 12px 20px rgba(15, 23, 42, 0.08); }
+      .job-detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+      .job-detail-body { display: flex; flex-direction: column; gap: 0.7rem; font-size: 0.9rem; }
+      .job-detail-body dl { margin: 0; }
+      .job-detail-body dt { font-weight: 600; color: #0f172a; }
+      .job-detail-body dd { margin: 0.15rem 0 0.5rem; color: #334155; }
+      tr.selected { outline: 2px solid #2563eb; outline-offset: -2px; background: #eff6ff; }
+      .quick-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+      .quick-actions .quick-link { padding: 0.35rem 0.65rem; border: 1px solid #94a3b8; border-radius: 0.35rem; background: #fff; cursor: pointer; font-size: 0.85rem; text-decoration: none; color: #0f172a; }
+      .quick-clear { padding: 0.2rem 0.7rem; border-radius: 999px; border: 1px solid #2563eb; background: transparent; color: #2563eb; cursor: pointer; font-size: 0.8rem; }
+      .review-card textarea { min-height: 5rem; }
+      .review-card form { display: flex; flex-direction: column; gap: 0.5rem; }
+      .review-card select, .review-card textarea { padding: 0.5rem; border: 1px solid #cbd5f5; border-radius: 0.3rem; font-size: 0.95rem; }
+      .jobs-table-actions { display: flex; flex-direction: column; gap: 0.35rem; }
+      .apply-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; align-items: end; margin-top: 0.75rem; }
+      .apply-selector label { display: flex; flex-direction: column; font-size: 0.85rem; color: #475569; }
+      .apply-selector select { padding: 0.35rem; border: 1px solid #cbd5f5; border-radius: 0.3rem; }
+      .apply-selector button { padding: 0.45rem 0.75rem; border-radius: 0.3rem; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
+      .apply-selector .full-row { grid-column: 1 / -1; }
+      .url-card textarea { width: 100%; min-height: 6rem; padding: 0.5rem; border: 1px solid #cbd5f5; border-radius: 0.3rem; }
+      .url-card button { margin-top: 0.5rem; padding: 0.45rem 0.75rem; border-radius: 0.3rem; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
+      .settings-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+      .settings-actions button { padding: 0.45rem 0.75rem; border-radius: 0.3rem; border: 1px solid #2563eb; background: #2563eb; color: #fff; cursor: pointer; }
     </style>
   </head>
   <body>
@@ -32,6 +92,7 @@
     <p>
       Monitor uploads, analysis, apply/rollback activity, and replay backed-up states.
     </p>
+    <div id="global-status" style="margin:0.5rem 0; color:#b91c1c; font-weight:600;"></div>
 
     <div class="toolbar">
       <div>
@@ -47,7 +108,218 @@
         <button id="clear-token" type="button">Clear token</button>
         <span class="token-required" id="token-hint"></span>
       </div>
+      <div>
+        <button id="purge-incoming-btn" type="button">Purge incoming</button>
+        <a id="audit-download" class="quick-link" href="#" target="_blank">Download audit.log</a>
+      </div>
     </div>
+    <div class="filters">
+      <label>
+        Approval status
+        <select id="approval-filter">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </label>
+      <label>
+        Type or keyword
+        <input type="text" id="type-filter" placeholder="e.g. MOSFET, symbol" />
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="ai-only" />
+        Show AI-ranked jobs only
+      </label>
+    </div>
+
+    <section class="workflow">
+      <div class="stepper">
+        <div class="step" data-step="1">
+          <h3>Configure</h3>
+          <p>Confirm KiCad paths, incoming directories, and ports. Settings persist back to the config file.</p>
+        </div>
+        <div class="step" data-step="2">
+          <h3>Import</h3>
+          <p>Drag vendor archives or KiCad folders into the drop zone. Each file becomes a job ready for analysis.</p>
+        </div>
+        <div class="step" data-step="3">
+          <h3>Review</h3>
+          <p>Analyze jobs, inspect AI hints, leave reviewer notes, and mark the job approved or rejected.</p>
+        </div>
+        <div class="step" data-step="4">
+          <h3>Apply & Monitor</h3>
+          <p>Apply approved jobs to sync files into <code>libs/</code>, update tables, and audit every action.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="workspace-layout">
+        <div class="workspace-main">
+          <div class="workspace-stack">
+            <div class="card instructions-card">
+              <h2>5 Easy Steps to a Usable KiCad Part</h2>
+              <ol class="instructions-list" start="0">
+                <li><strong>Prep</strong> – Mount your KiCad workspace and point <code>KICOMPORT_CONFIG_PATH</code> at a writable config file.</li>
+                <li><strong>Configure</strong> – Set the KiCad root, incoming folder, and ports in the settings panel so KiComport matches your layout.</li>
+                <li><strong>Upload</strong> – Drop the vendor’s symbols, footprints, and 3D models (folder or zip) into the import card to create a job.</li>
+                <li><strong>Analyze & review</strong> – Run *Analyze*, read the plan, leave notes, and mark the job approved.</li>
+                <li><strong>Apply & verify</strong> – Apply the job to copy files into <code>&lt;kicad root&gt;/libs</code>, update library tables, then reload KiCad to confirm the part works.</li>
+              </ol>
+              <p class="note">
+                Supported uploads include .zip archives, .kicad_sym files, .pretty directories, and 3D model bundles. Folder drops retain their structure during processing.
+              </p>
+              <h3 style="margin-bottom:0.3rem;">Future streamlining ideas</h3>
+              <ol class="instructions-list">
+                <li>Remember multiple environment presets for one-click configuration.</li>
+                <li>Auto-validate uploads so missing symbol/footprint/3D pairings are flagged immediately.</li>
+                <li>Launch KiCad directly from the Apply confirmation so verification is instant.</li>
+              </ol>
+            </div>
+            <div class="card snapshot-card">
+              <h2>Workspace Snapshot</h2>
+              <p>Current configuration is pulled directly from your config file. Adjust settings below if anything looks off.</p>
+              <dl>
+                <dt>Config file</dt>
+                <dd id="summary-config-path">Loading...</dd>
+                <dt>KiCad root</dt>
+                <dd id="summary-kicad-root">Loading...</dd>
+                <dt>Incoming folder</dt>
+                <dd id="summary-incoming">Loading...</dd>
+                <dt>Jobs directory</dt>
+                <dd id="summary-jobs">Loading...</dd>
+                <dt>Ports</dt>
+                <dd><span id="summary-ports">Loading...</span></dd>
+                <dt>KiCad Docker</dt>
+                <dd><a id="summary-kicad-link" href="#" target="_blank">Loading...</a> <button id="integration-check" type="button">Check</button></dd>
+                <dt>AI assistance</dt>
+                <dd id="summary-ai">Loading...</dd>
+              </dl>
+            </div>
+          </div>
+
+          <div class="workspace-stack">
+            <div class="card upload-card">
+              <h2>Import Components</h2>
+              <p>Drop vendor files or folders anywhere inside the area below to immediately queue a new job.</p>
+              <div id="drop-area" class="drop-area">
+                <strong>Drop files or folders here</strong>
+                <span>— or —</span>
+                <div class="browse-buttons">
+                  <button type="button" id="file-input-button">Browse files</button>
+                  <button type="button" id="folder-input-button">Browse folder</button>
+                </div>
+                <input type="file" id="file-input" multiple hidden />
+                <input type="file" id="folder-input" webkitdirectory mozdirectory multiple hidden />
+              </div>
+              <span id="upload-status" class="upload-status"></span>
+            </div>
+            <div class="card url-card">
+              <h2>Download from URLs</h2>
+              <p>Paste one or more HTTP/HTTPS URLs (one per line) to fetch files directly into the incoming folder.</p>
+              <textarea id="url-input" placeholder="https://example.com/file.zip&#10;https://example.com/lib.kicad_sym"></textarea>
+              <button type="button" id="url-download-btn">Download URLs</button>
+              <span id="url-download-status" class="upload-status"></span>
+            </div>
+            <div class="card review-card">
+              <h2>Review & Approvals</h2>
+              <p>Assign a status and capture reviewer notes before applying changes to your KiCad workspace.</p>
+              <form id="review-form">
+                <label>
+                  Job
+                  <select id="review-job" required>
+                    <option value="">Select a job</option>
+                  </select>
+                </label>
+                <label>
+                  Status
+                  <select id="review-status">
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </label>
+                <label>
+                  Notes
+                  <textarea id="review-notes" placeholder="Document context, concerns, or approvals..."></textarea>
+                </label>
+                <button type="submit">Save review</button>
+              </form>
+              <span id="review-status-hint" class="settings-status"></span>
+            </div>
+            <div class="card settings-card">
+              <h2>Environment Settings</h2>
+              <form id="settings-form">
+                <div class="form-grid">
+                  <label>
+                    KiCad library location
+                    <input type="text" id="kicad-root" required />
+                  </label>
+                  <label>
+                    Import folder
+                    <input type="text" id="incoming-folder" required />
+                  </label>
+                  <label>
+                    Logs folder
+                    <input type="text" id="logs-folder" placeholder="./logs" />
+                  </label>
+                  <label>
+                    Backup folder
+                    <input type="text" id="backup-folder" placeholder="./backup" />
+                  </label>
+                  <label>
+                    KiCad Docker port
+                    <input type="number" id="kicad-docker-port" min="1" required />
+                  </label>
+                  <label>
+                    Ollama port
+                    <input type="number" id="ollama-port" min="1" required />
+                  </label>
+                </div>
+                <label>
+                  UI token
+                  <input type="text" id="ui-token" placeholder="Set or rotate UI token" />
+                </label>
+                <div class="form-grid">
+                  <label>
+                    Ollama base URL
+                    <input type="text" id="ai-base-url" placeholder="http://ollama:11434" />
+                  </label>
+                  <label>
+                    Ollama model
+                    <input type="text" id="ai-model" placeholder="llama3.1:8b" />
+                  </label>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" id="ai-enabled" />
+                  Enable Ollama ranking assistance
+                </label>
+                <div class="settings-actions">
+                  <button type="submit">Save settings</button>
+                  <button type="button" id="settings-reset">Reset form</button>
+                  <button type="button" id="generate-token-btn">Generate token</button>
+                </div>
+              </form>
+              <span id="settings-status" class="settings-status"></span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="job-detail-card" id="job-detail">
+          <div class="job-detail-header">
+            <div>
+              <p class="note-text" style="margin:0;">Selected job</p>
+              <h2 id="detail-title">Choose a job to see details</h2>
+            </div>
+            <button type="button" class="quick-clear" id="clear-selection" style="display:none;">Clear</button>
+          </div>
+          <div class="job-detail-body" id="job-detail-body">
+            <p>Select a row in the Jobs table to inspect metadata, AI hints, installed assets, and quick actions.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
 
     <section>
       <h2>Jobs</h2>
@@ -57,7 +329,8 @@
             <th>ID</th>
             <th>Filename</th>
             <th>Status</th>
-            <th>Plan Candidates</th>
+            <th>Approval</th>
+            <th>Plan Insights</th>
             <th>Backups</th>
             <th>Table Diffs</th>
             <th>Actions</th>
@@ -94,11 +367,62 @@
       const tokenHint = document.getElementById('token-hint');
       const saveTokenBtn = document.getElementById('save-token');
       const clearTokenBtn = document.getElementById('clear-token');
+      const dropArea = document.getElementById('drop-area');
+      const fileInput = document.getElementById('file-input');
+      const folderInput = document.getElementById('folder-input');
+      const fileInputButton = document.getElementById('file-input-button');
+      const folderInputButton = document.getElementById('folder-input-button');
+      const uploadStatus = document.getElementById('upload-status');
+      const settingsForm = document.getElementById('settings-form');
+      const settingsStatus = document.getElementById('settings-status');
+      const kicadRootInput = document.getElementById('kicad-root');
+      const incomingFolderInput = document.getElementById('incoming-folder');
+      const logsFolderInput = document.getElementById('logs-folder');
+      const backupFolderInput = document.getElementById('backup-folder');
+      const kicadDockerPortInput = document.getElementById('kicad-docker-port');
+      const ollamaPortInput = document.getElementById('ollama-port');
+      const aiBaseUrlInput = document.getElementById('ai-base-url');
+      const aiModelInput = document.getElementById('ai-model');
+      const aiEnabledInput = document.getElementById('ai-enabled');
+      const uiTokenInput = document.getElementById('ui-token');
+      const typeFilterInput = document.getElementById('type-filter');
+      const approvalFilterSelect = document.getElementById('approval-filter');
+      const aiOnlyToggle = document.getElementById('ai-only');
+      const reviewForm = document.getElementById('review-form');
+      const reviewJobSelect = document.getElementById('review-job');
+      const reviewStatusSelect = document.getElementById('review-status');
+      const reviewNotesInput = document.getElementById('review-notes');
+      const reviewStatusHint = document.getElementById('review-status-hint');
+      const jobDetail = document.getElementById('job-detail');
+      const jobDetailBody = document.getElementById('job-detail-body');
+      const detailTitle = document.getElementById('detail-title');
+      const clearSelectionBtn = document.getElementById('clear-selection');
+      const summaryKicad = document.getElementById('summary-kicad-root');
+      const summaryIncoming = document.getElementById('summary-incoming');
+      const summaryJobs = document.getElementById('summary-jobs');
+      const summaryPorts = document.getElementById('summary-ports');
+      const summaryKicadLink = document.getElementById('summary-kicad-link');
+      const integrationCheckBtn = document.getElementById('integration-check');
+      const summaryAi = document.getElementById('summary-ai');
+      const purgeIncomingBtn = document.getElementById('purge-incoming-btn');
+      const auditDownloadLink = document.getElementById('audit-download');
+      const urlInput = document.getElementById('url-input');
+      const urlDownloadBtn = document.getElementById('url-download-btn');
+      const urlDownloadStatus = document.getElementById('url-download-status');
+      const summaryConfigPath = document.getElementById('summary-config-path');
+      const settingsResetBtn = document.getElementById('settings-reset');
+      const generateTokenBtn = document.getElementById('generate-token-btn');
+
+      let cachedSettings = null;
 
       const REQUIRE_TOKEN = {{ 'true' if require_token else 'false' }};
       const initialJobs = {{ jobs | tojson }};
       const initialAudit = {{ audit_entries | tojson }};
       const TOKEN_KEY = 'kicomport_ui_token';
+      let jobsCache = initialJobs || [];
+      let auditCache = initialAudit || [];
+      let selectedJobId = null;
+      let autoSelect = true;
 
       function getToken() {
         return localStorage.getItem(TOKEN_KEY) || '';
@@ -116,6 +440,252 @@
           : (value ? 'Token set.' : 'Token optional.');
       }
 
+      function urlWithToken(path) {
+        const token = getToken();
+        if (!token || !REQUIRE_TOKEN) return path;
+        const url = new URL(path, window.location.origin);
+        url.searchParams.set('token', token);
+        return url.pathname + url.search;
+      }
+
+      function setStatusMessage(element, message, isError = false) {
+        if (!element) return;
+        element.textContent = message;
+        element.style.color = isError ? '#b91c1c' : '#334155';
+      }
+
+      function setGlobalStatus(message, isError = false) {
+        const el = document.getElementById('global-status');
+        if (!el) return;
+        el.textContent = message || '';
+        el.style.color = isError ? '#b91c1c' : '#166534';
+      }
+
+      async function checkIntegration() {
+        try {
+          const response = await fetch('/ui/integration/check', {
+            headers: tokenHeaders(),
+          });
+          if (!response.ok) throw new Error(await response.text());
+          const data = await response.json();
+          if (data.reachable) {
+            setGlobalStatus(`KiCad port reachable at ${data.url} (status ${data.status || ''})`, false);
+          } else {
+            setGlobalStatus(`KiCad port unreachable at ${data.url}`, true);
+          }
+        } catch (error) {
+          setGlobalStatus('Integration check failed: ' + error, true);
+        }
+      }
+
+      function populateSettings(data) {
+        if (!data) return;
+        cachedSettings = data;
+        const paths = data.paths || {};
+        const integration = data.integration || {};
+        const ai = data.ai || {};
+        if (kicadRootInput) kicadRootInput.value = paths.root || '';
+        if (incomingFolderInput) incomingFolderInput.value = paths.incoming || '';
+        if (logsFolderInput) logsFolderInput.value = paths.logs || '';
+        if (backupFolderInput) backupFolderInput.value = paths.backup || '';
+        if (kicadDockerPortInput) kicadDockerPortInput.value = integration.kicad_docker_port || '';
+        if (ollamaPortInput) ollamaPortInput.value = integration.ollama_port || '';
+        if (aiBaseUrlInput) aiBaseUrlInput.value = ai.base_url || '';
+        if (aiModelInput) aiModelInput.value = ai.model || '';
+        if (aiEnabledInput) aiEnabledInput.checked = !!ai.enabled;
+        if (uiTokenInput) uiTokenInput.value = (data.ui && data.ui.token) || '';
+        updateSnapshot({ paths, integration, ai });
+      }
+
+      function updateSnapshot(data) {
+        if (!data) return;
+        if (summaryKicad) summaryKicad.textContent = data.paths?.root || 'Not set';
+        if (summaryIncoming) summaryIncoming.textContent = data.paths?.incoming || 'Not set';
+        if (summaryJobs) summaryJobs.textContent = data.paths?.jobs || 'Not set';
+        if (summaryPorts) {
+          const dockerPort = data.integration?.kicad_docker_port || '–';
+          const ollamaPort = data.integration?.ollama_port || '–';
+          summaryPorts.textContent = `KiCad: ${dockerPort} • Ollama: ${ollamaPort}`;
+        }
+        if (summaryKicadLink) {
+          const dockerPort = data.integration?.kicad_docker_port;
+          if (dockerPort) {
+            summaryKicadLink.textContent = `http://localhost:${dockerPort}`;
+            summaryKicadLink.href = `http://localhost:${dockerPort}`;
+          } else {
+            summaryKicadLink.textContent = 'Not set';
+            summaryKicadLink.removeAttribute('href');
+          }
+        }
+        if (summaryAi) {
+          const desc = data.ai?.enabled
+            ? `Enabled (${data.ai.model || 'model not set'})`
+            : 'Disabled';
+          summaryAi.textContent = desc;
+        }
+        if (auditDownloadLink) {
+          auditDownloadLink.href = urlWithToken('/audit/download');
+        }
+        if (summaryConfigPath) {
+          summaryConfigPath.textContent = data.config_path || 'dev-config.yaml';
+        }
+      }
+
+      async function fetchSettings() {
+        if (!settingsForm) return;
+        if (REQUIRE_TOKEN && !getToken()) {
+          setStatusMessage(settingsStatus, 'UI token required to load settings.');
+          return;
+        }
+        try {
+          setStatusMessage(settingsStatus, 'Loading settings...');
+          const response = await fetch('/ui/settings/data', {
+            headers: tokenHeaders(),
+          });
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+          const data = await response.json();
+          populateSettings(data);
+          setStatusMessage(settingsStatus, 'Settings synced.');
+        } catch (error) {
+          console.error(error);
+          setStatusMessage(settingsStatus, `Failed to load settings: ${error}`, true);
+        }
+      }
+
+      async function saveSettings(event) {
+        event.preventDefault();
+        if (REQUIRE_TOKEN && !getToken()) {
+          alert('UI token required before saving settings.');
+          return;
+        }
+        if (!kicadRootInput || !incomingFolderInput || !kicadDockerPortInput || !ollamaPortInput) {
+          return;
+        }
+        const payload = {
+          kicad_root: kicadRootInput.value.trim(),
+          incoming_folder: incomingFolderInput.value.trim(),
+          logs_folder: logsFolderInput ? logsFolderInput.value.trim() : null,
+          backup_folder: backupFolderInput ? backupFolderInput.value.trim() : null,
+          kicad_docker_port: Number(kicadDockerPortInput.value) || 0,
+          ollama_port: Number(ollamaPortInput.value) || 0,
+          ai_enabled: aiEnabledInput ? aiEnabledInput.checked : false,
+          ai_base_url: aiBaseUrlInput ? aiBaseUrlInput.value.trim() : null,
+          ai_model: aiModelInput ? aiModelInput.value.trim() : null,
+          ui_token: uiTokenInput ? uiTokenInput.value.trim() : null,
+        };
+        try {
+          setStatusMessage(settingsStatus, 'Saving settings...');
+          const response = await fetch('/ui/settings/apply', {
+            method: 'POST',
+            headers: tokenHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+          const data = await response.json();
+          populateSettings(data);
+          setStatusMessage(settingsStatus, 'Settings updated.');
+        } catch (error) {
+          console.error(error);
+          setStatusMessage(settingsStatus, `Failed to save settings: ${error}`, true);
+        }
+      }
+
+      function resetSettingsForm() {
+        if (cachedSettings) {
+          populateSettings(cachedSettings);
+          setStatusMessage(settingsStatus, 'Form reset to loaded values.');
+        }
+      }
+
+      function generateToken() {
+        const random = crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2, 18);
+        if (uiTokenInput) uiTokenInput.value = random;
+        setStatusMessage(settingsStatus, 'Generated new token (remember to save).');
+      }
+
+      function preventDefaults(event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      function highlightDropArea() {
+        if (dropArea) dropArea.classList.add('highlight');
+      }
+
+      function unhighlightDropArea() {
+        if (dropArea) dropArea.classList.remove('highlight');
+      }
+
+      async function handleUploadFiles(fileList) {
+        if (!fileList) return;
+        const files = Array.from(fileList);
+        if (!files.length) return;
+        if (REQUIRE_TOKEN && !getToken()) {
+          setStatusMessage(uploadStatus, 'UI token required before uploading.', true);
+          return;
+        }
+        try {
+          setStatusMessage(uploadStatus, `Uploading ${files.length} file(s)...`);
+          for (const file of files) {
+            const formData = new FormData();
+            formData.append('file', file);
+            const relativePath = file.webkitRelativePath || file.relativePath || '';
+            if (relativePath) {
+              formData.append('relative_path', relativePath);
+            }
+            const response = await fetch('/imports/upload', {
+              method: 'POST',
+              headers: tokenHeaders(),
+              body: formData,
+            });
+            if (!response.ok) {
+              throw new Error(await response.text());
+            }
+          }
+          setStatusMessage(uploadStatus, `Uploaded ${files.length} file(s). Refreshing jobs...`);
+          fetchData();
+        } catch (error) {
+          console.error(error);
+          setStatusMessage(uploadStatus, `Upload failed: ${error}`, true);
+        } finally {
+          unhighlightDropArea();
+        }
+      }
+
+      async function downloadUrls() {
+        if (REQUIRE_TOKEN && !getToken()) {
+          setStatusMessage(urlDownloadStatus, 'UI token required before downloading.', true);
+          return;
+        }
+        if (!urlInput) return;
+        const urls = urlInput.value
+          .split(/\r?\n/)
+          .map((u) => u.trim())
+          .filter(Boolean);
+        if (!urls.length) {
+          setStatusMessage(urlDownloadStatus, 'Enter at least one URL.', true);
+          return;
+        }
+        try {
+          setStatusMessage(urlDownloadStatus, `Downloading ${urls.length} URL(s)...`);
+          const response = await fetch('/imports/download', {
+            method: 'POST',
+            headers: tokenHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ urls }),
+          });
+          if (!response.ok) throw new Error(await response.text());
+          setStatusMessage(urlDownloadStatus, 'Download complete. Refreshing jobs...');
+          fetchData();
+        } catch (error) {
+          console.error(error);
+          setStatusMessage(urlDownloadStatus, `Download failed: ${error}`, true);
+        }
+      }
+
       function formatBackups(job) {
         const parts = [];
         if (job.backup_sym_lib_table) parts.push('sym');
@@ -126,6 +696,351 @@
       function formatDiffs(job) {
         const diffKeys = job.table_diffs ? Object.keys(job.table_diffs) : [];
         return diffKeys.length ? diffKeys.join(', ') : '-';
+      }
+
+      function formatApproval(job) {
+        const status = (job.approval_status || 'pending').toLowerCase();
+        const badge = `<span class="badge ${status}">${status}</span>`;
+        const notes = job.review_notes ? `<span class="note-text">${job.review_notes}</span>` : '';
+        return badge + notes;
+      }
+
+      function summarizeInstalled(installedAssets) {
+        if (!installedAssets) return '';
+        const entries = Object.entries(installedAssets);
+        if (!entries.length) return '';
+        const summary = entries
+          .map(([kind, paths]) => `${kind}: ${Array.isArray(paths) ? paths.length : 0}`)
+          .join(', ');
+        return `<span class="installed-list">Installed: ${summary}</span>`;
+      }
+
+      function formatPlanInsights(job) {
+        if (!job.plan) {
+          return '<span class="note-text">Run analyze to build a plan.</span>';
+        }
+        const detected = job.plan.detected_types && job.plan.detected_types.length
+          ? job.plan.detected_types.join(', ')
+          : 'unknown';
+        const quality = job.plan.quality_tags && job.plan.quality_tags.length
+          ? job.plan.quality_tags.join(', ')
+          : 'n/a';
+        const candidates = job.plan.candidates || [];
+        const candidateCount = candidates.length;
+        const topCandidate = candidates
+          .slice()
+          .sort((a, b) => (b.score || 0) - (a.score || 0))[0];
+        let topSummary = 'No ranked files yet.';
+        if (topCandidate) {
+          const topScore = typeof topCandidate.score === 'number' ? topCandidate.score : 0;
+          const topTypes =
+            topCandidate.metadata && topCandidate.metadata.component_types
+              ? topCandidate.metadata.component_types
+              : '';
+          topSummary = `${topCandidate.kind} (${topScore}) ${topTypes}`;
+        }
+        const aiAnnotations = job.plan.ai_annotations && Object.keys(job.plan.ai_annotations).length
+          ? Object.entries(job.plan.ai_annotations)
+              .map(([key, value]) => `${key}: ${value}`)
+              .join('; ')
+          : 'No AI insights yet.';
+        const installed = summarizeInstalled(job.installed_assets);
+        return `
+          <div class="plan-block">
+            <span><strong>Detected:</strong> ${detected}</span>
+            <span><strong>Quality:</strong> ${quality} | <strong>Candidates:</strong> ${candidateCount}</span>
+            <span><strong>Top:</strong> ${topSummary}</span>
+            <span class="ai-note"><strong>AI:</strong> ${aiAnnotations}</span>
+            ${installed}
+          </div>`;
+      }
+
+      function hasAiAnnotations(job) {
+        return Boolean(job.plan && job.plan.ai_annotations && Object.keys(job.plan.ai_annotations).length);
+      }
+
+      function gatherJobTerms(job) {
+        const plan = job.plan || {};
+        const parts = [
+          job.filename || '',
+          job.review_notes || '',
+          (plan.detected_types || []).join(' '),
+          (plan.quality_tags || []).join(' '),
+        ];
+        (plan.candidates || []).forEach((candidate) => {
+          parts.push(candidate.kind || '');
+          if (candidate.metadata) {
+            parts.push(candidate.metadata.component_types || '');
+            parts.push(candidate.metadata.installed_path || '');
+          }
+        });
+        return parts.join(' ').toLowerCase();
+      }
+
+      function filterJobs(jobs) {
+        const approvalValue = approvalFilterSelect ? approvalFilterSelect.value : 'all';
+        const aiOnly = aiOnlyToggle ? aiOnlyToggle.checked : false;
+        const queryValue = typeFilterInput ? typeFilterInput.value.trim().toLowerCase() : '';
+        const tokens = queryValue
+          ? queryValue
+              .split(/[, ]+/)
+              .map((token) => token.trim())
+              .filter(Boolean)
+          : [];
+        return jobs.filter((job) => {
+          const approvalStatus = (job.approval_status || 'pending').toLowerCase();
+          if (approvalValue !== 'all' && approvalStatus !== approvalValue) {
+            return false;
+          }
+          if (aiOnly && !hasAiAnnotations(job)) {
+            return false;
+          }
+          if (tokens.length) {
+            const haystack = gatherJobTerms(job);
+            const matches = tokens.some((token) => haystack.includes(token));
+            if (!matches) {
+              return false;
+            }
+          }
+          return true;
+        });
+      }
+
+      function candidateOptions(job, kind) {
+        const plan = job.plan || {};
+        const candidates = (plan.candidates || []).filter((cand) => cand.kind === kind);
+        if (!candidates.length) {
+          return '<option value="">No candidates</option>';
+        }
+        const options = ['<option value="">Auto (highest score)</option>'].concat(
+          candidates.map(
+            (cand) =>
+              `<option value="${cand.path}">${cand.path} (${typeof cand.score === 'number' ? cand.score : 0})</option>`
+          )
+        );
+        return options.join('');
+      }
+
+      function candidateMultiOptions(job, kind) {
+        const plan = job.plan || {};
+        const candidates = (plan.candidates || []).filter((cand) => cand.kind === kind);
+        if (!candidates.length) {
+          return '<option value="">No candidates</option>';
+        }
+        return candidates
+          .map(
+            (cand) =>
+              `<option value="${cand.path}">${cand.path} (${typeof cand.score === 'number' ? cand.score : 0})</option>`
+          )
+          .join('');
+      }
+
+      async function applySelected(jobId) {
+        if (REQUIRE_TOKEN && !getToken()) {
+          alert('UI token required before applying.');
+          return;
+        }
+        const symbolSelect = document.getElementById(`symbol-choice-${jobId}`);
+        const footprintSelect = document.getElementById(`footprint-choice-${jobId}`);
+        const modelSelect = document.getElementById(`model-choice-${jobId}`);
+        const payload = {};
+        if (symbolSelect && symbolSelect.value) payload.symbol_path = symbolSelect.value;
+        if (footprintSelect && footprintSelect.value) payload.footprint_path = footprintSelect.value;
+        if (modelSelect) {
+          const selected = Array.from(modelSelect.selectedOptions || []).map((opt) => opt.value).filter(Boolean);
+          if (selected.length) payload.model_paths = selected;
+        }
+        const hasBody = Object.keys(payload).length > 0;
+        const headers = tokenHeaders(hasBody ? { 'Content-Type': 'application/json' } : {});
+        try {
+          refreshStatus.textContent = 'Applying...';
+          const response = await fetch(`/imports/${jobId}/apply`, {
+            method: 'POST',
+            headers,
+            body: hasBody ? JSON.stringify(payload) : null,
+          });
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+          await fetchData();
+          refreshStatus.textContent = 'Apply complete';
+          setGlobalStatus('Apply completed', false);
+        } catch (error) {
+          console.error(error);
+          setGlobalStatus('Apply failed: ' + error, true);
+          refreshStatus.textContent = 'Apply failed';
+        }
+      }
+
+      function populateReviewJobs(jobs) {
+        if (!reviewJobSelect) return;
+        const previous = reviewJobSelect.value;
+        reviewJobSelect.innerHTML =
+          '<option value="">Select a job</option>' +
+          jobs
+            .map(
+              (job) =>
+                `<option value="${job.id}">${job.filename} (${job.approval_status || 'pending'})</option>`
+            )
+            .join('');
+        if (previous && jobs.some((job) => job.id === previous)) {
+          reviewJobSelect.value = previous;
+          hydrateReviewForm(previous);
+        } else {
+          reviewJobSelect.value = '';
+        }
+      }
+
+      function hydrateReviewForm(jobId) {
+        if (!jobId) {
+          if (reviewStatusSelect) reviewStatusSelect.value = 'pending';
+          if (reviewNotesInput) reviewNotesInput.value = '';
+          return;
+        }
+        const job = jobsCache.find((item) => item.id === jobId);
+        if (!job) return;
+        if (reviewStatusSelect) reviewStatusSelect.value = job.approval_status || 'pending';
+        if (reviewNotesInput) reviewNotesInput.value = job.review_notes || '';
+      }
+
+      function updateJobsView() {
+        const filtered = filterJobs(jobsCache);
+        renderJobs(filtered);
+        if (!selectedJobId && filtered.length && autoSelect) {
+          selectedJobId = filtered[0].id;
+          hydrateReviewForm(selectedJobId);
+          renderJobDetails(filtered[0]);
+        } else if (selectedJobId) {
+          const job = jobsCache.find((item) => item.id === selectedJobId);
+          if (job) {
+            renderJobDetails(job);
+          } else {
+            selectedJobId = null;
+            renderJobDetails(null);
+          }
+        } else {
+          renderJobDetails(null);
+        }
+      }
+
+      async function submitReview(event) {
+        event.preventDefault();
+        if (REQUIRE_TOKEN && !getToken()) {
+          alert('UI token required before saving review notes.');
+          return;
+        }
+        if (!reviewJobSelect || !reviewJobSelect.value) {
+          setStatusMessage(reviewStatusHint, 'Pick a job to review.', true);
+          return;
+        }
+        const payload = {
+          approval_status: reviewStatusSelect ? reviewStatusSelect.value : 'pending',
+          review_notes: reviewNotesInput ? reviewNotesInput.value : '',
+        };
+        try {
+          setStatusMessage(reviewStatusHint, 'Saving review...');
+          const response = await fetch(`/imports/${reviewJobSelect.value}/review`, {
+            method: 'POST',
+            headers: tokenHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) {
+            throw new Error(await response.text());
+          }
+          setStatusMessage(reviewStatusHint, 'Review saved.');
+          fetchData();
+        } catch (error) {
+          console.error(error);
+          setStatusMessage(reviewStatusHint, `Failed to save review: ${error}`, true);
+        }
+      }
+
+      function setSelectedJob(jobId, scrollIntoView = true) {
+        selectedJobId = jobId;
+        autoSelect = false;
+        if (jobId && reviewJobSelect) {
+          reviewJobSelect.value = jobId;
+          hydrateReviewForm(jobId);
+        }
+        if (!jobId) {
+          hydrateReviewForm('');
+        }
+        updateJobsView();
+        if (scrollIntoView && jobId) {
+          const row = document.querySelector(`tr[data-job="${jobId}"]`);
+          if (row) {
+            row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+
+      function renderJobDetails(job) {
+        if (!jobDetailBody || !detailTitle) return;
+        if (!job) {
+          detailTitle.textContent = 'Choose a job to see details';
+          jobDetailBody.innerHTML = '<p>Select a row in the Jobs table to inspect metadata, AI hints, installed assets, and quick actions.</p>';
+          if (clearSelectionBtn) clearSelectionBtn.style.display = 'none';
+          return;
+        }
+        detailTitle.textContent = job.filename;
+        if (clearSelectionBtn) clearSelectionBtn.style.display = 'inline-flex';
+
+        const plan = job.plan || {};
+        const aiEntries = plan.ai_annotations
+          ? Object.entries(plan.ai_annotations)
+              .map(([key, value]) => `<span><strong>${key}:</strong> ${value}</span>`)
+              .join('<br/>')
+          : 'No AI insights captured.';
+        const detectedTypes = plan.detected_types && plan.detected_types.length ? plan.detected_types.join(', ') : 'Unknown';
+        const quality = plan.quality_tags && plan.quality_tags.length ? plan.quality_tags.join(', ') : 'n/a';
+        const installed = job.installed_assets && Object.keys(job.installed_assets).length
+          ? Object.entries(job.installed_assets)
+              .map(([kind, paths]) => `<li>${kind}: ${paths.length} item(s)</li>`)
+              .join('')
+          : '<li>No assets installed yet.</li>';
+        const tokenizedJson = urlWithToken(`/imports/${job.id}`);
+        const actionButtons = `
+          <div class="quick-actions">
+            <a class="quick-link" href="${tokenizedJson}" target="_blank">Raw JSON</a>
+            <a class="quick-link" href="${urlWithToken(`/imports/${job.id}/preview`)}" target="_blank">Preview Files</a>
+            <a class="quick-link" href="${urlWithToken(`/imports/${job.id}/preview/tables`)}" target="_blank">Table Snapshot</a>
+            <a class="quick-link" href="${urlWithToken(`/imports/${job.id}/diff`)}" target="_blank">Diff</a>
+          </div>`;
+        const selectors = `
+          <div class="apply-selector">
+            <label>Symbol
+              <select id="symbol-choice-${job.id}">${candidateOptions(job, 'symbol')}</select>
+            </label>
+            <label>Footprint
+              <select id="footprint-choice-${job.id}">${candidateOptions(job, 'footprint')}</select>
+            </label>
+            <label class="full-row">Models (optional)
+              <select id="model-choice-${job.id}" multiple size="4">${candidateMultiOptions(job, 'model')}</select>
+            </label>
+            <button type="button" data-job="${job.id}" class="apply-selected-btn">Apply selected</button>
+          </div>`;
+        jobDetailBody.innerHTML = `
+          <dl>
+            <dt>Status</dt>
+            <dd>${job.status} &middot; Approval: ${job.approval_status}</dd>
+            <dt>Detected types</dt>
+            <dd>${detectedTypes}</dd>
+            <dt>Quality tags</dt>
+            <dd>${quality}</dd>
+            <dt>AI guidance</dt>
+            <dd>${aiEntries}</dd>
+            <dt>Installed assets</dt>
+            <dd><ul>${installed}</ul></dd>
+            <dt>Notes</dt>
+            <dd>${job.review_notes || 'No reviewer notes yet.'}</dd>
+          </dl>
+          ${actionButtons}
+          ${selectors}
+        `;
+        const applyBtn = jobDetailBody.querySelector('.apply-selected-btn');
+        if (applyBtn) {
+          applyBtn.addEventListener('click', () => applySelected(job.id));
+        }
       }
 
       function createActionForms(job) {
@@ -142,31 +1057,63 @@
 
       function renderJobs(jobs) {
         if (!jobs.length) {
-          jobsBody.innerHTML = '<tr><td colspan="7">No jobs yet.</td></tr>';
+          jobsBody.innerHTML = '<tr><td colspan="8">No jobs yet.</td></tr>';
           return;
         }
         jobsBody.innerHTML = jobs
           .map((job) => {
-            const planCount = job.plan && job.plan.candidates ? job.plan.candidates.length : '-';
+            const rowClass = job.id === selectedJobId ? 'selected' : '';
             return `
-              <tr>
+              <tr data-job="${job.id}" class="${rowClass}">
                 <td>${job.id}</td>
                 <td>${job.filename}</td>
                 <td class="status">${job.status}</td>
-                <td>${planCount}</td>
+                <td>${formatApproval(job)}</td>
+                <td>${formatPlanInsights(job)}</td>
                 <td>${formatBackups(job)}</td>
                 <td>${formatDiffs(job)}</td>
-                <td class="actions">
-                  <a href="/imports/${job.id}" target="_blank">JSON</a>
-                  <a href="/imports/${job.id}/preview" target="_blank">Preview</a>
-                  <a href="/imports/${job.id}/preview/tables" target="_blank">Tables</a>
-                  <a href="/imports/${job.id}/diff" target="_blank">Diff</a>
+                <td class="actions jobs-table-actions">
+                  <a href="${urlWithToken(`/imports/${job.id}`)}" target="_blank">JSON</a>
+                  <a href="${urlWithToken(`/imports/${job.id}/preview`)}" target="_blank">Preview</a>
+                  <a href="${urlWithToken(`/imports/${job.id}/preview/tables`)}" target="_blank">Tables</a>
+                  <a href="${urlWithToken(`/imports/${job.id}/diff`)}" target="_blank">Diff</a>
                   ${createActionForms(job)}
+                  <button type="button" class="delete-job-btn" data-job="${job.id}">Delete</button>
                 </td>
               </tr>`;
           })
           .join('');
         applyTokenToForms();
+        jobsBody.querySelectorAll('tr[data-job]').forEach((row) => {
+          row.addEventListener('click', () => {
+            const jobId = row.dataset.job;
+            if (jobId) {
+              setSelectedJob(jobId);
+            }
+          });
+        });
+        document.querySelectorAll('.delete-job-btn').forEach((btn) => {
+          btn.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const jobId = btn.dataset.job;
+            if (!jobId) return;
+            if (REQUIRE_TOKEN && !getToken()) {
+              alert('UI token required for delete.');
+              return;
+            }
+            if (!confirm('Delete this job?')) return;
+            try {
+              const response = await fetch(`/imports/${jobId}`, {
+                method: 'DELETE',
+                headers: tokenHeaders(),
+              });
+              if (!response.ok) throw new Error(await response.text());
+              fetchData();
+            } catch (error) {
+              alert('Delete failed: ' + error);
+            }
+          });
+        });
       }
 
       function renderAudit(entries) {
@@ -207,7 +1154,7 @@
 
       async function fetchData() {
         if (REQUIRE_TOKEN && !getToken()) {
-          alert('UI token required. Set it before refreshing.');
+          setGlobalStatus('UI token required. Set it before refreshing.', true);
           return;
         }
         try {
@@ -219,33 +1166,43 @@
             throw new Error(await response.text());
           }
           const data = await response.json();
-          renderJobs(data.jobs || []);
-          renderAudit(data.audit_entries || []);
+          jobsCache = data.jobs || [];
+          auditCache = data.audit_entries || [];
+          updateJobsView();
+          renderAudit(auditCache);
+          populateReviewJobs(jobsCache);
           refreshStatus.textContent = 'Last updated ' + new Date().toLocaleTimeString();
         } catch (error) {
           console.error(error);
           refreshStatus.textContent = 'Refresh failed';
-          alert('Failed to refresh: ' + error);
+          setGlobalStatus('Failed to refresh: ' + error, true);
         }
       }
 
       function applyTokenToForms() {
         const forms = document.querySelectorAll('form.action-form');
         forms.forEach((form) => {
-          form.addEventListener('submit', (event) => {
+          const base = form.dataset.baseAction;
+          if (!base) return;
+          form.addEventListener('submit', async (event) => {
+            event.preventDefault();
             if (REQUIRE_TOKEN && !getToken()) {
-              event.preventDefault();
-              alert('UI token required. Set it before using actions.');
+              setGlobalStatus('UI token required for actions.', true);
               return;
             }
-            const base = form.dataset.baseAction;
-            if (!base) return;
             const token = getToken();
             const url = new URL(base, window.location.origin);
             if (token) {
               url.searchParams.set('token', token);
             }
-            form.action = url.pathname + url.search;
+            try {
+              const response = await fetch(url.pathname + url.search, { method: 'POST' });
+              if (!response.ok) throw new Error(await response.text());
+              setGlobalStatus('Action succeeded', false);
+              fetchData();
+            } catch (error) {
+              setGlobalStatus('Action failed: ' + error, true);
+            }
           });
         });
       }
@@ -279,14 +1236,136 @@
         });
       }
 
+      if (settingsForm) {
+        settingsForm.addEventListener('submit', saveSettings);
+      }
+
+      ['dragenter', 'dragover', 'drop'].forEach((eventName) => {
+        document.addEventListener(eventName, preventDefaults, false);
+      });
+
+      if (dropArea) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach((eventName) => {
+          dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+        ['dragenter', 'dragover'].forEach((eventName) =>
+          dropArea.addEventListener(eventName, highlightDropArea, false)
+        );
+        ['dragleave', 'drop'].forEach((eventName) =>
+          dropArea.addEventListener(eventName, unhighlightDropArea, false)
+        );
+        dropArea.addEventListener('drop', (event) => {
+          const files = event.dataTransfer ? event.dataTransfer.files : null;
+          if (files && files.length) {
+            handleUploadFiles(files);
+          }
+        });
+        dropArea.addEventListener('click', () => {
+          if (fileInput) fileInput.click();
+        });
+      }
+
+      if (fileInput && fileInputButton) {
+        fileInputButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          fileInput.click();
+        });
+        fileInput.addEventListener('change', (event) => {
+          handleUploadFiles(event.target.files);
+          fileInput.value = '';
+        });
+      }
+
+      if (folderInput && folderInputButton) {
+        folderInputButton.addEventListener('click', (event) => {
+          event.preventDefault();
+          folderInput.click();
+        });
+        folderInput.addEventListener('change', (event) => {
+          handleUploadFiles(event.target.files);
+          folderInput.value = '';
+        });
+      }
+
       refreshBtn.addEventListener('click', fetchData);
-      saveTokenBtn.addEventListener('click', () => setToken(tokenInput.value.trim()));
-      clearTokenBtn.addEventListener('click', () => setToken(''));
+      if (integrationCheckBtn) {
+        integrationCheckBtn.addEventListener('click', checkIntegration);
+      }
+      if (purgeIncomingBtn) {
+        purgeIncomingBtn.addEventListener('click', async () => {
+          if (REQUIRE_TOKEN && !getToken()) {
+            alert('UI token required.');
+            return;
+          }
+          if (!confirm('Delete all files in incoming/?')) return;
+          try {
+            const response = await fetch('/imports/purge_incoming', {
+              method: 'POST',
+              headers: tokenHeaders(),
+            });
+            if (!response.ok) throw new Error(await response.text());
+            setGlobalStatus('Incoming purged', false);
+          } catch (error) {
+            setGlobalStatus('Purge failed: ' + error, true);
+          }
+        });
+      }
+      if (urlDownloadBtn) {
+        urlDownloadBtn.addEventListener('click', downloadUrls);
+      }
+      if (settingsResetBtn) {
+        settingsResetBtn.addEventListener('click', resetSettingsForm);
+      }
+      if (generateTokenBtn) {
+        generateTokenBtn.addEventListener('click', generateToken);
+      }
+      saveTokenBtn.addEventListener('click', () => {
+        setToken(tokenInput.value.trim());
+        fetchSettings();
+      });
+      clearTokenBtn.addEventListener('click', () => {
+        setToken('');
+        fetchSettings();
+      });
       tokenInput.addEventListener('keyup', (event) => {
         if (event.key === 'Enter') {
           setToken(tokenInput.value.trim());
+          fetchSettings();
         }
       });
+      if (typeFilterInput) {
+        typeFilterInput.addEventListener('input', updateJobsView);
+      }
+      if (approvalFilterSelect) {
+        approvalFilterSelect.addEventListener('change', updateJobsView);
+      }
+      if (aiOnlyToggle) {
+        aiOnlyToggle.addEventListener('change', updateJobsView);
+      }
+      if (reviewForm) {
+        reviewForm.addEventListener('submit', submitReview);
+      }
+      if (reviewJobSelect) {
+        reviewJobSelect.addEventListener('change', (event) => {
+          const jobId = event.target.value;
+          if (jobId) {
+            setSelectedJob(jobId, false);
+          } else {
+            autoSelect = false;
+            selectedJobId = null;
+            renderJobDetails(null);
+            updateJobsView();
+          }
+        });
+      }
+      if (clearSelectionBtn) {
+        clearSelectionBtn.addEventListener('click', () => {
+          autoSelect = false;
+          selectedJobId = null;
+          renderJobDetails(null);
+          updateJobsView();
+        });
+      }
 
       let refreshInterval = setInterval(fetchData, 15000);
       autoRefresh.addEventListener('change', () => {
@@ -299,8 +1378,13 @@
       });
 
       setToken(getToken());
-      renderJobs(initialJobs);
-      renderAudit(initialAudit);
+      jobsCache = initialJobs || [];
+      auditCache = initialAudit || [];
+      updateJobsView();
+      renderAudit(auditCache);
+      populateReviewJobs(jobsCache);
+      fetchSettings();
+      if (auditDownloadLink) auditDownloadLink.href = urlWithToken('/audit/download');
     </script>
   </body>
 </html>

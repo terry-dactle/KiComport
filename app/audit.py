@@ -10,6 +10,14 @@ AUDIT_LOG = Path("data/audit.log")
 AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
 
 
+def configure(paths) -> None:
+    """Repoint the audit log to the configured logs directory."""
+    global AUDIT_LOG
+    log_dir = Path(getattr(paths, "logs", "logs"))
+    AUDIT_LOG = log_dir / "audit.log"
+    AUDIT_LOG.parent.mkdir(parents=True, exist_ok=True)
+
+
 def log_event(action: str, job_id: str, details: Dict[str, Any] | None = None) -> None:
     entry = {
         "event_id": str(uuid4()),

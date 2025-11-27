@@ -14,6 +14,12 @@ class ImportJobStatus(str, Enum):
     failed = "failed"
 
 
+class ReviewStatus(str, Enum):
+    pending = "pending"
+    approved = "approved"
+    rejected = "rejected"
+
+
 class ImportJob(BaseModel):
     id: str
     filename: str
@@ -25,6 +31,9 @@ class ImportJob(BaseModel):
     backup_fp_lib_table: Optional[str] = None
     plan: Optional["ImportPlan"] = None
     table_diffs: Optional[Dict[str, str]] = None
+    approval_status: ReviewStatus = ReviewStatus.pending
+    review_notes: Optional[str] = None
+    installed_assets: Dict[str, List[str]] = Field(default_factory=dict)
 
 
 class PlanCandidate(BaseModel):

@@ -22,3 +22,7 @@ heuristics:
 ui:
   require_token: false
   token: ""
+
+integration:
+  kicad_docker_port: 3000
+  ollama_port: 11434

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from fastapi import FastAPI
 
+from . import audit, storage
 from .config import AppConfig, load_config
 from .ollama_client import OllamaClient
 from .routes.audit import router as audit_router
@@ -23,12 +24,20 @@ async def startup_event() -> None:
     config = load_config()
     app.state.config = config
     app.state.ollama_client = OllamaClient(config.ai)
+    audit.configure(config.paths)
+    storage.configure(config.paths)
     logger.info("Configuration loaded. Incoming path: %s", config.paths.incoming)
 
 
 @app.get("/")
 async def root() -> dict:
-    config: AppConfig = getattr(app.state, "config", load_config())
+    config: AppConfig = getattr(app.state, "config", None)
+    if config is None:
+        config = load_config()
+        app.state.config = config
+        app.state.ollama_client = OllamaClient(config.ai)
+        audit.configure(config.paths)
+        storage.configure(config.paths)
     return {
         "app": "KiComport",
         "status": "ok",
