@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ app_name if app_name else "Global KiCad Library Intake Server" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container">
+      <h1>{{ app_name if app_name else "Global KiCad Library Intake Server" }}</h1>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/api/health">Health</a>
+        <a href="/api/config">Config</a>
+        <a href="/api/diagnostics">Diagnostics</a>
+        <a href="/docs">API Docs</a>
+        <a href="/settings">Settings</a>
+      </nav>
+    </div>
+  </header>
+  <main class="container">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="footer">
+    <div class="container">
+      <small>Dockerised KiCad library intake server (v1 bootstrap)</small>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,0 +1,35 @@
+# Quick Start (v1)
+
+## Prerequisites
+- Python 3.11+
+- Docker + Docker Compose (for containerized run)
+
+## Local Dev (uvicorn)
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r v1/backend/requirements-dev.txt   # includes pytest; use requirements.txt for runtime
+
+# run API + templates
+uvicorn v1.backend.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Then open `http://localhost:8000` to view the UI. Default config lives at `v1/config/app_settings.yaml`; the service will create it with defaults if missing.
+
+## Docker Compose
+A compose file will live under `v1/docker/docker-compose.yaml`.
+
+Example run (after compose exists):
+```bash
+cd v1/docker
+docker compose up -d --build
+```
+
+Mounted volumes (planned defaults):
+- `../data:/data` — SQLite DB, temp, extracted files
+- `../uploads:/uploads` — raw uploads
+- `../v1/config:/app/config` — config files
+
+## Makefile / scripts
+Helper scripts will be added under `v1/scripts` as the project evolves (dev server, lint, cleanup).

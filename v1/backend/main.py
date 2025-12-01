@@ -1,0 +1,147 @@
+from __future__ import annotations
+
+import time
+import uuid
+from pathlib import Path
+
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
+from .api import config_routes
+from .api.health import router as health_router
+from .api.jobs_routes import router as jobs_router
+from .api.ollama_routes import router as ollama_router
+from .api.system_routes import router as system_router
+from .api.uploads_routes import router as uploads_router
+from .config import load_config
+from .db.models import Job, JobLog
+from .db.models import Base
+from .db.session import get_engine, get_session_factory
+from .services.logger import setup_logging
+
+TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "frontend" / "templates"
+STATIC_DIR = Path(__file__).resolve().parents[1] / "frontend" / "static"
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="Global KiCad Library Intake Server", version="0.1.0", docs_url="/docs")
+    templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
+
+    @app.on_event("startup")
+    async def load_app_config() -> None:
+        app.state.config = load_config()
+        app.state.logger = setup_logging(app.state.config.log_level)
+        engine = get_engine(app.state.config)
+        Base.metadata.create_all(engine)
+        app.state.db_session_factory = get_session_factory(app.state.config)
+        app.state.templates = templates
+
+    app.include_router(health_router)
+    app.include_router(config_routes.router)
+    app.include_router(uploads_router)
+    app.include_router(jobs_router)
+    app.include_router(ollama_router)
+    app.include_router(system_router)
+
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+    def _get_session():
+        factory = getattr(app.state, "db_session_factory", None)
+        if not factory:
+            return None
+        return factory()
+
+    @app.middleware("http")
+    async def add_request_id_and_log(request: Request, call_next):
+        request_id = str(uuid.uuid4())
+        request.state.request_id = request_id
+        logger = getattr(app.state, "logger", None)
+        start = time.time()
+        if logger:
+            logger.info(f"request.start path={request.url.path} rid={request_id}")
+        response = await call_next(request)
+        duration_ms = int((time.time() - start) * 1000)
+        response.headers["X-Request-ID"] = request_id
+        if logger:
+            logger.info(f"request.end path={request.url.path} rid={request_id} status={response.status_code} dur_ms={duration_ms}")
+        return response
+
+    @app.get("/", response_class=HTMLResponse)
+    async def index(request: Request):
+        config = getattr(request.app.state, "config", None)
+        session = _get_session()
+        jobs = []
+        recent_logs = []
+        if session:
+            try:
+                jobs = session.query(Job).order_by(Job.created_at.desc()).limit(20).all()
+                recent_logs = session.query(JobLog).order_by(JobLog.created_at.desc()).limit(20).all()
+            finally:
+                session.close()
+        return templates.TemplateResponse(
+            "index.html",
+            {
+                "request": request,
+                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "config": config,
+                "jobs": jobs,
+                "recent_logs": recent_logs,
+            },
+        )
+
+    @app.get("/jobs/{job_id}", response_class=HTMLResponse)
+    async def job_detail(job_id: int, request: Request):
+        session = _get_session()
+        if not session:
+            raise HTTPException(status_code=500, detail="DB not initialized")
+        try:
+            job = session.get(Job, job_id)
+            if not job:
+                raise HTTPException(status_code=404, detail="Job not found")
+            session.refresh(job)
+            # eager-load relationships
+            for comp in job.components:
+                _ = comp.candidates
+            _ = job.logs
+        finally:
+            session.close()
+        return templates.TemplateResponse(
+            "job_detail.html",
+            {"request": request, "job": job, "app_name": getattr(request.app.state, 'config', None).app_name},
+        )
+
+    @app.get("/api-help", response_class=HTMLResponse)
+    async def api_help(request: Request):
+        config = getattr(request.app.state, "config", None)
+        return templates.TemplateResponse(
+            "api_help.html",
+            {
+                "request": request,
+                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+            },
+        )
+
+    @app.get("/settings", response_class=HTMLResponse)
+    async def settings_page(request: Request):
+        config = getattr(request.app.state, "config", None)
+        return templates.TemplateResponse(
+            "settings.html",
+            {
+                "request": request,
+                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "config": config,
+            },
+        )
+
+    return app
+
+
+app = create_app()
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    uvicorn.run("v1.backend.main:app", host="0.0.0.0", port=8000, reload=True)

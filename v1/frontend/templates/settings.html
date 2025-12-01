@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Settings</h2>
+  <p class="muted">Update directories and Ollama options. Values are saved via the Config API.</p>
+  <form id="settings-form">
+    <label>Uploads dir<br><input type="text" name="uploads_dir" value="{{ config.uploads_dir if config else '' }}"></label><br>
+    <label>Temp dir<br><input type="text" name="temp_dir" value="{{ config.temp_dir if config else '' }}"></label><br>
+    <label>Data dir<br><input type="text" name="data_dir" value="{{ config.data_dir if config else '' }}"></label><br>
+    <label>DB path<br><input type="text" name="database_path" value="{{ config.database_path if config else '' }}"></label><br>
+    <label>Symbol dir<br><input type="text" name="kicad_symbol_dir" value="{{ config.kicad_symbol_dir if config else '' }}"></label><br>
+    <label>Footprint dir<br><input type="text" name="kicad_footprint_dir" value="{{ config.kicad_footprint_dir if config else '' }}"></label><br>
+    <label>3D dir<br><input type="text" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
+    <label>Ollama enabled <input type="checkbox" name="ollama_enabled" {% if config and config.ollama_enabled %}checked{% endif %}></label><br>
+    <label>Ollama base URL<br><input type="text" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}"></label><br>
+    <label>Ollama model<br><input type="text" name="ollama_model" value="{{ config.ollama_model if config else '' }}"></label><br>
+    <label>Log level<br><input type="text" name="log_level" value="{{ config.log_level if config else 'INFO' }}"></label><br>
+    <label>Log file (optional)<br><input type="text" name="log_file" value="{{ config.log_file if config and config.log_file else '' }}"></label><br>
+    <button type="submit">Save Settings</button>
+    <button type="button" id="ollama-test">Test Ollama</button>
+  </form>
+  <p id="settings-status" class="muted"></p>
+</section>
+<script>
+  const form = document.getElementById('settings-form');
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const payload = {};
+    formData.forEach((value, key) => {
+      if (key === "ollama_enabled") {
+        payload[key] = true;
+      } else if (value !== "") {
+        payload[key] = value;
+      }
+    });
+    if (!payload["ollama_enabled"]) payload["ollama_enabled"] = false;
+    const resp = await fetch("/api/config", {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+    const body = await resp.json();
+    document.getElementById('settings-status').textContent = "Saved: " + JSON.stringify(body);
+  });
+
+  document.getElementById('ollama-test').addEventListener('click', async () => {
+    const resp = await fetch("/api/ollama/test");
+    const body = await resp.json();
+    document.getElementById('settings-status').textContent = "Ollama test: " + JSON.stringify(body);
+  });
+</script>
+{% endblock %}

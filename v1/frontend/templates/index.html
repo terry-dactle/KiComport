@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Upload</h2>
+  <form id="upload-form" action="/api/uploads" method="post" enctype="multipart/form-data">
+    <label for="file">Select a KiCad archive or library file (zip, .kicad_sym, .kicad_mod, .stp/.step/.wrl/.obj):</label><br/>
+    <input type="file" id="file" name="file" required>
+    <button type="submit">Upload</button>
+  </form>
+  <p class="muted">One upload at a time. MD5 deduping: duplicates will point to the original job.</p>
+</section>
+
+<section class="card">
+  <h3>Recent Jobs</h3>
+  {% if jobs and jobs|length > 0 %}
+  <table class="job-table">
+    <thead>
+      <tr><th>ID</th><th>Filename</th><th>Status</th><th>MD5</th><th>Updated</th></tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr>
+        <td><a href="/jobs/{{ job.id }}">{{ job.id }}</a></td>
+        <td>{{ job.original_filename }}</td>
+        <td><span class="badge">{{ job.status.value }}</span></td>
+        <td class="mono">{{ job.md5 }}</td>
+        <td>{{ job.updated_at }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No jobs yet. Upload a zip or library file to start.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Recent Job Logs</h3>
+  {% if recent_logs %}
+  <ul class="logs">
+    {% for log in recent_logs %}
+    <li><span class="mono">{{ log.created_at }}</span> [{{ log.level }}] Job {{ log.job_id }} — {{ log.message }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No logs yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Current Config (summary)</h3>
+  {% if config %}
+  <pre class="config-dump">{{ config.to_safe_dict() | tojson(indent=2) }}</pre>
+  {% else %}
+  <p>No config loaded yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

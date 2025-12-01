@@ -1,0 +1,93 @@
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --border: #2a3039;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #2ea043;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+.container {
+  width: min(1080px, 92vw);
+  margin: 0 auto;
+}
+.topbar {
+  background: #0b0f14;
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+}
+.topbar h1 { margin: 0; font-size: 1.3rem; }
+.topbar nav { margin-top: 0.35rem; }
+.topbar nav a {
+  color: var(--muted);
+  margin-right: 1rem;
+  text-decoration: none;
+}
+.topbar nav a:hover { color: var(--accent); }
+
+main { padding: 1.5rem 0 2rem; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+.card h2, .card h3 { margin-top: 0; }
+.config-dump {
+  background: #0b0f14;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  overflow-x: auto;
+  color: var(--muted);
+}
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 1rem 0 1.2rem;
+  color: var(--muted);
+}
+.job-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.job-table th, .job-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+.badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: #1f6feb;
+  color: #fff;
+  font-size: 0.85rem;
+}
+.muted { color: var(--muted); }
+.mono { font-family: "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace; font-size: 0.8rem; }
+button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+button:hover { opacity: 0.9; }
+.component { border: 1px solid var(--border); border-radius: 6px; padding: 0.75rem; margin-bottom: 0.75rem; }
+.candidate-group { margin-bottom: 0.5rem; }
+.candidate { display: block; padding: 0.15rem 0; }
+.logs { list-style: none; padding-left: 0; }
+.logs li { border-bottom: 1px solid var(--border); padding: 0.3rem 0; }
+.card label { display: block; margin: 0.25rem 0; }
+.card input[type="text"] { width: 100%; padding: 0.35rem; border-radius: 6px; border: 1px solid var(--border); background: #0b0f14; color: var(--text); }

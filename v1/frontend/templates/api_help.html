@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>API Help</h2>
+  <p>OpenAPI docs are available at <a href="/docs">/docs</a>. Key endpoints:</p>
+  <ul>
+    <li><code>GET /health</code> — liveness check</li>
+    <li><code>GET/PUT /api/config</code> — read/update config</li>
+    <li><code>POST /api/uploads</code> — upload a file</li>
+    <li><code>GET /api/jobs</code>, <code>GET /api/jobs/{id}</code> — list/detail</li>
+    <li><code>POST /api/jobs/{id}/select</code> — save selections</li>
+    <li><code>POST /api/jobs/{id}/import</code> — import selections</li>
+    <li><code>GET /api/ollama/test</code> — test Ollama connectivity</li>
+    <li><code>POST /api/cleanup</code> — manual cleanup</li>
+    <li><code>GET /api/diagnostics</code> — summary info</li>
+  </ul>
+</section>
+{% endblock %}

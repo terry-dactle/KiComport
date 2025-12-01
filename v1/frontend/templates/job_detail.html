@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <h2>Job #{{ job.id }} — {{ job.original_filename }}</h2>
+  <p>Status: <span class="badge">{{ job.status.value }}</span></p>
+  <p>MD5: <span class="mono">{{ job.md5 }}</span></p>
+  <p>Message: {{ job.message or "—" }}</p>
+</section>
+
+<section class="card">
+  <h3>Components & Candidates</h3>
+  {% if job.components %}
+  <form id="selection-form">
+    {% for comp in job.components %}
+    <div class="component">
+      <h4>{{ comp.name }}</h4>
+      <div class="candidate-group">
+        <h5>Symbols</h5>
+        {% for cand in comp.candidates if cand.type.value == "symbol" %}
+          <label class="candidate">
+            <input type="radio" name="symbol_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_symbol_id == cand.id %}checked{% endif %}>
+            {{ cand.name }} (score {{ "%.2f"|format(cand.combined_score) }})
+          </label>
+        {% endfor %}
+        <label class="candidate"><input type="radio" name="symbol_{{ comp.id }}" value="">None</label>
+      </div>
+      <div class="candidate-group">
+        <h5>Footprints</h5>
+        {% for cand in comp.candidates if cand.type.value == "footprint" %}
+          <label class="candidate">
+            <input type="radio" name="footprint_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_footprint_id == cand.id %}checked{% endif %}>
+            {{ cand.name }} (pads {{ cand.pad_count or "?" }}, score {{ "%.2f"|format(cand.combined_score) }})
+          </label>
+        {% endfor %}
+        <label class="candidate"><input type="radio" name="footprint_{{ comp.id }}" value="">None</label>
+      </div>
+      <div class="candidate-group">
+        <h5>3D Models</h5>
+        {% for cand in comp.candidates if cand.type.value == "model" %}
+          <label class="candidate">
+            <input type="radio" name="model_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_model_id == cand.id %}checked{% endif %}>
+            {{ cand.name }} ({{ cand.description }})
+          </label>
+        {% endfor %}
+        <label class="candidate"><input type="radio" name="model_{{ comp.id }}" value="">None</label>
+      </div>
+    </div>
+    {% endfor %}
+    <button type="submit">Save Selections</button>
+    <button type="button" id="import-btn">Import Selected</button>
+  </form>
+  {% else %}
+  <p>No components found.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Logs</h3>
+  {% if job.logs %}
+  <ul class="logs">
+    {% for log in job.logs %}
+    <li><span class="mono">{{ log.created_at }}</span> [{{ log.level }}] {{ log.message }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No logs yet.</p>
+  {% endif %}
+</section>
+
+<script>
+  const jobId = {{ job.id }};
+  document.getElementById('selection-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {};
+    const form = e.target;
+    {% for comp in job.components %}
+    data["{{ comp.id }}"] = {
+      symbol_id: form["symbol_{{ comp.id }}"].value || null,
+      footprint_id: form["footprint_{{ comp.id }}"].value || null,
+      model_id: form["model_{{ comp.id }}"].value || null,
+    };
+    {% endfor %}
+    const resp = await fetch(`/api/jobs/${jobId}/select`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const body = await resp.json();
+    alert("Selections saved: " + JSON.stringify(body));
+  });
+
+  document.getElementById('import-btn')?.addEventListener('click', async () => {
+    const resp = await fetch(`/api/jobs/${jobId}/import`, { method: "POST" });
+    const body = await resp.json();
+    alert("Import result: " + JSON.stringify(body));
+  });
+</script>
+{% endblock %}

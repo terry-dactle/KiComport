@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from sqlalchemy.orm import Session
+
+from ..config import AppConfig
+from ..db.deps import get_db
+from ..db.models import Job
+from ..services.retention import manual_cleanup
+
+router = APIRouter(tags=["system"])
+
+
+def get_config(request: Request) -> AppConfig:
+    cfg = getattr(request.app.state, "config", None)
+    if not cfg:
+        raise HTTPException(status_code=500, detail="Config not loaded")
+    return cfg
+
+
+@router.get("/api/diagnostics")
+def diagnostics(request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    cfg = get_config(request)
+    total_jobs = db.query(Job).count()
+    return {
+        "app_name": cfg.app_name,
+        "config": cfg.to_safe_dict(),
+        "db_path": str(cfg.database_path),
+        "job_count": total_jobs,
+    }
+
+
+@router.post("/api/cleanup")
+def cleanup(request: Request) -> Dict[str, Any]:
+    cfg = get_config(request)
+    uploads_removed, temp_removed = manual_cleanup(cfg.uploads_dir, cfg.temp_dir, cfg.retention_days)
+    return {"uploads_removed": uploads_removed, "temp_removed": temp_removed, "retention_days": cfg.retention_days}

@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: v1/docker/Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - ../data:/data
+      - ../uploads:/uploads
+      - ../v1/config:/app/config
+    restart: unless-stopped
