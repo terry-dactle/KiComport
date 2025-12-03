@@ -17,10 +17,28 @@ Dockerised FastAPI service that ingests KiCad library contributions, scans uploa
 - `v1/` — all application code and assets  
   - `backend/` — FastAPI app, models, services  
   - `frontend/` — Jinja2 templates/static assets  
-  - `docker/` — Dockerfile, docker-compose configs  
-  - `config/` — default config templates  
-  - `docs/` — architecture, config schema, quick start  
-  - `scripts/` — helper scripts  
+- `docker/` — Dockerfile, docker-compose configs  
+- `config/` — default config templates  
+- `docs/` — architecture, config schema, quick start  
+- `scripts/` — helper scripts  
 - `data/` — runtime volume for DB/uploads/extracted data (untracked)
 
 See `v1/docs/QUICK_START.md` for running locally or via Docker.
+
+## Docker Build/Run
+Build from the repo root:
+```bash
+docker build -t kicomport -f v1/docker/Dockerfile .
+```
+
+Run the container:
+```bash
+docker run -d \
+  --name kicomport \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -v /path/to/KiComport-data:/data \
+  -v /path/to/KiCad:/kicad \
+  -e KICOMPORT_CONFIG_PATH=/kicad/config/kicomport-config.yaml \
+  kicomport
+```

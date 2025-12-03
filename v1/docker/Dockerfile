@@ -8,12 +8,12 @@ WORKDIR ${APP_HOME}
 
 RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
 
-COPY ../backend/requirements.txt ./requirements.txt
+COPY v1/backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY ../backend ./backend
-COPY ../frontend ./frontend
-COPY ../config ./config
+COPY v1/backend ./backend
+COPY v1/frontend ./frontend
+COPY v1/config ./config
 
 EXPOSE 8000
 

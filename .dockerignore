@@ -1,0 +1,7 @@
+.git
+data/
+__pycache__/
+*.pyc
+v1/docs/
+v1/scripts/
+.DS_Store

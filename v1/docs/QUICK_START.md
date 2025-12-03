@@ -17,16 +17,36 @@ uvicorn v1.backend.main:app --reload --host 0.0.0.0 --port 8000
 
 Then open `http://localhost:8000` to view the UI. Default config lives at `v1/config/app_settings.yaml`; the service will create it with defaults if missing.
 
-## Docker Compose
-A compose file will live under `v1/docker/docker-compose.yaml`.
+## Docker
 
-Example run (after compose exists):
+### Build
+From the repo root:
+```bash
+docker build -t kicomport -f v1/docker/Dockerfile .
+```
+
+### Run
+```bash
+docker run -d \
+  --name kicomport \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -v /path/to/KiComport-data:/data \
+  -v /path/to/KiCad:/kicad \
+  -e KICOMPORT_CONFIG_PATH=/kicad/config/kicomport-config.yaml \
+  kicomport
+```
+
+## Docker Compose
+The compose file lives under `v1/docker/docker-compose.yaml`.
+
+Example run:
 ```bash
 cd v1/docker
 docker compose up -d --build
 ```
 
-Mounted volumes (planned defaults):
+Mounted volumes (defaults):
 - `../data:/data` — SQLite DB, temp, extracted files
 - `../uploads:/uploads` — raw uploads
 - `../v1/config:/app/config` — config files
