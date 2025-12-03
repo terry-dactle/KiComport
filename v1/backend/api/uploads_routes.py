@@ -104,19 +104,19 @@ def _persist_components(db: Session, job_id: int, candidates: list[scan_service.
         db.add(comp)
         db.flush()
         response_candidates = []
-        for cand in cand_list:
-            cf = CandidateFile(
-                component_id=comp.id,
-                type=cand.type,
-                path=str(cand.path),
-                rel_path=str(cand.rel_path),
-                name=cand.name,
-                description=cand.description,
-                pin_count=cand.pin_count,
-                pad_count=cand.pad_count,
-                heuristic_score=cand.heuristic_score,
-                metadata=cand.metadata or {},
-            )
+            for cand in cand_list:
+                cf = CandidateFile(
+                    component_id=comp.id,
+                    type=cand.type,
+                    path=str(cand.path),
+                    rel_path=str(cand.rel_path),
+                    name=cand.name,
+                    description=cand.description,
+                    pin_count=cand.pin_count,
+                    pad_count=cand.pad_count,
+                    heuristic_score=cand.heuristic_score,
+                    metadata_json=cand.metadata or {},
+                )
             cf.quality_score = ranking.quality_score_for_candidate(cf)
             cf.combined_score = ranking.calc_combined(cf)
             db.add(cf)
@@ -148,4 +148,5 @@ def _serialize_candidate(cf: CandidateFile) -> Dict[str, Any]:
         "feedback_score": cf.feedback_score,
         "ai_reason": cf.ai_reason,
         "rel_path": cf.rel_path,
+        "metadata": cf.metadata_json,
     }

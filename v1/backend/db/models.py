@@ -83,11 +83,10 @@ class CandidateFile(Base):
     feedback_score: Mapped[float] = mapped_column(default=0.0)
     selected_count: Mapped[int] = mapped_column(Integer, default=0)
     ai_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    metadata: Mapped[dict] = mapped_column(JSON, default=dict)
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     component: Mapped[Component] = relationship("Component", back_populates="candidates")
-
 
 class JobLog(Base):
     __tablename__ = "job_logs"

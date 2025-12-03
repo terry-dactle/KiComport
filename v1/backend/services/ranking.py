@@ -38,7 +38,7 @@ def quality_score_for_candidate(cf: CandidateFile) -> float:
         if cf.pad_count and cf.pad_count > 0:
             score += 0.05
     elif cf.type == CandidateType.model:
-        if cf.metadata.get("size", 1) > 0:
+        if cf.metadata_json.get("size", 1) > 0:
             score += 0.05
         if Path(cf.path).suffix.lower() in {".step", ".stp"}:
             score += 0.05

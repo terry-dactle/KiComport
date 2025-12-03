@@ -52,7 +52,7 @@ def _build_payload(job_id: int, components: List[Component], model: str) -> Dict
                         "name": cand.name,
                         "description": cand.description,
                         "heuristic_score": cand.heuristic_score,
-                        "metadata": cand.metadata,
+                        "metadata": cand.metadata_json,
                     }
                     for cand in comp.candidates
                 ],
