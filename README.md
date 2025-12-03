@@ -36,9 +36,13 @@ Run the container:
 docker run -d \
   --name kicomport \
   --restart unless-stopped \
-  -p 8000:8000 \
+  -p 27888:8000 \
   -v /path/to/KiComport-data:/data \
   -v /path/to/KiCad:/kicad \
   -e KICOMPORT_CONFIG_PATH=/kicad/config/kicomport-config.yaml \
+  # optional: change container listen port (defaults to 8000)
+  # -e KICOMPORT_PORT=8000 \
   kicomport
 ```
+
+The backend listens on port `8000` inside the container; map any host port you like (examples use `27888`). `/health` and `/` are safe endpoints for a quick status check; `/` redirects to the UI.

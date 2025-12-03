@@ -4,8 +4,8 @@ import time
 import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -53,6 +53,23 @@ def create_app() -> FastAPI:
             return None
         return factory()
 
+    def _fetch_jobs_and_logs():
+        jobs = []
+        recent_logs = []
+        session = _get_session()
+        if not session:
+            return jobs, recent_logs
+        try:
+            jobs = session.query(Job).order_by(Job.created_at.desc()).limit(20).all()
+            recent_logs = session.query(JobLog).order_by(JobLog.created_at.desc()).limit(20).all()
+        except Exception:
+            logger = getattr(app.state, "logger", None)
+            if logger:
+                logger.exception("home.load_failed while loading dashboard data")
+        finally:
+            session.close()
+        return jobs, recent_logs
+
     @app.middleware("http")
     async def add_request_id_and_log(request: Request, call_next):
         request_id = str(uuid.uuid4())
@@ -68,18 +85,14 @@ def create_app() -> FastAPI:
             logger.info(f"request.end path={request.url.path} rid={request_id} status={response.status_code} dur_ms={duration_ms}")
         return response
 
-    @app.get("/", response_class=HTMLResponse)
+    @app.get("/", include_in_schema=False)
+    async def root():
+        return RedirectResponse(url="/ui/jobs", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+    @app.get("/ui/jobs", response_class=HTMLResponse, include_in_schema=False)
     async def index(request: Request):
         config = getattr(request.app.state, "config", None)
-        session = _get_session()
-        jobs = []
-        recent_logs = []
-        if session:
-            try:
-                jobs = session.query(Job).order_by(Job.created_at.desc()).limit(20).all()
-                recent_logs = session.query(JobLog).order_by(JobLog.created_at.desc()).limit(20).all()
-            finally:
-                session.close()
+        jobs, recent_logs = _fetch_jobs_and_logs()
         return templates.TemplateResponse(
             "index.html",
             {
@@ -107,9 +120,10 @@ def create_app() -> FastAPI:
             _ = job.logs
         finally:
             session.close()
+        cfg = getattr(request.app.state, "config", None)
         return templates.TemplateResponse(
             "job_detail.html",
-            {"request": request, "job": job, "app_name": getattr(request.app.state, 'config', None).app_name},
+            {"request": request, "job": job, "app_name": cfg.app_name if cfg else "Global KiCad Library Intake Server"},
         )
 
     @app.get("/api-help", response_class=HTMLResponse)
@@ -142,6 +156,8 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    import os
     import uvicorn
 
-    uvicorn.run("v1.backend.main:app", host="0.0.0.0", port=8000, reload=True)
+    port = int(os.getenv("KICOMPORT_PORT", "8000"))
+    uvicorn.run("v1.backend.main:app", host="0.0.0.0", port=port, reload=True)

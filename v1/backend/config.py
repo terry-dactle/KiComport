@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
@@ -171,8 +172,15 @@ def save_config(config: AppConfig, path: Optional[Path] = None) -> None:
 
 
 def load_config(config_path: Optional[Path] = None) -> AppConfig:
-    target = config_path or DEFAULT_CONFIG_PATH
+    env_path = os.getenv("KICOMPORT_CONFIG_PATH")
+    target = Path(config_path or env_path or DEFAULT_CONFIG_PATH)
     raw = _read_config_file(target)
+    env_port = os.getenv("KICOMPORT_PORT")
+    if env_port:
+        try:
+            raw["port"] = int(env_port)
+        except (TypeError, ValueError):
+            pass
     config = AppConfig.model_validate(raw)
     config.config_path = target
     config = normalize_paths(config, target.parent)

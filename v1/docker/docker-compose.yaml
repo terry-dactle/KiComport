@@ -7,8 +7,9 @@ services:
       dockerfile: v1/docker/Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
+      - KICOMPORT_PORT=${KICOMPORT_PORT:-8000}
     ports:
-      - "${PORT:-8000}:8000"
+      - "${HOST_PORT:-27888}:${KICOMPORT_PORT:-8000}"
     volumes:
       - ../data:/data
       - ../uploads:/uploads

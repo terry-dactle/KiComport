@@ -30,12 +30,16 @@ docker build -t kicomport -f v1/docker/Dockerfile .
 docker run -d \
   --name kicomport \
   --restart unless-stopped \
-  -p 8000:8000 \
+  -p 27888:8000 \
   -v /path/to/KiComport-data:/data \
   -v /path/to/KiCad:/kicad \
   -e KICOMPORT_CONFIG_PATH=/kicad/config/kicomport-config.yaml \
+  # optional: change container listen port (defaults to 8000)
+  # -e KICOMPORT_PORT=8000 \
   kicomport
 ```
+
+The app listens on `8000` inside the container; map any host port you prefer (examples use `27888`). `/health` and `/` are safe status checks, with `/` redirecting to the UI.
 
 ## Docker Compose
 The compose file lives under `v1/docker/docker-compose.yaml`.
@@ -45,6 +49,8 @@ Example run:
 cd v1/docker
 docker compose up -d --build
 ```
+
+By default compose maps host `27888` to the container port `8000`. Override with `HOST_PORT` (host) or `KICOMPORT_PORT` (container listen port) environment variables as needed.
 
 Mounted volumes (defaults):
 - `../data:/data` — SQLite DB, temp, extracted files
