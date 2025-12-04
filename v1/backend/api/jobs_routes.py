@@ -3,13 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from ..config import AppConfig
 from ..db.deps import get_db
 from ..db.models import CandidateFile, CandidateType, Component, Job, JobStatus
 from ..services import importer, jobs as job_service, ranking
+from ..services import extract, scan as scan_service
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -123,3 +124,54 @@ def _serialize_candidate(cf: CandidateFile) -> Dict[str, Any]:
         "combined_score": cf.combined_score,
         "rel_path": cf.rel_path,
     }
+
+
+@router.post("/{job_id}/retry", status_code=status.HTTP_202_ACCEPTED)
+def retry_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    config = get_config(request)
+    if not Path(job.stored_path).exists():
+        raise HTTPException(status_code=400, detail="Stored file not found; cannot retry")
+    # reset components/logs state
+    for comp in list(job.components):
+        db.delete(comp)
+    job_service.reset_job_selection(db, job)
+    job_service.update_status(db, job, JobStatus.analyzing, "Retry triggered")
+    try:
+        extracted_dir = extract.extract_if_needed(Path(job.stored_path), Path(config.temp_dir))
+        job_service.set_extracted_path(db, job, extracted_dir)
+    except Exception as exc:
+        job_service.update_status(db, job, JobStatus.error, f"Retry extraction failed: {exc}")
+        raise HTTPException(status_code=400, detail=f"Retry failed: {exc}") from exc
+
+    candidates = scan_service.scan_candidates(Path(job.extracted_path))
+    if not candidates:
+        job_service.update_status(db, job, JobStatus.error, "No candidates detected on retry")
+        return {"job_id": job.id, "status": job.status.value, "message": job.message}
+
+    comp_objs, _ = _persist_components(db, job.id, candidates)
+    job_service.update_status(db, job, JobStatus.waiting_for_user, "Scan complete after retry")
+    return {"job_id": job.id, "status": job.status.value}
+
+
+@router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> None:
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    cfg = get_config(request)
+    # delete extracted/stored files
+    for path_str in [job.stored_path, job.extracted_path]:
+        if path_str:
+            try:
+                path = Path(path_str)
+                if path.is_dir():
+                    import shutil
+                    shutil.rmtree(path, ignore_errors=True)
+                else:
+                    path.unlink(missing_ok=True)
+            except Exception:
+                pass
+    db.delete(job)

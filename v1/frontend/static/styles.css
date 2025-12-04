@@ -140,6 +140,7 @@ button:hover { opacity: 0.92; }
 .button { display: inline-block; background: linear-gradient(120deg, var(--accent), var(--accent-strong)); color: #0f141b; padding: 0.48rem 0.9rem; border-radius: 7px; text-decoration: none; font-weight: 700; border: 1px solid transparent; box-shadow: 0 6px 20px rgba(54,197,116,0.25); }
 .button.ghost { background: transparent; color: var(--text); border-color: var(--border); box-shadow: none; }
 .button:hover { opacity: 0.92; }
+.danger, .button.danger { background: #f9706a; color: #0f141b; box-shadow: 0 6px 18px rgba(249,112,106,0.3); }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.75rem; }
 .stat-pill { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.8rem; background: #111823; }
 .stat-value { font-size: 1.4rem; font-weight: 700; }

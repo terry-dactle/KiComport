@@ -5,6 +5,13 @@
   <p>Status: <span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace("_", " ") }}</span></p>
   <p>MD5: <span class="mono">{{ job.md5 }}</span></p>
   <p>Message: {{ job.message or "-" }}</p>
+  <div class="actions">
+    {% if job.status.value == "error" %}
+      <button id="retry-job">Retry</button>
+      <button id="delete-job" class="danger">Remove</button>
+    {% endif %}
+  </div>
+  <p id="job-action-status" class="muted"></p>
 </section>
 
 <section class="card">
@@ -69,6 +76,38 @@
 
 <script>
   const jobId = {{ job.id }};
+  const actionStatus = document.getElementById('job-action-status');
+  const retryBtn = document.getElementById('retry-job');
+  const deleteBtn = document.getElementById('delete-job');
+  function setActionStatus(msg) { if (actionStatus) actionStatus.textContent = msg; }
+
+  retryBtn?.addEventListener('click', async () => {
+    setActionStatus("Retrying...");
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}/retry`, { method: "POST" });
+      const body = await resp.json();
+      if (!resp.ok) throw new Error(body.detail || resp.statusText);
+      setActionStatus("Retry kicked off. Reloading...");
+      window.location.reload();
+    } catch (err) {
+      setActionStatus(`Retry failed: ${err?.message || err}`);
+    }
+  });
+
+  deleteBtn?.addEventListener('click', async () => {
+    if (!confirm("Remove this job and its files?")) return;
+    setActionStatus("Removing...");
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+      if (!resp.ok) {
+        const body = await resp.json().catch(() => ({}));
+        throw new Error(body.detail || resp.statusText);
+      }
+      window.location.href = "/";
+    } catch (err) {
+      setActionStatus(`Remove failed: ${err?.message || err}`);
+    }
+  });
   document.getElementById('selection-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const data = {};

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from collections import Counter
+import zipfile
 from typing import Any, Dict
 
 import httpx
@@ -40,7 +41,15 @@ async def upload_file(
     if suffix not in ALLOWED_EXTS:
         raise HTTPException(status_code=400, detail=f"Unsupported extension {suffix}")
 
-    stored_path, md5 = upload_service.save_upload(file.file, Path(config.uploads_dir), file.filename)
+    try:
+        stored_path, md5 = upload_service.save_upload(file.file, Path(config.uploads_dir), file.filename)
+        _validate_zip_or_raise(stored_path, suffix)
+    except ValueError as exc:
+        try:
+            Path(stored_path).unlink(missing_ok=True)
+        except Exception:
+            pass
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return await _process_upload(request, db, config, stored_path, file.filename, md5=md5)
 
 
@@ -238,6 +247,7 @@ async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Pat
                             out_file.write(chunk)
                 stored_path = Path(destination_dir) / f"{Path(tmp_path).name}_{upload_service.sanitize_filename(filename)}"
                 Path(tmp_path).rename(stored_path)
+                _validate_zip_or_raise(stored_path, suffix, content_type)
                 md5 = upload_service.compute_md5(stored_path)
                 return stored_path, md5, filename
             except Exception:
@@ -274,3 +284,11 @@ def _file_summary(root: Path) -> Dict[str, Any]:
                 samples.append(str(path.relative_to(root)))
     top_exts = ", ".join(f"{ext}({n})" for ext, n in ext_counter.most_common(5))
     return {"files": count, "exts": top_exts or "none", "samples": "; ".join(samples)}
+
+
+def _validate_zip_or_raise(path: Path, suffix: str, content_type: str | None = None) -> None:
+    if suffix != ".zip":
+        return
+    if not zipfile.is_zipfile(path):
+        extra = f" (content-type {content_type})" if content_type else ""
+        raise ValueError(f"Invalid zip archive{extra}")
