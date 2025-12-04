@@ -1,30 +1,67 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-  <h2>Upload</h2>
-  <form id="upload-form" action="/api/uploads" method="post" enctype="multipart/form-data">
-    <label for="file">Select a KiCad archive or library file (zip, .kicad_sym, .kicad_mod, .stp/.step/.wrl/.obj):</label><br/>
-    <input type="file" id="file" name="file" required>
-    <button type="submit">Upload</button>
+  <div class="card-header">
+    <div>
+      <h2>Upload</h2>
+      <p class="muted">Drop a KiCad archive or library file, or provide a URL. Upload starts automatically.</p>
+    </div>
+  </div>
+  <form id="upload-form">
+    <div id="drop-zone" class="drop-zone">
+      <input type="file" id="file" name="file" hidden>
+      <p><strong>Drop file here</strong> or click to browse</p>
+      <p class="muted">Zip, symbol, footprint, or 3D model files are supported.</p>
+    </div>
+    <div class="helper-row">
+      <span class="chip">zip</span>
+      <span class="chip">.kicad_sym</span>
+      <span class="chip">.kicad_mod</span>
+      <span class="chip">.stp / .step</span>
+      <span class="chip">.wrl / .obj</span>
+    </div>
+    <div class="url-row">
+      <input type="url" id="url-input" name="url" placeholder="https://example.com/library.zip">
+      <button type="button" id="fetch-url">Fetch URL</button>
+    </div>
+    <p id="upload-status" class="muted"></p>
   </form>
-  <p class="muted">One upload at a time. MD5 deduping: duplicates will point to the original job.</p>
 </section>
 
 <section class="card">
   <h3>Recent Jobs</h3>
+  <div class="table-actions">
+    <input type="search" id="job-filter" placeholder="Filter by filename, md5, status">
+    <select id="status-filter">
+      <option value="">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="analyzing">Analyzing</option>
+      <option value="waiting_for_user">Waiting for user</option>
+      <option value="waiting_for_import">Waiting for import</option>
+      <option value="imported">Imported</option>
+      <option value="duplicate">Duplicate</option>
+      <option value="error">Error</option>
+    </select>
+  </div>
   {% if jobs and jobs|length > 0 %}
-  <table class="job-table">
+  <table class="job-table" id="jobs-table">
     <thead>
-      <tr><th>ID</th><th>Filename</th><th>Status</th><th>MD5</th><th>Updated</th></tr>
+      <tr>
+        <th data-sort="id">ID</th>
+        <th data-sort="filename">Filename</th>
+        <th data-sort="status">Status</th>
+        <th>MD5</th>
+        <th data-sort="updated">Updated</th>
+      </tr>
     </thead>
     <tbody>
       {% for job in jobs %}
       <tr>
         <td><a href="/jobs/{{ job.id }}">{{ job.id }}</a></td>
         <td>{{ job.original_filename }}</td>
-        <td><span class="badge">{{ job.status.value }}</span></td>
+        <td><span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace('_', ' ') }}</span></td>
         <td class="mono">{{ job.md5 }}</td>
-        <td>{{ job.updated_at }}</td>
+        <td>{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -39,7 +76,7 @@
   {% if recent_logs %}
   <ul class="logs">
     {% for log in recent_logs %}
-    <li><span class="mono">{{ log.created_at }}</span> [{{ log.level }}] Job {{ log.job_id }} — {{ log.message }}</li>
+    <li><span class="mono">{{ log.created_at.strftime("%Y-%m-%d %H:%M") }}</span> [{{ log.level }}] Job {{ log.job_id }} - {{ log.message }}</li>
     {% endfor %}
   </ul>
   {% else %}
@@ -47,12 +84,209 @@
   {% endif %}
 </section>
 
+{% if libraries %}
 <section class="card">
-  <h3>Current Config (summary)</h3>
-  {% if config %}
-  <pre class="config-dump">{{ config.to_safe_dict() | tojson(indent=2) }}</pre>
-  {% else %}
-  <p>No config loaded yet.</p>
-  {% endif %}
+  <h3>KiCad Libraries</h3>
+  <div class="grid three-col">
+    {% for lib in libraries %}
+    <div class="info-block">
+      <h4>{{ lib.label }}</h4>
+      <p class="muted mono">{{ lib.path }}</p>
+      <p class="muted">
+        {% if lib.exists %}
+          {% if lib.truncated %}
+            {{ lib.count }}+ items (capped)
+          {% else %}
+            {{ lib.count }} item{{ 's' if lib.count != 1 else '' }} available
+          {% endif %}
+        {% else %}
+          Directory not found
+        {% endif %}
+      </p>
+      {% if lib.sample %}
+      <ul class="mini-list">
+        {% for name in lib.sample %}
+        <li class="mono">{{ name }}</li>
+        {% endfor %}
+        {% if lib.count > lib.sample|length %}
+        <li class="muted">...and {{ lib.count - lib.sample|length }} more</li>
+        {% endif %}
+      </ul>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
 </section>
+{% endif %}
+
+<script>
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file');
+  const urlInput = document.getElementById('url-input');
+  const fetchUrlBtn = document.getElementById('fetch-url');
+  const statusEl = document.getElementById('upload-status');
+  const form = document.getElementById('upload-form');
+  const jobFilterInput = document.getElementById('job-filter');
+  const statusFilter = document.getElementById('status-filter');
+  const jobsTable = document.getElementById('jobs-table');
+
+  function setStatus(message, loading = false) {
+    if (!statusEl) return;
+    statusEl.innerHTML = "";
+    if (loading) {
+      const span = document.createElement('span');
+      span.className = 'upload-progress';
+      span.innerHTML = '<span class="spinner"></span>' + message;
+      statusEl.appendChild(span);
+    } else {
+      statusEl.textContent = message || "";
+    }
+  }
+
+  async function uploadFile(file) {
+    if (!file) return;
+    setStatus(`Uploading ${file.name}...`, true);
+    const data = new FormData();
+    data.append('file', file);
+    try {
+      const resp = await fetch("/api/uploads", { method: "POST", body: data });
+      const body = await resp.json();
+      if (!resp.ok) {
+        throw new Error(body.detail || resp.statusText);
+      }
+      if (body.duplicate) {
+        setStatus(`Duplicate upload detected. Opening job ${body.job_id}...`);
+        window.location.href = `/jobs/${body.job_id}`;
+        return;
+      }
+      setStatus(`Upload complete. Opening job ${body.job_id}...`);
+      window.location.href = `/jobs/${body.job_id}`;
+    } catch (err) {
+      setStatus(`Upload failed: ${err?.message || err}`);
+    } finally {
+      fileInput.value = "";
+    }
+  }
+
+  async function uploadFromUrl(url) {
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) {
+      setStatus("Enter a valid http/https URL.");
+      return;
+    }
+    setStatus(`Fetching ${url}...`, true);
+    try {
+      const resp = await fetch("/api/uploads/from-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const body = await resp.json();
+      if (!resp.ok) {
+        throw new Error(body.detail || resp.statusText);
+      }
+      if (body.duplicate) {
+        setStatus(`Duplicate upload detected. Opening job ${body.job_id}...`);
+        window.location.href = `/jobs/${body.job_id}`;
+        return;
+      }
+      setStatus(`Download complete. Opening job ${body.job_id}...`);
+      window.location.href = `/jobs/${body.job_id}`;
+    } catch (err) {
+      setStatus(`URL fetch failed: ${err?.message || err}`);
+    }
+  }
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+  });
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      uploadFile(e.dataTransfer.files[0]);
+      return;
+    }
+    const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+    if (url && url.startsWith("http")) {
+      uploadFromUrl(url.trim());
+      return;
+    }
+    setStatus("Drop a KiCad file or paste a URL to upload.");
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+      uploadFile(fileInput.files[0]);
+    }
+  });
+
+  fetchUrlBtn.addEventListener('click', () => {
+    const url = urlInput.value.trim();
+    if (url) {
+      uploadFromUrl(url);
+    }
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (fileInput.files.length > 0) {
+      uploadFile(fileInput.files[0]);
+    } else if (urlInput.value.trim()) {
+      uploadFromUrl(urlInput.value.trim());
+    }
+  });
+
+  function filterJobs() {
+    if (!jobsTable) return;
+    const term = (jobFilterInput?.value || "").toLowerCase();
+    const statusVal = statusFilter?.value || "";
+    const rows = jobsTable.querySelectorAll("tbody tr");
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll("td");
+      const filename = cells[1]?.textContent.toLowerCase() || "";
+      const statusText = cells[2]?.textContent.toLowerCase().replace(/\s+/g, "_") || "";
+      const md5 = cells[3]?.textContent.toLowerCase() || "";
+      const matchesTerm = !term || filename.includes(term) || md5.includes(term) || statusText.includes(term);
+      const matchesStatus = !statusVal || statusText === statusVal;
+      row.style.display = matchesTerm && matchesStatus ? "" : "none";
+    });
+  }
+
+  function sortJobs(columnIndex, numeric = false) {
+    if (!jobsTable) return;
+    const tbody = jobsTable.querySelector("tbody");
+    const rows = Array.from(tbody.querySelectorAll("tr"));
+    const current = jobsTable.getAttribute("data-sort") || "";
+    const [currIndex, currDir] = current.split(":");
+    const direction = currIndex == columnIndex && currDir === "asc" ? "desc" : "asc";
+    rows.sort((a, b) => {
+      const aText = a.children[columnIndex].textContent.trim();
+      const bText = b.children[columnIndex].textContent.trim();
+      if (numeric) {
+        return direction === "asc" ? Number(aText) - Number(bText) : Number(bText) - Number(aText);
+      }
+      return direction === "asc" ? aText.localeCompare(bText) : bText.localeCompare(aText);
+    });
+    rows.forEach((r) => tbody.appendChild(r));
+    jobsTable.setAttribute("data-sort", `${columnIndex}:${direction}`);
+  }
+
+  jobFilterInput?.addEventListener('input', filterJobs);
+  statusFilter?.addEventListener('change', filterJobs);
+  document.querySelectorAll('#jobs-table th[data-sort]').forEach((th) => {
+    th.style.cursor = "pointer";
+    th.addEventListener('click', () => {
+      const idx = Array.from(th.parentNode.children).indexOf(th);
+      const numeric = th.getAttribute('data-sort') === 'id';
+      sortJobs(idx, numeric);
+    });
+  });
+</script>
 {% endblock %}

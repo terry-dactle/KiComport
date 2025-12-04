@@ -68,8 +68,8 @@ def _build_symbol(path: Path, root: Path) -> CandidateData:
 
 def _build_footprint(path: Path, root: Path) -> CandidateData:
     text = path.read_text(errors="ignore")
-    pad_count = len(re.findall(r"\\bpad\\b", text, flags=re.IGNORECASE))
-    description = _extract_first(text, r"\\(descr|description)\\s+\"([^\"]+)\"")
+    pad_count = len(re.findall(r"\bpad\b", text, flags=re.IGNORECASE))
+    description = _extract_first(text, r"\(descr|description)\s+\"([^\"]+)\"")
     score = _heuristic_score(name=path.stem, pin_or_pad=pad_count, description=description, path=path)
     return CandidateData(
         type=CandidateType.footprint,
@@ -138,7 +138,7 @@ def _path_trust_bonus(path: Path) -> float:
 
 
 def _looks_like_part_number(name: str) -> bool:
-    return bool(re.match(r"^[a-zA-Z]{1,5}\\d{2,}[a-zA-Z0-9-]*$", name))
+    return bool(re.match(r"^[a-zA-Z]{1,5}\d{2,}[a-zA-Z0-9-]*$", name))
 
 
 def _model_score(path: Path) -> float:

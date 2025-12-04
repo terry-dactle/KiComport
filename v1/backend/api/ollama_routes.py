@@ -16,13 +16,33 @@ def get_config(request: Request) -> AppConfig:
 
 
 @router.get("/test")
-async def ollama_test(request: Request):
+async def ollama_test(
+    request: Request,
+    enabled: bool | None = None,
+    base_url: str | None = None,
+    model: str | None = None,
+):
     cfg = get_config(request)
-    if not cfg.ollama_enabled:
-        return {"enabled": False, "message": "Ollama disabled in config"}
-    client = OllamaClient(cfg.ollama_base_url, cfg.ollama_model, cfg.ollama_timeout_sec, cfg.ollama_max_retries)
+    effective_enabled = cfg.ollama_enabled if enabled is None else enabled
+    if not effective_enabled:
+        return {"enabled": False, "message": "Enable Ollama in settings to run the test"}
+    target_url = base_url or cfg.ollama_base_url
+    target_model = model or cfg.ollama_model
+    client = OllamaClient(target_url, target_model, cfg.ollama_timeout_sec, cfg.ollama_max_retries)
     try:
         result = await client.health()
-        return {"enabled": True, "ok": True, "result": result}
+        return {"enabled": True, "ok": True, "result": result, "base_url": target_url, "model": target_model}
     except Exception as exc:
-        return {"enabled": True, "ok": False, "error": str(exc)}
+        return {"enabled": True, "ok": False, "error": str(exc), "base_url": target_url, "model": target_model}
+
+
+@router.get("/models")
+async def list_models(request: Request, base_url: str | None = None):
+    cfg = get_config(request)
+    target_url = base_url or cfg.ollama_base_url
+    client = OllamaClient(target_url, cfg.ollama_model, cfg.ollama_timeout_sec, cfg.ollama_max_retries)
+    try:
+        models = await client.list_models()
+        return {"models": models, "base_url": target_url}
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to list models: {exc}") from exc

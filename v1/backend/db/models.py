@@ -61,7 +61,12 @@ class Component(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     job: Mapped[Job] = relationship("Job", back_populates="components")
-    candidates: Mapped[list["CandidateFile"]] = relationship("CandidateFile", back_populates="component", cascade="all, delete-orphan")
+    candidates: Mapped[list["CandidateFile"]] = relationship(
+        "CandidateFile",
+        back_populates="component",
+        cascade="all, delete-orphan",
+        foreign_keys="CandidateFile.component_id",
+    )
 
 
 class CandidateFile(Base):
@@ -86,7 +91,11 @@ class CandidateFile(Base):
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    component: Mapped[Component] = relationship("Component", back_populates="candidates")
+    component: Mapped[Component] = relationship(
+        "Component",
+        back_populates="candidates",
+        foreign_keys=[component_id],
+    )
 
 class JobLog(Base):
     __tablename__ = "job_logs"

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Configuration</h2>
+      <p class="muted">Current runtime settings. Use the Settings page to make changes.</p>
+    </div>
+    <a class="button ghost" href="/settings">Edit settings</a>
+  </div>
+  {% if config_path %}
+  <p class="muted">Config file: <span class="mono">{{ config_path }}</span></p>
+  {% endif %}
+  <div class="grid two-col">
+    <div class="info-block">
+      <h4>Server</h4>
+      <dl class="kv-list">
+        <dt>App name</dt><dd>{{ safe_config.get("app_name", "-") }}</dd>
+        <dt>Host</dt><dd>{{ safe_config.get("host", "-") }}</dd>
+        <dt>Port</dt><dd>{{ safe_config.get("port", "-") }}</dd>
+      </dl>
+    </div>
+    <div class="info-block">
+      <h4>Ollama</h4>
+      <dl class="kv-list">
+        <dt>Status</dt><dd><span class="pill {{ 'success' if safe_config.get('ollama_enabled') else 'muted' }}">{{ "Enabled" if safe_config.get("ollama_enabled") else "Disabled" }}</span></dd>
+        <dt>Base URL</dt><dd>{{ safe_config.get("ollama_base_url", "-") }}</dd>
+        <dt>Model</dt><dd>{{ safe_config.get("ollama_model", "-") }}</dd>
+        <dt>Timeout (s)</dt><dd>{{ safe_config.get("ollama_timeout_sec", "-") }}</dd>
+        <dt>Max retries</dt><dd>{{ safe_config.get("ollama_max_retries", "-") }}</dd>
+      </dl>
+    </div>
+    <div class="info-block">
+      <h4>Paths</h4>
+      <dl class="kv-list">
+        <dt>Uploads</dt><dd class="mono">{{ safe_config.get("uploads_dir", "-") }}</dd>
+        <dt>Temp</dt><dd class="mono">{{ safe_config.get("temp_dir", "-") }}</dd>
+        <dt>Data</dt><dd class="mono">{{ safe_config.get("data_dir", "-") }}</dd>
+        <dt>Database</dt><dd class="mono">{{ safe_config.get("database_path", "-") }}</dd>
+      </dl>
+    </div>
+    <div class="info-block">
+      <h4>KiCad Libraries</h4>
+      <dl class="kv-list">
+        <dt>Symbols</dt><dd class="mono">{{ safe_config.get("kicad_symbol_dir", "-") }}</dd>
+        <dt>Footprints</dt><dd class="mono">{{ safe_config.get("kicad_footprint_dir", "-") }}</dd>
+        <dt>3D Models</dt><dd class="mono">{{ safe_config.get("kicad_3d_dir", "-") }}</dd>
+      </dl>
+    </div>
+    <div class="info-block">
+      <h4>Logging &amp; Retention</h4>
+      <dl class="kv-list">
+        <dt>Log level</dt><dd>{{ safe_config.get("log_level", "-") }}</dd>
+        <dt>Log file</dt><dd class="mono">{{ safe_config.get("log_file", "-") }}</dd>
+        <dt>Retention (days)</dt><dd>{{ safe_config.get("retention_days", "-") }}</dd>
+      </dl>
+    </div>
+  </div>
+</section>
+{% endblock %}

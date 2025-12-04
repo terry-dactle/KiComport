@@ -4,18 +4,20 @@
   <h2>Settings</h2>
   <p class="muted">Update directories and Ollama options. Values are saved via the Config API.</p>
   <form id="settings-form">
-    <label>Uploads dir<br><input type="text" name="uploads_dir" value="{{ config.uploads_dir if config else '' }}"></label><br>
-    <label>Temp dir<br><input type="text" name="temp_dir" value="{{ config.temp_dir if config else '' }}"></label><br>
-    <label>Data dir<br><input type="text" name="data_dir" value="{{ config.data_dir if config else '' }}"></label><br>
-    <label>DB path<br><input type="text" name="database_path" value="{{ config.database_path if config else '' }}"></label><br>
-    <label>Symbol dir<br><input type="text" name="kicad_symbol_dir" value="{{ config.kicad_symbol_dir if config else '' }}"></label><br>
-    <label>Footprint dir<br><input type="text" name="kicad_footprint_dir" value="{{ config.kicad_footprint_dir if config else '' }}"></label><br>
-    <label>3D dir<br><input type="text" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
-    <label>Ollama enabled <input type="checkbox" name="ollama_enabled" {% if config and config.ollama_enabled %}checked{% endif %}></label><br>
-    <label>Ollama base URL<br><input type="text" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}"></label><br>
-    <label>Ollama model<br><input type="text" name="ollama_model" value="{{ config.ollama_model if config else '' }}"></label><br>
-    <label>Log level<br><input type="text" name="log_level" value="{{ config.log_level if config else 'INFO' }}"></label><br>
-    <label>Log file (optional)<br><input type="text" name="log_file" value="{{ config.log_file if config and config.log_file else '' }}"></label><br>
+    <label>Uploads dir<br><input type="text" id="uploads_dir" name="uploads_dir" value="{{ config.uploads_dir if config else '' }}"></label><br>
+    <label>Temp dir<br><input type="text" id="temp_dir" name="temp_dir" value="{{ config.temp_dir if config else '' }}"></label><br>
+    <label>Data dir<br><input type="text" id="data_dir" name="data_dir" value="{{ config.data_dir if config else '' }}"></label><br>
+    <label>DB path<br><input type="text" id="database_path" name="database_path" value="{{ config.database_path if config else '' }}"></label><br>
+    <label>Symbol dir<br><input type="text" id="kicad_symbol_dir" name="kicad_symbol_dir" value="{{ config.kicad_symbol_dir if config else '' }}"></label><br>
+    <label>Footprint dir<br><input type="text" id="kicad_footprint_dir" name="kicad_footprint_dir" value="{{ config.kicad_footprint_dir if config else '' }}"></label><br>
+    <label>3D dir<br><input type="text" id="kicad_3d_dir" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
+    <label><input type="checkbox" id="ollama_enabled" name="ollama_enabled" {% if config and config.ollama_enabled %}checked{% endif %}> Ollama enabled</label><br>
+    <label>Ollama base URL<br><input type="text" id="ollama_base_url" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}"></label><br>
+    <label>Ollama model<br><input type="text" id="ollama_model" name="ollama_model" list="ollama-models" value="{{ config.ollama_model if config else '' }}"></label>
+    <datalist id="ollama-models"></datalist>
+    <p id="ollama-model-hint" class="muted"></p>
+    <label>Log level<br><input type="text" id="log_level" name="log_level" value="{{ config.log_level if config else 'INFO' }}"></label><br>
+    <label>Log file (optional)<br><input type="text" id="log_file" name="log_file" value="{{ config.log_file if config and config.log_file else '' }}"></label><br>
     <button type="submit">Save Settings</button>
     <button type="button" id="ollama-test">Test Ollama</button>
   </form>
@@ -23,8 +25,14 @@
 </section>
 <script>
   const form = document.getElementById('settings-form');
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  const statusEl = document.getElementById('settings-status');
+  const modelList = document.getElementById('ollama-models');
+  const modelHint = document.getElementById('ollama-model-hint');
+  const baseInput = document.getElementById('ollama_base_url');
+  const modelInput = document.getElementById('ollama_model');
+  const enabledBox = document.getElementById('ollama_enabled');
+
+  function buildPayload() {
     const formData = new FormData(form);
     const payload = {};
     formData.forEach((value, key) => {
@@ -35,19 +43,94 @@
       }
     });
     if (!payload["ollama_enabled"]) payload["ollama_enabled"] = false;
-    const resp = await fetch("/api/config", {
-      method: "PUT",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(payload),
-    });
-    const body = await resp.json();
-    document.getElementById('settings-status').textContent = "Saved: " + JSON.stringify(body);
+    return payload;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const payload = buildPayload();
+    statusEl.textContent = "Saving settings...";
+    try {
+      const resp = await fetch("/api/config", {
+        method: "PUT",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload),
+      });
+      const body = await resp.json();
+      statusEl.textContent = "Saved settings.";
+      if (body.ollama_base_url) {
+        baseInput.value = body.ollama_base_url;
+      }
+      if (body.ollama_model) {
+        modelInput.value = body.ollama_model;
+      }
+    } catch (err) {
+      statusEl.textContent = "Save failed: " + (err?.message || err);
+    }
   });
 
+  async function loadModels() {
+    const baseUrl = baseInput.value.trim();
+    if (!baseUrl) {
+      modelHint.textContent = "Enter an Ollama base URL to load models.";
+      modelList.innerHTML = "";
+      return;
+    }
+    modelHint.textContent = "Loading available models...";
+    try {
+      const resp = await fetch(`/api/ollama/models?base_url=${encodeURIComponent(baseUrl)}`);
+      const body = await resp.json();
+      if (!resp.ok) {
+        throw new Error(body.detail || "Request failed");
+      }
+      modelList.innerHTML = "";
+      (body.models || []).forEach((name) => {
+        const opt = document.createElement('option');
+        opt.value = name;
+        modelList.appendChild(opt);
+      });
+      modelHint.textContent = (body.models && body.models.length)
+        ? `Loaded ${body.models.length} model option(s).`
+        : "No models reported by Ollama.";
+    } catch (err) {
+      modelHint.textContent = "Model list unavailable: " + (err?.message || err);
+    }
+  }
+
   document.getElementById('ollama-test').addEventListener('click', async () => {
-    const resp = await fetch("/api/ollama/test");
-    const body = await resp.json();
-    document.getElementById('settings-status').textContent = "Ollama test: " + JSON.stringify(body);
+    const enabled = enabledBox.checked;
+    const baseUrl = baseInput.value.trim();
+    const model = modelInput.value.trim();
+    if (!enabled) {
+      statusEl.textContent = "Enable Ollama and save before testing.";
+      return;
+    }
+    if (!baseUrl || !model) {
+      statusEl.textContent = "Set base URL and model to run the test.";
+      return;
+    }
+    statusEl.textContent = "Running Ollama test...";
+    const params = new URLSearchParams({ enabled: String(enabled), base_url: baseUrl, model });
+    try {
+      const resp = await fetch(`/api/ollama/test?${params.toString()}`);
+      const body = await resp.json();
+      if (!resp.ok) {
+        statusEl.textContent = "Ollama test failed: " + (body.detail || resp.statusText);
+        return;
+      }
+      if (body.enabled === false) {
+        statusEl.textContent = "Enable Ollama and save before testing.";
+        return;
+      }
+      statusEl.textContent = body.ok
+        ? `Ollama OK via ${body.base_url} using ${body.model}`
+        : `Ollama test failed: ${body.error || "unknown error"}`;
+    } catch (err) {
+      statusEl.textContent = "Ollama test failed: " + (err?.message || err);
+    }
   });
+
+  loadModels();
+  baseInput?.addEventListener('change', loadModels);
 </script>
 {% endblock %}

@@ -37,6 +37,32 @@ class OllamaClient:
             resp.raise_for_status()
             return resp.json()
 
+    async def list_models(self) -> list[str]:
+        """Return available model names from Ollama."""
+        url = f"{self.base_url}/api/tags"
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            raw_models = data.get("models") or data.get("data") or data.get("tags") or []
+            names = []
+            for item in raw_models:
+                if isinstance(item, dict):
+                    name = item.get("name") or item.get("model")
+                    if name:
+                        names.append(str(name))
+                else:
+                    names.append(str(item))
+            # keep order but drop duplicates
+            seen = set()
+            unique = []
+            for name in names:
+                if name in seen:
+                    continue
+                seen.add(name)
+                unique.append(name)
+            return unique
+
 
 def _build_payload(job_id: int, components: List[Component], model: str) -> Dict[str, Any]:
     items = []

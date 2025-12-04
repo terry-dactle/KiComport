@@ -43,7 +43,6 @@ class AppConfig(BaseModel):
     admin_password: str = ""
     log_level: str = "INFO"
     log_file: Optional[Path] = Field(default=None, description="Optional log file path")
-    log_file: Optional[Path] = Field(default=None, description="Optional log file path")
     config_path: Optional[Path] = Field(default=None, exclude=True)
 
     model_config = ConfigDict(extra="ignore")

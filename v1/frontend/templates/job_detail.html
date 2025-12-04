@@ -2,9 +2,9 @@
 {% block content %}
 <section class="card">
   <h2>Job #{{ job.id }} — {{ job.original_filename }}</h2>
-  <p>Status: <span class="badge">{{ job.status.value }}</span></p>
+  <p>Status: <span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace("_", " ") }}</span></p>
   <p>MD5: <span class="mono">{{ job.md5 }}</span></p>
-  <p>Message: {{ job.message or "—" }}</p>
+  <p>Message: {{ job.message or "-" }}</p>
 </section>
 
 <section class="card">
@@ -59,7 +59,7 @@
   {% if job.logs %}
   <ul class="logs">
     {% for log in job.logs %}
-    <li><span class="mono">{{ log.created_at }}</span> [{{ log.level }}] {{ log.message }}</li>
+    <li><span class="mono">{{ log.created_at.strftime("%Y-%m-%d %H:%M") }}</span> [{{ log.level }}] {{ log.message }}</li>
     {% endfor %}
   </ul>
   {% else %}

@@ -10,13 +10,13 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .api import config_routes
-from .api.health import router as health_router
+from .api.health import healthcheck, router as health_router
 from .api.jobs_routes import router as jobs_router
 from .api.ollama_routes import router as ollama_router
 from .api.system_routes import router as system_router
 from .api.uploads_routes import router as uploads_router
 from .config import load_config
-from .db.models import Job, JobLog
+from .db.models import CandidateFile, Component, Job, JobLog, JobStatus
 from .db.models import Base
 from .db.session import get_engine, get_session_factory
 from .services.logger import setup_logging
@@ -70,6 +70,38 @@ def create_app() -> FastAPI:
             session.close()
         return jobs, recent_logs
 
+    def _library_snapshot(cfg):
+        libraries = []
+        if not cfg:
+            return libraries
+        logger = getattr(app.state, "logger", None)
+        max_scan = 500
+        for label, path in [
+            ("Symbols", cfg.kicad_symbol_dir),
+            ("Footprints", cfg.kicad_footprint_dir),
+            ("3D Models", cfg.kicad_3d_dir),
+        ]:
+            entry = {"label": label, "path": str(path), "exists": False, "count": 0, "sample": [], "truncated": False}
+            try:
+                p = Path(path)
+                entry["exists"] = p.exists()
+                if p.exists():
+                    sample: list[str] = []
+                    count = 0
+                    for count, child in enumerate(p.iterdir(), start=1):
+                        if len(sample) < 8:
+                            sample.append(child.name)
+                        if count >= max_scan:
+                            entry["truncated"] = True
+                            break
+                    entry["count"] = count
+                    entry["sample"] = sorted(sample)
+            except Exception:
+                if logger:
+                    logger.exception("home.library_snapshot_failed", extra={"label": label, "path": str(path)})
+            libraries.append(entry)
+        return libraries
+
     @app.middleware("http")
     async def add_request_id_and_log(request: Request, call_next):
         request_id = str(uuid.uuid4())
@@ -93,6 +125,7 @@ def create_app() -> FastAPI:
     async def index(request: Request):
         config = getattr(request.app.state, "config", None)
         jobs, recent_logs = _fetch_jobs_and_logs()
+        libraries = _library_snapshot(config)
         return templates.TemplateResponse(
             "index.html",
             {
@@ -101,6 +134,7 @@ def create_app() -> FastAPI:
                 "config": config,
                 "jobs": jobs,
                 "recent_logs": recent_logs,
+                "libraries": libraries,
             },
         )
 
@@ -146,6 +180,71 @@ def create_app() -> FastAPI:
                 "request": request,
                 "app_name": config.app_name if config else "Global KiCad Library Intake Server",
                 "config": config,
+            },
+        )
+
+    @app.get("/ui/health", response_class=HTMLResponse, include_in_schema=False)
+    async def health_page(request: Request):
+        config = getattr(request.app.state, "config", None)
+        try:
+            health = healthcheck()
+        except Exception as exc:
+            health = {"status": "error", "error": str(exc)}
+        return templates.TemplateResponse(
+            "health.html",
+            {
+                "request": request,
+                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "health": health,
+            },
+        )
+
+    @app.get("/ui/config", response_class=HTMLResponse, include_in_schema=False)
+    async def config_page(request: Request):
+        config = getattr(request.app.state, "config", None)
+        safe_config = config.to_safe_dict() if config else {}
+        config_path = str(config.config_path) if config and config.config_path else None
+        return templates.TemplateResponse(
+            "config.html",
+            {
+                "request": request,
+                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "config": config,
+                "safe_config": safe_config,
+                "config_path": config_path,
+            },
+        )
+
+    @app.get("/ui/diagnostics", response_class=HTMLResponse, include_in_schema=False)
+    async def diagnostics_page(request: Request):
+        config = getattr(request.app.state, "config", None)
+        safe_config = config.to_safe_dict() if config else {}
+        config_path = str(config.config_path) if config and config.config_path else None
+        stats = {"job_count": 0, "status_counts": {}, "component_count": 0, "candidate_count": 0}
+        session = _get_session()
+        if session:
+            try:
+                stats["job_count"] = session.query(Job).count()
+                stats["component_count"] = session.query(Component).count()
+                stats["candidate_count"] = session.query(CandidateFile).count()
+                stats["status_counts"] = {
+                    status.value: session.query(Job).filter(Job.status == status).count() for status in JobStatus
+                }
+            except Exception:
+                logger = getattr(request.app.state, "logger", None)
+                if logger:
+                    logger.exception("diagnostics.load_failed")
+            finally:
+                session.close()
+        return templates.TemplateResponse(
+            "diagnostics.html",
+            {
+                "request": request,
+                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "config": config,
+                "safe_config": safe_config,
+                "config_path": config_path,
+                "stats": stats,
             },
         )
 

@@ -4,19 +4,26 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ app_name if app_name else "Global KiCad Library Intake Server" }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
 </head>
 <body>
   <header class="topbar">
-    <div class="container">
-      <h1>{{ app_name if app_name else "Global KiCad Library Intake Server" }}</h1>
-      <nav>
-        <a href="/">Home</a>
-        <a href="/api/health">Health</a>
-        <a href="/api/config">Config</a>
-        <a href="/api/diagnostics">Diagnostics</a>
+    {% set current_path = request.url.path %}
+    <div class="container topbar-row">
+      <div class="brand">
+        <h1>{{ app_name if app_name else "Global KiCad Library Intake Server" }}</h1>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
+      <nav id="main-nav">
+        <a class="{% if current_path == '/' or current_path.startswith('/ui/jobs') or current_path.startswith('/jobs') %}active{% endif %}" href="/">Jobs</a>
+        <a class="{% if current_path.startswith('/ui/health') %}active{% endif %}" href="/ui/health">Health</a>
+        <a class="{% if current_path.startswith('/ui/config') %}active{% endif %}" href="/ui/config">Config</a>
+        <a class="{% if current_path.startswith('/ui/diagnostics') %}active{% endif %}" href="/ui/diagnostics">Diagnostics</a>
+        <a class="{% if current_path.startswith('/settings') %}active{% endif %}" href="/settings">Settings</a>
         <a href="/docs">API Docs</a>
-        <a href="/settings">Settings</a>
       </nav>
     </div>
   </header>
@@ -28,5 +35,14 @@
       <small>Dockerised KiCad library intake server (v1 bootstrap)</small>
     </div>
   </footer>
+  <script>
+    const navToggle = document.querySelector('.nav-toggle');
+    const nav = document.getElementById('main-nav');
+    navToggle?.addEventListener('click', () => {
+      const expanded = navToggle.getAttribute('aria-expanded') === 'true';
+      navToggle.setAttribute('aria-expanded', String(!expanded));
+      nav?.classList.toggle('open');
+    });
+  </script>
 </body>
 </html>

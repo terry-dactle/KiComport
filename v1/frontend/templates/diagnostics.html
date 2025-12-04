@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+  <div class="card-header">
+    <div>
+      <h2>Diagnostics</h2>
+      <p class="muted">Quick snapshot of database activity and important paths.</p>
+    </div>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-pill">
+      <div class="stat-value">{{ stats.job_count }}</div>
+      <div class="stat-label">Jobs</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-value">{{ stats.component_count }}</div>
+      <div class="stat-label">Components</div>
+    </div>
+    <div class="stat-pill">
+      <div class="stat-value">{{ stats.candidate_count }}</div>
+      <div class="stat-label">Candidates</div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h3>Job Status Breakdown</h3>
+  {% if stats.status_counts %}
+  <table class="job-table compact">
+    <thead><tr><th>Status</th><th>Count</th></tr></thead>
+    <tbody>
+      {% for status, count in stats.status_counts.items() %}
+      <tr><td>{{ status }}</td><td>{{ count }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No jobs yet.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h3>Paths &amp; Config</h3>
+  <dl class="kv-list two-col">
+    <dt>Config file</dt><dd class="mono">{{ config_path or "-" }}</dd>
+    <dt>Database</dt><dd class="mono">{{ safe_config.get("database_path", "-") }}</dd>
+    <dt>Uploads</dt><dd class="mono">{{ safe_config.get("uploads_dir", "-") }}</dd>
+    <dt>Temp</dt><dd class="mono">{{ safe_config.get("temp_dir", "-") }}</dd>
+    <dt>Symbols</dt><dd class="mono">{{ safe_config.get("kicad_symbol_dir", "-") }}</dd>
+    <dt>Footprints</dt><dd class="mono">{{ safe_config.get("kicad_footprint_dir", "-") }}</dd>
+    <dt>3D models</dt><dd class="mono">{{ safe_config.get("kicad_3d_dir", "-") }}</dd>
+    <dt>Retention (days)</dt><dd>{{ safe_config.get("retention_days", "-") }}</dd>
+  </dl>
+</section>
+{% endblock %}

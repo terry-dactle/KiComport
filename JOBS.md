@@ -1,5 +1,20 @@
 # Project Job List / Roadmap
 
+- [x] Fix/Finish Health Tab
+- [x] Fix/Finish Config Tab
+- [x] Fix/Finish Diagnostics Tab
+- [x] Fix/Finish "Ollama test: {"enabled":false,"message":"Ollama disabled in config"}" error when testing ollama
+- [x] Have avaliable model options in ollama selectable in the ollama model feild
+- [x] Remove line "MD5 deduping: duplicates will point to the original job."
+- [x] Add support to drop URL and have it wget the download
+- [x] Clean up Current Config (summary) so its pretty
+- [x] Remove line " (zip, .kicad_sym, .kicad_mod, .stp/.step/.wrl/.obj):"
+- [x] Move Current config (summary) from main page to clean it up
+- [x] Load and Show current Kicad schematic, footprint, 3d librarys on main page
+- [x] Autoload file when dropped in, no need to press upload, just attempt to load file
+- [x] Fix Internal Server Error when uploading file "sqlalchemy.exc.InvalidRequestError: One or more mappers failed to initialize - can't proceed with initialization of other mappers. Triggering mapper: 'Mapper[Component(components)]'. Original exception was: Could not determine join condition between parent/child tables on relationship Component.candidates - there are multiple foreign key paths linking the tables.  Specify the 'foreign_keys' argument, providing a list of those columns which should be counted as containing a foreign key reference to the parent table."
+
+
 - [x] Phase 0 – Reset / skeleton
   - [x] Clean old files, create target directories (`v1/backend`, `v1/frontend`, `v1/docker`, `v1/config`, `v1/docs`, `v1/scripts`)
   - [x] Write README, .gitignore, JOBS, ARCHITECTURE, CONFIG_SCHEMA, QUICK_START docs

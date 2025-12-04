@@ -18,7 +18,7 @@ def compute_md5(file_path: Path, chunk_size: int = 8192) -> str:
 
 def save_upload(temp_file, destination_dir: Path, original_filename: str) -> Tuple[Path, str]:
     destination_dir.mkdir(parents=True, exist_ok=True)
-    safe_name = _sanitize_filename(original_filename)
+    safe_name = sanitize_filename(original_filename)
     fd, tmp_path = tempfile.mkstemp(prefix="upload_", dir=destination_dir)
     os.close(fd)
     with open(tmp_path, "wb") as out_file:
@@ -29,7 +29,7 @@ def save_upload(temp_file, destination_dir: Path, original_filename: str) -> Tup
     return stored_path, md5
 
 
-def _sanitize_filename(name: str) -> str:
+def sanitize_filename(name: str) -> str:
     keep = [c for c in name if c.isalnum() or c in {"-", "_", ".", " "} ]
     sanitized = "".join(keep).strip()
     return sanitized or "upload"
