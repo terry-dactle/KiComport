@@ -96,7 +96,7 @@ async def _process_upload(
         raise HTTPException(status_code=400, detail=f"Failed to extract upload: {exc}") from exc
     except Exception as exc:  # bad zip etc
         job_service.update_status(db, job, JobStatus.error, f"Extraction failed: {exc}")
-        raise HTTPException(status_code=400, detail="Failed to extract upload") from exc
+        raise HTTPException(status_code=400, detail=f"Failed to extract upload: {exc}") from exc
 
     candidates = scan_service.scan_candidates(Path(job.extracted_path))
     if not candidates:
@@ -210,13 +210,15 @@ async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Pat
                 if content_type == "application/zip":
                     filename = f"{filename}.zip" if not filename.endswith(".zip") else filename
                     suffix = ".zip"
+                elif content_type in REJECT_CONTENT_TYPES:
+                    raise ValueError(f"Rejected content type {content_type}")
                 else:
                     raise ValueError(f"Unsupported extension {suffix}")
             content_length = resp.headers.get("content-length")
             if content_length and int(content_length) > MAX_URL_DOWNLOAD_BYTES:
                 raise ValueError("File too large to fetch")
             content_type = (resp.headers.get("content-type") or "").split(";")[0].lower()
-            if content_type in REJECT_CONTENT_TYPES:
+            if suffix not in ALLOWED_EXTS and content_type in REJECT_CONTENT_TYPES:
                 raise ValueError(f"Rejected content type {content_type}")
             destination_dir.mkdir(parents=True, exist_ok=True)
             fd, tmp_path = tempfile.mkstemp(prefix="upload_url_", dir=destination_dir)
