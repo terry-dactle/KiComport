@@ -159,6 +159,9 @@ button:hover { opacity: 0.92; }
 .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 .table-actions { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; }
 .table-actions input { width: 220px; max-width: 100%; }
+.candidate-table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
+.candidate-table th, .candidate-table td { border-bottom: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; }
+.candidate-table th { color: var(--muted); font-size: 0.9rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

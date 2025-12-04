@@ -19,39 +19,80 @@
   {% if job.components %}
   <form id="selection-form">
     {% for comp in job.components %}
-    <div class="component">
-      <h4>{{ comp.name }}</h4>
-      <div class="candidate-group">
-        <h5>Symbols</h5>
-        {% for cand in comp.candidates if cand.type.value == "symbol" %}
-          <label class="candidate">
-            <input type="radio" name="symbol_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_symbol_id == cand.id %}checked{% endif %}>
-            {{ cand.name }} (score {{ "%.2f"|format(cand.combined_score) }})
-          </label>
-        {% endfor %}
-        <label class="candidate"><input type="radio" name="symbol_{{ comp.id }}" value="">None</label>
+      {% set symbols = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) %}
+      {% set footprints = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) %}
+      {% set models = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) %}
+      <div class="component">
+        <h4>{{ comp.name }}</h4>
+        <div class="grid three-col">
+          <div>
+            <h5>Symbols</h5>
+            {% if symbols %}
+            <table class="candidate-table">
+              <thead><tr><th>Select</th><th>Name</th><th>Score</th><th>Pins</th><th>Path</th></tr></thead>
+              <tbody>
+                {% for cand in symbols %}
+                <tr>
+                  <td><input type="radio" name="symbol_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_symbol_id == cand.id %}checked{% endif %}></td>
+                  <td>{{ cand.name }}</td>
+                  <td class="mono">{{ "%.2f"|format(cand.combined_score) }}</td>
+                  <td>{{ cand.pin_count or "-" }}</td>
+                  <td class="mono">{{ cand.rel_path }}</td>
+                </tr>
+                {% endfor %}
+                <tr><td colspan="5"><label><input type="radio" name="symbol_{{ comp.id }}" value=""> None</label></td></tr>
+              </tbody>
+            </table>
+            {% else %}
+            <p class="muted">No symbol options.</p>
+            {% endif %}
+          </div>
+          <div>
+            <h5>Footprints</h5>
+            {% if footprints %}
+            <table class="candidate-table">
+              <thead><tr><th>Select</th><th>Name</th><th>Score</th><th>Pads</th><th>Path</th></tr></thead>
+              <tbody>
+                {% for cand in footprints %}
+                <tr>
+                  <td><input type="radio" name="footprint_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_footprint_id == cand.id %}checked{% endif %}></td>
+                  <td>{{ cand.name }}</td>
+                  <td class="mono">{{ "%.2f"|format(cand.combined_score) }}</td>
+                  <td>{{ cand.pad_count or "-" }}</td>
+                  <td class="mono">{{ cand.rel_path }}</td>
+                </tr>
+                {% endfor %}
+                <tr><td colspan="5"><label><input type="radio" name="footprint_{{ comp.id }}" value=""> None</label></td></tr>
+              </tbody>
+            </table>
+            {% else %}
+            <p class="muted">No footprint options.</p>
+            {% endif %}
+          </div>
+          <div>
+            <h5>3D Models</h5>
+            {% if models %}
+            <table class="candidate-table">
+              <thead><tr><th>Select</th><th>Name</th><th>Score</th><th>Info</th><th>Path</th></tr></thead>
+              <tbody>
+                {% for cand in models %}
+                <tr>
+                  <td><input type="radio" name="model_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_model_id == cand.id %}checked{% endif %}></td>
+                  <td>{{ cand.name }}</td>
+                  <td class="mono">{{ "%.2f"|format(cand.combined_score) }}</td>
+                  <td>{{ cand.description or "-" }}</td>
+                  <td class="mono">{{ cand.rel_path }}</td>
+                </tr>
+                {% endfor %}
+                <tr><td colspan="5"><label><input type="radio" name="model_{{ comp.id }}" value=""> None</label></td></tr>
+              </tbody>
+            </table>
+            {% else %}
+            <p class="muted">No model options.</p>
+            {% endif %}
+          </div>
+        </div>
       </div>
-      <div class="candidate-group">
-        <h5>Footprints</h5>
-        {% for cand in comp.candidates if cand.type.value == "footprint" %}
-          <label class="candidate">
-            <input type="radio" name="footprint_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_footprint_id == cand.id %}checked{% endif %}>
-            {{ cand.name }} (pads {{ cand.pad_count or "?" }}, score {{ "%.2f"|format(cand.combined_score) }})
-          </label>
-        {% endfor %}
-        <label class="candidate"><input type="radio" name="footprint_{{ comp.id }}" value="">None</label>
-      </div>
-      <div class="candidate-group">
-        <h5>3D Models</h5>
-        {% for cand in comp.candidates if cand.type.value == "model" %}
-          <label class="candidate">
-            <input type="radio" name="model_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_model_id == cand.id %}checked{% endif %}>
-            {{ cand.name }} ({{ cand.description }})
-          </label>
-        {% endfor %}
-        <label class="candidate"><input type="radio" name="model_{{ comp.id }}" value="">None</label>
-      </div>
-    </div>
     {% endfor %}
     <button type="submit">Save Selections</button>
     <button type="button" id="import-btn">Import Selected</button>
