@@ -12,7 +12,8 @@
     <label>Footprint dir<br><input type="text" id="kicad_footprint_dir" name="kicad_footprint_dir" value="{{ config.kicad_footprint_dir if config else '' }}"></label><br>
     <label>3D dir<br><input type="text" id="kicad_3d_dir" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
     <label><input type="checkbox" id="ollama_enabled" name="ollama_enabled" {% if config and config.ollama_enabled %}checked{% endif %}> Ollama enabled</label><br>
-    <label>Ollama base URL<br><input type="text" id="ollama_base_url" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}"></label><br>
+    <label>Ollama base URL<br><input type="text" id="ollama_base_url" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}"></label>
+    <p class="muted">Use a reachable address from this container (e.g., http://192.168.20.3:11434 or http://host.docker.internal:11434).</p>
     <label>Ollama model<br><input type="text" id="ollama_model" name="ollama_model" list="ollama-models" value="{{ config.ollama_model if config else '' }}"></label>
     <datalist id="ollama-models"></datalist>
     <p id="ollama-model-hint" class="muted"></p>
@@ -91,7 +92,7 @@
       });
       modelHint.textContent = (body.models && body.models.length)
         ? `Loaded ${body.models.length} model option(s).`
-        : "No models reported by Ollama.";
+        : "No models reported by Ollama. Check the base URL and network.";
     } catch (err) {
       modelHint.textContent = "Model list unavailable: " + (err?.message || err);
     }
@@ -101,10 +102,6 @@
     const enabled = enabledBox.checked;
     const baseUrl = baseInput.value.trim();
     const model = modelInput.value.trim();
-    if (!enabled) {
-      statusEl.textContent = "Enable Ollama and save before testing.";
-      return;
-    }
     if (!baseUrl || !model) {
       statusEl.textContent = "Set base URL and model to run the test.";
       return;

@@ -91,6 +91,9 @@ async def _process_upload(
     try:
         extracted_dir = extract.extract_if_needed(stored_path, Path(config.temp_dir))
         job_service.set_extracted_path(db, job, extracted_dir)
+    except ValueError as exc:
+        job_service.update_status(db, job, JobStatus.error, f"Extraction rejected: {exc}")
+        raise HTTPException(status_code=400, detail=f"Failed to extract upload: {exc}") from exc
     except Exception as exc:  # bad zip etc
         job_service.update_status(db, job, JobStatus.error, f"Extraction failed: {exc}")
         raise HTTPException(status_code=400, detail="Failed to extract upload") from exc
@@ -199,8 +202,16 @@ async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Pat
             resp.raise_for_status()
             filename = _guess_filename(url, resp)
             suffix = Path(filename).suffix.lower()
+            if not suffix:
+                filename = f"{filename}.zip"
+                suffix = ".zip"
             if suffix not in ALLOWED_EXTS:
-                raise ValueError(f"Unsupported extension {suffix}")
+                content_type = (resp.headers.get("content-type") or "").split(";")[0].lower()
+                if content_type == "application/zip":
+                    filename = f"{filename}.zip" if not filename.endswith(".zip") else filename
+                    suffix = ".zip"
+                else:
+                    raise ValueError(f"Unsupported extension {suffix}")
             content_length = resp.headers.get("content-length")
             if content_length and int(content_length) > MAX_URL_DOWNLOAD_BYTES:
                 raise ValueError("File too large to fetch")

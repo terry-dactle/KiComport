@@ -15,6 +15,14 @@ def get_config(request: Request) -> AppConfig:
     return cfg
 
 
+def _normalize_base_url(url: str) -> str:
+    if not url:
+        return url
+    if url.startswith("http://") or url.startswith("https://"):
+        return url
+    return f"http://{url}"
+
+
 @router.get("/test")
 async def ollama_test(
     request: Request,
@@ -24,10 +32,12 @@ async def ollama_test(
 ):
     cfg = get_config(request)
     effective_enabled = cfg.ollama_enabled if enabled is None else enabled
+    target_url = _normalize_base_url(base_url or cfg.ollama_base_url)
+    target_model = model or cfg.ollama_model
+    if not effective_enabled and (base_url or model):
+        effective_enabled = True  # allow ad-hoc test even if not yet saved
     if not effective_enabled:
         return {"enabled": False, "message": "Enable Ollama in settings to run the test"}
-    target_url = base_url or cfg.ollama_base_url
-    target_model = model or cfg.ollama_model
     client = OllamaClient(target_url, target_model, cfg.ollama_timeout_sec, cfg.ollama_max_retries)
     try:
         result = await client.health()
@@ -39,7 +49,7 @@ async def ollama_test(
 @router.get("/models")
 async def list_models(request: Request, base_url: str | None = None):
     cfg = get_config(request)
-    target_url = base_url or cfg.ollama_base_url
+    target_url = _normalize_base_url(base_url or cfg.ollama_base_url)
     client = OllamaClient(target_url, cfg.ollama_model, cfg.ollama_timeout_sec, cfg.ollama_max_retries)
     try:
         models = await client.list_models()
