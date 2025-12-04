@@ -162,6 +162,14 @@ button:hover { opacity: 0.92; }
 .candidate-table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
 .candidate-table th, .candidate-table td { border-bottom: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; }
 .candidate-table th { color: var(--muted); font-size: 0.9rem; }
+.candidate-card { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem; background: #0f141b; }
+.candidate-list { list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+.candidate-list li { border-bottom: 1px solid var(--border); padding-bottom: 0.35rem; }
+.candidate-list li:last-child { border-bottom: none; }
+.candidate-list label { display: flex; flex-direction: column; gap: 0.15rem; cursor: pointer; }
+.candidate-list .name { font-weight: 700; }
+.candidate-list .score { background: rgba(54,197,116,0.12); padding: 0.1rem 0.3rem; border-radius: 4px; display: inline-block; }
+.card-header.small { margin-bottom: 0.25rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

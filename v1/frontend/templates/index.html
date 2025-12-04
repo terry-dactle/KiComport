@@ -50,7 +50,6 @@
         <th data-sort="id">ID</th>
         <th data-sort="filename">Filename</th>
         <th data-sort="status">Status</th>
-        <th>MD5</th>
         <th data-sort="updated">Updated</th>
       </tr>
     </thead>
@@ -60,8 +59,7 @@
         <td><a href="/jobs/{{ job.id }}">{{ job.id }}</a></td>
         <td>{{ job.original_filename }}</td>
         <td><span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace('_', ' ') }}</span></td>
-        <td class="mono">{{ job.md5 }}</td>
-        <td>{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
+        <td class="updated-cell mono" data-updated="{{ job.updated_at.isoformat() if job.updated_at else '' }}">{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -298,5 +296,27 @@
       return { detail: resp.statusText || "Non-JSON response" };
     }
   }
+
+  function timeAgo(ts) {
+    const now = new Date();
+    const then = new Date(ts);
+    const diff = (now - then) / 1000;
+    if (isNaN(diff)) return "";
+    if (diff < 60) return `${Math.max(1, Math.floor(diff))}s ago`;
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    return `${Math.floor(diff/86400)}d ago`;
+  }
+
+  function updateRelativeTimes() {
+    document.querySelectorAll('.updated-cell').forEach((cell) => {
+      const ts = cell.getAttribute('data-updated');
+      if (ts) {
+        cell.textContent = timeAgo(ts);
+      }
+    });
+  }
+  updateRelativeTimes();
+  setInterval(updateRelativeTimes, 30000);
 </script>
 {% endblock %}
