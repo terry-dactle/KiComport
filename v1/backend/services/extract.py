@@ -13,6 +13,8 @@ def extract_if_needed(stored_path: Path, temp_root: Path) -> Path:
         shutil.rmtree(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
 
+    if stored_path.suffix.lower() == ".zip" and not zipfile.is_zipfile(stored_path):
+        raise ValueError("Invalid zip archive")
     if zipfile.is_zipfile(stored_path):
         _safe_extract_zip(stored_path, target_dir)
     else:

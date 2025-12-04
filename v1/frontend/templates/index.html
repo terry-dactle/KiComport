@@ -150,9 +150,9 @@
     data.append('file', file);
     try {
       const resp = await fetch("/api/uploads", { method: "POST", body: data });
-      const body = await resp.json();
+      const body = await safeJson(resp);
       if (!resp.ok) {
-        throw new Error(body.detail || resp.statusText);
+        throw new Error(body?.detail || resp.statusText);
       }
       if (body.duplicate) {
         setStatus(`Duplicate upload detected. Opening job ${body.job_id}...`);
@@ -181,9 +181,9 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url }),
       });
-      const body = await resp.json();
+      const body = await safeJson(resp);
       if (!resp.ok) {
-        const detail = body.detail || resp.statusText;
+        const detail = body?.detail || resp.statusText;
         setStatus(`URL fetch failed: ${detail}`);
         return;
       }
@@ -290,5 +290,13 @@
       sortJobs(idx, numeric);
     });
   });
+
+  async function safeJson(resp) {
+    try {
+      return await resp.json();
+    } catch (err) {
+      return { detail: resp.statusText || "Non-JSON response" };
+    }
+  }
 </script>
 {% endblock %}
