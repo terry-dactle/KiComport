@@ -69,7 +69,7 @@ def _build_symbol(path: Path, root: Path) -> CandidateData:
 def _build_footprint(path: Path, root: Path) -> CandidateData:
     text = path.read_text(errors="ignore")
     pad_count = len(re.findall(r"\bpad\b", text, flags=re.IGNORECASE))
-    description = _extract_first(text, r"\(descr|description)\s+\"([^\"]+)\"")
+    description = _extract_first(text, r"\((?:descr|description)\s+\"([^\"]+)\"")
     score = _heuristic_score(name=path.stem, pin_or_pad=pad_count, description=description, path=path)
     return CandidateData(
         type=CandidateType.footprint,

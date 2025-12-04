@@ -118,7 +118,11 @@ async def _process_upload(
         job_service.update_status(db, job, JobStatus.error, f"Extraction failed: {exc}")
         raise HTTPException(status_code=500, detail=f"Failed to extract upload: {exc}") from exc
 
-    candidates = scan_service.scan_candidates(Path(job.extracted_path))
+    try:
+        candidates = scan_service.scan_candidates(Path(job.extracted_path))
+    except Exception as exc:
+        job_service.update_status(db, job, JobStatus.error, f"Scan failed: {exc}")
+        raise HTTPException(status_code=500, detail=f"Scan failed: {exc}") from exc
     if not candidates:
         summary = _file_summary(Path(job.extracted_path))
         detail = "No candidates detected"
