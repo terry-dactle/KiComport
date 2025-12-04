@@ -41,16 +41,26 @@ async def upload_file(
     if suffix not in ALLOWED_EXTS:
         raise HTTPException(status_code=400, detail=f"Unsupported extension {suffix}")
 
+    stored_path: Path | None = None
     try:
         stored_path, md5 = upload_service.save_upload(file.file, Path(config.uploads_dir), file.filename)
         _validate_zip_or_raise(stored_path, suffix)
+        return await _process_upload(request, db, config, stored_path, file.filename, md5=md5)
     except ValueError as exc:
-        try:
-            Path(stored_path).unlink(missing_ok=True)
-        except Exception:
-            pass
+        if stored_path:
+            try:
+                Path(stored_path).unlink(missing_ok=True)
+            except Exception:
+                pass
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return await _process_upload(request, db, config, stored_path, file.filename, md5=md5)
+    except Exception as exc:
+        if stored_path:
+            try:
+                Path(stored_path).unlink(missing_ok=True)
+            except Exception:
+                pass
+        # bubble up as 500 with context
+        raise HTTPException(status_code=500, detail=f"Upload failed: {exc}") from exc
 
 
 @router.post("/from-url", status_code=status.HTTP_201_CREATED)
@@ -106,7 +116,7 @@ async def _process_upload(
         raise HTTPException(status_code=400, detail=f"Failed to extract upload: {exc}") from exc
     except Exception as exc:  # bad zip etc
         job_service.update_status(db, job, JobStatus.error, f"Extraction failed: {exc}")
-        raise HTTPException(status_code=400, detail=f"Failed to extract upload: {exc}") from exc
+        raise HTTPException(status_code=500, detail=f"Failed to extract upload: {exc}") from exc
 
     candidates = scan_service.scan_candidates(Path(job.extracted_path))
     if not candidates:
