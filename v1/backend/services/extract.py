@@ -25,10 +25,13 @@ def _safe_extract_zip(zip_path: Path, target_dir: Path) -> None:
     """Extract a zip while preventing path traversal."""
     with zipfile.ZipFile(zip_path, "r") as zf:
         members = _safe_members(zf.namelist(), target_dir)
+        if not members:
+            raise ValueError("Archive contains no files")
         for member in members:
+            member_str = member.as_posix()
             dest = target_dir / member
             dest.parent.mkdir(parents=True, exist_ok=True)
-            with zf.open(member, "r") as src, open(dest, "wb") as dst:
+            with zf.open(member_str, "r") as src, open(dest, "wb") as dst:
                 shutil.copyfileobj(src, dst)
 
 

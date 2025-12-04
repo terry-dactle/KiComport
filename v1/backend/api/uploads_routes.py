@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from collections import Counter
 from typing import Any, Dict
 
 import httpx
@@ -100,8 +101,12 @@ async def _process_upload(
 
     candidates = scan_service.scan_candidates(Path(job.extracted_path))
     if not candidates:
-        job_service.update_status(db, job, JobStatus.error, "No candidates detected")
-        return {"job_id": job.id, "status": job.status.value, "message": "No candidates detected"}
+        summary = _file_summary(Path(job.extracted_path))
+        detail = "No candidates detected"
+        if summary:
+            detail = f"{detail}. Found {summary['files']} files; common extensions: {summary['exts']}; samples: {summary['samples']}"
+        job_service.update_status(db, job, JobStatus.error, detail)
+        return {"job_id": job.id, "status": job.status.value, "message": detail}
 
     comp_objs, response_components = _persist_components(db, job.id, candidates)
 
@@ -253,3 +258,19 @@ def _guess_filename(url: str, response: httpx.Response) -> str:
     if not name:
         name = "download"
     return upload_service.sanitize_filename(name)
+
+
+def _file_summary(root: Path) -> Dict[str, Any]:
+    if not root.exists():
+        return {}
+    count = 0
+    ext_counter: Counter[str] = Counter()
+    samples: list[str] = []
+    for path in root.rglob("*"):
+        if path.is_file():
+            count += 1
+            ext_counter[path.suffix.lower() or "<noext>"] += 1
+            if len(samples) < 5:
+                samples.append(str(path.relative_to(root)))
+    top_exts = ", ".join(f"{ext}({n})" for ext, n in ext_counter.most_common(5))
+    return {"files": count, "exts": top_exts or "none", "samples": "; ".join(samples)}
