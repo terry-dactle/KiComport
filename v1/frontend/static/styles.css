@@ -189,6 +189,9 @@ button:hover { opacity: 0.92; }
 .chip .title { font-weight: 700; }
 .chip .meta { color: var(--muted); font-size: 0.9rem; }
 .chip .small { font-size: 0.85rem; }
+.none-line { margin-top: 0.3rem; }
+.none-label { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); cursor: pointer; }
+.none-radio { accent-color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

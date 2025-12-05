@@ -23,9 +23,6 @@
       <input type="hidden" name="footprint_{{ comp.id }}" value="{{ comp.selected_footprint_id or '' }}">
       <input type="hidden" name="model_{{ comp.id }}" value="{{ comp.selected_model_id or '' }}">
     {% endfor %}
-    {% set symbols_by_comp = job.components | map(attribute='candidates') | list %}
-    {% set footprints_by_comp = job.components | map(attribute='candidates') | list %}
-    {% set models_by_comp = job.components | map(attribute='candidates') | list %}
 
     <div class="grid three-col align-start candidate-columns">
       <div class="candidate-card">
