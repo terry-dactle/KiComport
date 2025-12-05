@@ -255,12 +255,18 @@
       if (chosen) {
         markSelected(type, chosen);
         applyTypeSelection(type, chosen.dataset.candId || "", chosen.dataset.compId || "");
-      } else {
-        const noneBtn = document.querySelector(`.option-tile.none[data-type="${type}"]`);
-        if (noneBtn) {
-          markSelected(type, noneBtn);
-          applyTypeSelection(type, "", "");
-        }
+        return;
+      }
+      const firstCandidate = document.querySelector(`.option-tile[data-type="${type}"]:not(.none)`);
+      if (firstCandidate) {
+        markSelected(type, firstCandidate);
+        applyTypeSelection(type, firstCandidate.dataset.candId || "", firstCandidate.dataset.compId || "");
+        return;
+      }
+      const noneBtn = document.querySelector(`.option-tile.none[data-type="${type}"]`);
+      if (noneBtn) {
+        markSelected(type, noneBtn);
+        applyTypeSelection(type, "", "");
       }
     });
   }
