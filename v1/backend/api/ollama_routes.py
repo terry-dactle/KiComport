@@ -18,6 +18,10 @@ def get_config(request: Request) -> AppConfig:
 def _normalize_base_url(url: str) -> str:
     if not url:
         return url
+    url = url.strip()
+    if url.endswith("/"):
+        url = url.rstrip("/")
+    url = url.replace("/:", ":")  # fix accidental "/:" before port
     if url.startswith("http://") or url.startswith("https://"):
         return url
     return f"http://{url}"
@@ -51,6 +55,7 @@ async def ollama_test(
             "model": target_model,
             "hint": "Verify the base URL is reachable from the app container and Ollama is listening on this address/port. If Ollama runs on the host, try http://192.168.20.3:11434 or http://host.docker.internal:11434.",
             "debug": {"timeout": cfg.ollama_timeout_sec, "retries": cfg.ollama_max_retries},
+            "requested_url": f"{target_url}/api/tags",
         }
 
 

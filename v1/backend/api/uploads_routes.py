@@ -254,7 +254,7 @@ async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Pat
             if suffix not in ALLOWED_EXTS and content_type in REJECT_CONTENT_TYPES:
                 preview = ""
                 try:
-                    preview = (await resp.aread())[:200].decode(errors="ignore")
+                    preview = (await resp.aread())[:400].decode(errors="ignore")
                 except Exception:
                     preview = ""
                 info = {

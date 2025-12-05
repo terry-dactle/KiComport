@@ -168,11 +168,16 @@ button:hover { opacity: 0.92; }
 .candidate-list li:last-child { border-bottom: none; }
 .candidate-list label { display: flex; flex-direction: column; gap: 0.15rem; cursor: pointer; }
 .candidate-list input[type="radio"] { accent-color: var(--accent); align-self: flex-start; }
+.candidate-list .selectable { border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem; background: #111823; transition: border-color 0.15s ease, background 0.15s ease; }
+.candidate-list .selectable.selected { border-color: var(--accent); background: rgba(54,197,116,0.08); }
+.candidate-list .selectable .choice { display: flex; flex-direction: column; gap: 0.15rem; }
 .candidate-list .name { font-weight: 700; }
 .candidate-list .score { background: rgba(54,197,116,0.12); padding: 0.1rem 0.3rem; border-radius: 4px; display: inline-block; }
 .card-header.small { margin-bottom: 0.25rem; }
 .candidate-block { margin-bottom: 1rem; padding: 0.5rem 0; }
 .candidate-list.compact li { padding-bottom: 0.25rem; }
+.candidate-block.horizontal { display: flex; flex-direction: column; gap: 0.5rem; }
+.candidate-block.horizontal .component { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem; background: #0f141b; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

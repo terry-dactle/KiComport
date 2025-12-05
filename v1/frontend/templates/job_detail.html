@@ -35,8 +35,13 @@
         {% set _ = models_by_comp.append({"comp": comp, "cands": models}) %}
       {% endif %}
     {% endfor %}
+    {% for comp in job.components %}
+      <input type="hidden" name="symbol_{{ comp.id }}" value="{{ comp.selected_symbol_id or '' }}">
+      <input type="hidden" name="footprint_{{ comp.id }}" value="{{ comp.selected_footprint_id or '' }}">
+      <input type="hidden" name="model_{{ comp.id }}" value="{{ comp.selected_model_id or '' }}">
+    {% endfor %}
 
-    <div class="candidate-block">
+    <div class="candidate-block horizontal">
       <div class="card-header small"><h4>Symbols</h4></div>
       {% if symbols_by_comp %}
         {% for bundle in symbols_by_comp %}
@@ -44,16 +49,15 @@
             <h5>{{ bundle.comp.name }}</h5>
             <ul class="candidate-list compact">
               {% for cand in bundle.cands %}
-              <li>
-                <label>
-                  <input type="radio" name="symbol_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_symbol_id == cand.id %}checked{% endif %}>
-                  <span class="name">{{ cand.name }}</span>
-                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</span>
-                  <span class="muted mono">{{ cand.rel_path }}</span>
-                </label>
+              <li class="selectable" data-input="symbol_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
+                <div class="choice">
+                  <div class="name">{{ cand.name }}</div>
+                  <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</div>
+                  <div class="muted mono">{{ cand.rel_path }}</div>
+                </div>
               </li>
               {% endfor %}
-              <li><label><input type="radio" name="symbol_{{ bundle.comp.id }}" value=""> None</label></li>
+              <li class="selectable none-option" data-input="symbol_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
             </ul>
           </div>
         {% endfor %}
@@ -62,7 +66,7 @@
       {% endif %}
     </div>
 
-    <div class="candidate-block">
+    <div class="candidate-block horizontal">
       <div class="card-header small"><h4>Footprints</h4></div>
       {% if footprints_by_comp %}
         {% for bundle in footprints_by_comp %}
@@ -70,16 +74,15 @@
             <h5>{{ bundle.comp.name }}</h5>
             <ul class="candidate-list compact">
               {% for cand in bundle.cands %}
-              <li>
-                <label>
-                  <input type="radio" name="footprint_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_footprint_id == cand.id %}checked{% endif %}>
-                  <span class="name">{{ cand.name }}</span>
-                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</span>
-                  <span class="muted mono">{{ cand.rel_path }}</span>
-                </label>
+              <li class="selectable" data-input="footprint_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
+                <div class="choice">
+                  <div class="name">{{ cand.name }}</div>
+                  <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</div>
+                  <div class="muted mono">{{ cand.rel_path }}</div>
+                </div>
               </li>
               {% endfor %}
-              <li><label><input type="radio" name="footprint_{{ bundle.comp.id }}" value=""> None</label></li>
+              <li class="selectable none-option" data-input="footprint_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
             </ul>
           </div>
         {% endfor %}
@@ -88,7 +91,7 @@
       {% endif %}
     </div>
 
-    <div class="candidate-block">
+    <div class="candidate-block horizontal">
       <div class="card-header small"><h4>3D Models</h4></div>
       {% if models_by_comp %}
         {% for bundle in models_by_comp %}
@@ -96,16 +99,15 @@
             <h5>{{ bundle.comp.name }}</h5>
             <ul class="candidate-list compact">
               {% for cand in bundle.cands %}
-              <li>
-                <label>
-                  <input type="radio" name="model_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_model_id == cand.id %}checked{% endif %}>
-                  <span class="name">{{ cand.name }}</span>
-                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</span>
-                  <span class="muted mono">{{ cand.rel_path }}</span>
-                </label>
+              <li class="selectable" data-input="model_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
+                <div class="choice">
+                  <div class="name">{{ cand.name }}</div>
+                  <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</div>
+                  <div class="muted mono">{{ cand.rel_path }}</div>
+                </div>
               </li>
               {% endfor %}
-              <li><label><input type="radio" name="model_{{ bundle.comp.id }}" value=""> None</label></li>
+              <li class="selectable none-option" data-input="model_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
             </ul>
           </div>
         {% endfor %}
@@ -114,10 +116,12 @@
       {% endif %}
     </div>
 
-    <div class="actions">
-      <button type="submit">Save choices</button>
-      <button type="button" id="import-btn">Save + import to KiCad</button>
-      <p class="muted">Save choices stores your picks. Import copies the selected items into your KiCad library folders.</p>
+    <div class="card actions-card">
+      <h4>Save & Import</h4>
+      <div class="actions">
+        <button type="submit">Save</button>
+        <button type="button" id="import-btn">Save and Import</button>
+      </div>
     </div>
   </form>
 {% else %}
@@ -191,6 +195,30 @@
     const body = await resp.json();
     return { ok: resp.ok, body, message: body.detail || "" };
   }
+
+  function attachSelectableHandlers() {
+    document.querySelectorAll('.selectable').forEach((item) => {
+      item.addEventListener('click', () => {
+        const inputName = item.getAttribute('data-input');
+        const val = item.getAttribute('data-value');
+        const hidden = document.querySelector(`input[name="${inputName}"]`);
+        if (hidden) hidden.value = val || "";
+        // clear selection in same group
+        document.querySelectorAll(`.selectable[data-input="${inputName}"]`).forEach((el) => el.classList.remove('selected'));
+        item.classList.add('selected');
+      });
+    });
+    // preselect existing values
+    document.querySelectorAll('.selectable').forEach((item) => {
+      const inputName = item.getAttribute('data-input');
+      const val = item.getAttribute('data-value');
+      const hidden = document.querySelector(`input[name="${inputName}"]`);
+      if (hidden && hidden.value === val) {
+        item.classList.add('selected');
+      }
+    });
+  }
+  attachSelectableHandlers();
 
   document.getElementById('selection-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
