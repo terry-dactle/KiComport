@@ -18,99 +18,92 @@
   <h3>Components & Candidates</h3>
 {% if job.components %}
   <form id="selection-form">
-    {% set symbols_by_comp = [] %}
-    {% set footprints_by_comp = [] %}
-    {% set models_by_comp = [] %}
     {% for comp in job.components %}
       <input type="hidden" name="symbol_{{ comp.id }}" value="{{ comp.selected_symbol_id or '' }}">
       <input type="hidden" name="footprint_{{ comp.id }}" value="{{ comp.selected_footprint_id or '' }}">
       <input type="hidden" name="model_{{ comp.id }}" value="{{ comp.selected_model_id or '' }}">
-      {% set symbols = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list %}
-      {% set footprints = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list %}
-      {% set models = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list %}
-      {% if symbols|length > 0 %}
-        {% set _ = symbols_by_comp.append({"comp": comp, "cands": symbols}) %}
-      {% endif %}
-      {% if footprints|length > 0 %}
-        {% set _ = footprints_by_comp.append({"comp": comp, "cands": footprints}) %}
-      {% endif %}
-      {% if models|length > 0 %}
-        {% set _ = models_by_comp.append({"comp": comp, "cands": models}) %}
-      {% endif %}
     {% endfor %}
+    {% set symbols_by_comp = job.components | map(attribute='candidates') | list %}
+    {% set footprints_by_comp = job.components | map(attribute='candidates') | list %}
+    {% set models_by_comp = job.components | map(attribute='candidates') | list %}
 
-    <div class="grid three-col align-start">
+    <div class="grid three-col align-start candidate-columns">
       <div class="candidate-card">
         <div class="card-header small"><h4>Symbols</h4></div>
-        {% if symbols_by_comp %}
-          {% for bundle in symbols_by_comp %}
+        {% set any_symbols = false %}
+        {% for comp in job.components %}
+          {% set cands = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list %}
+          {% if cands %}
+            {% set any_symbols = true %}
             <div class="component-block">
-              <h5>{{ bundle.comp.name }}</h5>
-              <ul class="candidate-list compact">
-                {% for cand in bundle.cands %}
-                <li class="selectable" data-input="symbol_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
-                  <div class="choice">
-                    <div class="name">{{ cand.name }}</div>
-                    <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</div>
-                    <div class="muted mono">{{ cand.rel_path }}</div>
-                  </div>
-                </li>
+              <h5>{{ comp.name }}</h5>
+              <div class="chip-list">
+                {% for cand in cands %}
+                <div class="chip selectable-chip" data-input="symbol_{{ comp.id }}" data-value="{{ cand.id }}">
+                  <div class="title">{{ cand.name }}</div>
+                  <div class="meta">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</div>
+                </div>
                 {% endfor %}
-                <li class="selectable none-option" data-input="symbol_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
-              </ul>
+                <div class="chip selectable-chip none-option" data-input="symbol_{{ comp.id }}" data-value="">None</div>
+              </div>
             </div>
-          {% endfor %}
-        {% else %}
+          {% endif %}
+        {% endfor %}
+        {% if not any_symbols %}
           <p class="muted">No symbol candidates.</p>
         {% endif %}
       </div>
 
       <div class="candidate-card">
         <div class="card-header small"><h4>Footprints</h4></div>
-        {% if footprints_by_comp %}
-          {% for bundle in footprints_by_comp %}
+        {% set any_fps = false %}
+        {% for comp in job.components %}
+          {% set cands = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list %}
+          {% if cands %}
+            {% set any_fps = true %}
             <div class="component-block">
-              <h5>{{ bundle.comp.name }}</h5>
-              <ul class="candidate-list compact">
-                {% for cand in bundle.cands %}
-                <li class="selectable" data-input="footprint_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
-                  <div class="choice">
-                    <div class="name">{{ cand.name }}</div>
-                    <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</div>
-                    <div class="muted mono">{{ cand.rel_path }}</div>
-                  </div>
-                </li>
+              <h5>{{ comp.name }}</h5>
+              <div class="chip-list">
+                {% for cand in cands %}
+                <div class="chip selectable-chip" data-input="footprint_{{ comp.id }}" data-value="{{ cand.id }}">
+                  <div class="title">{{ cand.name }}</div>
+                  <div class="meta">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</div>
+                  <div class="muted mono small">{{ cand.rel_path }}</div>
+                </div>
                 {% endfor %}
-                <li class="selectable none-option" data-input="footprint_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
-              </ul>
+                <div class="chip selectable-chip none-option" data-input="footprint_{{ comp.id }}" data-value="">None</div>
+              </div>
             </div>
-          {% endfor %}
-        {% else %}
+          {% endif %}
+        {% endfor %}
+        {% if not any_fps %}
           <p class="muted">No footprint candidates.</p>
         {% endif %}
       </div>
 
       <div class="candidate-card">
         <div class="card-header small"><h4>3D Models</h4></div>
-        {% if models_by_comp %}
-          {% for bundle in models_by_comp %}
+        {% set any_models = false %}
+        {% for comp in job.components %}
+          {% set cands = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list %}
+          {% if cands %}
+            {% set any_models = true %}
             <div class="component-block">
-              <h5>{{ bundle.comp.name }}</h5>
-              <ul class="candidate-list compact">
-                {% for cand in bundle.cands %}
-                <li class="selectable" data-input="model_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
-                  <div class="choice">
-                    <div class="name">{{ cand.name }}</div>
-                    <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</div>
-                    <div class="muted mono">{{ cand.rel_path }}</div>
-                  </div>
-                </li>
+              <h5>{{ comp.name }}</h5>
+              <div class="chip-list">
+                {% for cand in cands %}
+                <div class="chip selectable-chip" data-input="model_{{ comp.id }}" data-value="{{ cand.id }}">
+                  <div class="title">{{ cand.name }}</div>
+                  <div class="meta">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</div>
+                  <div class="muted mono small">{{ cand.rel_path }}</div>
+                </div>
                 {% endfor %}
-                <li class="selectable none-option" data-input="model_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
-              </ul>
+                <div class="chip selectable-chip none-option" data-input="model_{{ comp.id }}" data-value="">None</div>
+              </div>
             </div>
-          {% endfor %}
-        {% else %}
+          {% endif %}
+        {% endfor %}
+        {% if not any_models %}
           <p class="muted">No 3D model candidates.</p>
         {% endif %}
       </div>
@@ -197,19 +190,19 @@
   }
 
   function attachSelectableHandlers() {
-    document.querySelectorAll('.selectable').forEach((item) => {
+    document.querySelectorAll('.selectable-chip').forEach((item) => {
       item.addEventListener('click', () => {
         const inputName = item.getAttribute('data-input');
         const val = item.getAttribute('data-value');
         const hidden = document.querySelector(`input[name="${inputName}"]`);
         if (hidden) hidden.value = val || "";
         // clear selection in same group
-        document.querySelectorAll(`.selectable[data-input="${inputName}"]`).forEach((el) => el.classList.remove('selected'));
+        document.querySelectorAll(`.selectable-chip[data-input="${inputName}"]`).forEach((el) => el.classList.remove('selected'));
         item.classList.add('selected');
       });
     });
     // preselect existing values
-    document.querySelectorAll('.selectable').forEach((item) => {
+    document.querySelectorAll('.selectable-chip').forEach((item) => {
       const inputName = item.getAttribute('data-input');
       const val = item.getAttribute('data-value');
       const hidden = document.querySelector(`input[name="${inputName}"]`);
