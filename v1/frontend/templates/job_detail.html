@@ -59,17 +59,22 @@
       <div class="candidate-card">
         <div class="card-header small">
           <h4>Symbols</h4>
-          <span class="muted small">{{ symbols.options|length }} option{{ '' if symbols.options|length == 1 else 's' }}</span>
+          <span class="count-pill">{{ symbols.options|length }} option{{ '' if symbols.options|length == 1 else 's' }}</span>
         </div>
         <div class="option-stack" data-type="symbol">
           {% if symbols.options %}
             {% for opt in symbols.options | sort(attribute='score', reverse=True) %}
               <button type="button" class="option-tile {% if opt.id == selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
-                <div class="option-name">{{ opt.name }}</div>
-                {% if opt.comp_name != opt.name %}<div class="option-tag">Component: {{ opt.comp_name }}</div>{% endif %}
-                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} · Pins {{ opt.pins or "-" }}</div>
-                {% if opt.file %}<div class="option-file mono small">File: {{ opt.file }}</div>{% endif %}
-                {% if opt.path %}<div class="option-path mono small">Path: {{ opt.path }}</div>{% endif %}
+                <div class="option-head">
+                  <div class="option-name">{{ opt.name }}</div>
+                  {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
+                </div>
+                <div class="option-meta-row">
+                  <span class="meta-chip">Score {{ "%.2f"|format(opt.score or 0) }}</span>
+                  <span class="meta-chip">Pins {{ opt.pins or "-" }}</span>
+                </div>
+                {% if opt.file %}<div class="option-file mono small">{{ opt.file }}</div>{% endif %}
+                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
               </button>
             {% endfor %}
           {% else %}
@@ -84,17 +89,22 @@
       <div class="candidate-card">
         <div class="card-header small">
           <h4>Footprints</h4>
-          <span class="muted small">{{ footprints.options|length }} option{{ '' if footprints.options|length == 1 else 's' }}</span>
+          <span class="count-pill">{{ footprints.options|length }} option{{ '' if footprints.options|length == 1 else 's' }}</span>
         </div>
         <div class="option-stack" data-type="footprint">
           {% if footprints.options %}
             {% for opt in footprints.options | sort(attribute='score', reverse=True) %}
               <button type="button" class="option-tile {% if opt.id == selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
-                <div class="option-name">{{ opt.name }}</div>
-                {% if opt.comp_name != opt.name %}<div class="option-tag">Component: {{ opt.comp_name }}</div>{% endif %}
-                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} · Pads {{ opt.pads or "-" }}</div>
-                {% if opt.file %}<div class="option-file mono small">File: {{ opt.file }}</div>{% endif %}
-                {% if opt.path %}<div class="option-path mono small">Path: {{ opt.path }}</div>{% endif %}
+                <div class="option-head">
+                  <div class="option-name">{{ opt.name }}</div>
+                  {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
+                </div>
+                <div class="option-meta-row">
+                  <span class="meta-chip">Score {{ "%.2f"|format(opt.score or 0) }}</span>
+                  <span class="meta-chip">Pads {{ opt.pads or "-" }}</span>
+                </div>
+                {% if opt.file %}<div class="option-file mono small">{{ opt.file }}</div>{% endif %}
+                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
               </button>
             {% endfor %}
           {% else %}
@@ -109,17 +119,22 @@
       <div class="candidate-card">
         <div class="card-header small">
           <h4>3D Models</h4>
-          <span class="muted small">{{ models.options|length }} option{{ '' if models.options|length == 1 else 's' }}</span>
+          <span class="count-pill">{{ models.options|length }} option{{ '' if models.options|length == 1 else 's' }}</span>
         </div>
         <div class="option-stack" data-type="model">
           {% if models.options %}
             {% for opt in models.options | sort(attribute='score', reverse=True) %}
               <button type="button" class="option-tile {% if opt.id == selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
-                <div class="option-name">{{ opt.name }}</div>
-                {% if opt.comp_name != opt.name %}<div class="option-tag">Component: {{ opt.comp_name }}</div>{% endif %}
-                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} · {{ opt.desc or "-" }}</div>
-                {% if opt.file %}<div class="option-file mono small">File: {{ opt.file }}</div>{% endif %}
-                {% if opt.path %}<div class="option-path mono small">Path: {{ opt.path }}</div>{% endif %}
+                <div class="option-head">
+                  <div class="option-name">{{ opt.name }}</div>
+                  {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
+                </div>
+                <div class="option-meta-row">
+                  <span class="meta-chip">Score {{ "%.2f"|format(opt.score or 0) }}</span>
+                  <span class="meta-chip">{{ opt.desc or "-" }}</span>
+                </div>
+                {% if opt.file %}<div class="option-file mono small">{{ opt.file }}</div>{% endif %}
+                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
               </button>
             {% endfor %}
           {% else %}

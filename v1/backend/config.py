@@ -39,7 +39,6 @@ class AppConfig(BaseModel):
     ollama_model: str = "qwen2.5:7b"
     ollama_timeout_sec: int = 30
     ollama_max_retries: int = 2
-    retention_days: int = 30
     admin_password: str = ""
     log_level: str = "INFO"
     log_file: Optional[Path] = Field(default=None, description="Optional log file path")
@@ -91,7 +90,6 @@ class AppConfigUpdate(BaseModel):
     ollama_model: Optional[str] = None
     ollama_timeout_sec: Optional[int] = None
     ollama_max_retries: Optional[int] = None
-    retention_days: Optional[int] = None
     admin_password: Optional[str] = None
     log_level: Optional[str] = None
 

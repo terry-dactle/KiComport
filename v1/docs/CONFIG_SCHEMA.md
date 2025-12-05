@@ -19,7 +19,6 @@ Config is stored in `v1/config/app_settings.yaml` (or `.json`). On startup the a
 | `ollama_model` | string | `qwen2.5:7b` | Model name/tag |
 | `ollama_timeout_sec` | int | `30` | Request timeout |
 | `ollama_max_retries` | int | `2` | Retry attempts |
-| `retention_days` | int | `30` | For manual cleanup of uploads/extractions |
 | `admin_password` | string | `` (optional) | Basic gate for settings page (v1: simple check) |
 | `log_level` | string | `INFO` | Logging threshold |
 | `log_file` | path | `` | Optional log file target (JSON lines) |
@@ -46,7 +45,6 @@ ollama_base_url: http://localhost:11434
 ollama_model: qwen2.5:7b
 ollama_timeout_sec: 30
 ollama_max_retries: 2
-retention_days: 30
 admin_password: \"\"
 log_level: INFO
 ```

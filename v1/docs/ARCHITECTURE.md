@@ -22,7 +22,6 @@ This service ingests KiCad library submissions, analyzes them, and imports chose
   - `scan.py`: File discovery + metadata parsing + heuristic scoring.
   - `ollama.py`: Optional Ollama client with retries/timeouts.
   - `importer.py`: Copy/merge selected assets into KiCad global dirs.
-  - `retention.py`: Manual cleanup of aged uploads/extracts.
 - `api/`: Routers for health, config, jobs, uploads, components, diagnostics, ollama.
 - `frontend/`: Jinja2 templates + static assets, served by FastAPI.
 

@@ -41,7 +41,7 @@
 
 <section class="card">
   <h3>Paths &amp; Config</h3>
-  <dl class="kv-list two-col">
+  <dl class="kv-list">
     <dt>Config file</dt><dd class="mono">{{ config_path or "-" }}</dd>
     <dt>Database</dt><dd class="mono">{{ safe_config.get("database_path", "-") }}</dd>
     <dt>Uploads</dt><dd class="mono">{{ safe_config.get("uploads_dir", "-") }}</dd>
@@ -49,7 +49,6 @@
     <dt>Symbols</dt><dd class="mono">{{ safe_config.get("kicad_symbol_dir", "-") }}</dd>
     <dt>Footprints</dt><dd class="mono">{{ safe_config.get("kicad_footprint_dir", "-") }}</dd>
     <dt>3D models</dt><dd class="mono">{{ safe_config.get("kicad_3d_dir", "-") }}</dd>
-    <dt>Retention (days)</dt><dd>{{ safe_config.get("retention_days", "-") }}</dd>
   </dl>
 </section>
 {% endblock %}

@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from ..config import AppConfig
 from ..db.deps import get_db
 from ..db.models import Job
-from ..services.retention import manual_cleanup
 
 router = APIRouter(tags=["system"])
 
@@ -31,9 +30,3 @@ def diagnostics(request: Request, db: Session = Depends(get_db)) -> Dict[str, An
         "job_count": total_jobs,
     }
 
-
-@router.post("/api/cleanup")
-def cleanup(request: Request) -> Dict[str, Any]:
-    cfg = get_config(request)
-    uploads_removed, temp_removed = manual_cleanup(cfg.uploads_dir, cfg.temp_dir, cfg.retention_days)
-    return {"uploads_removed": uploads_removed, "temp_removed": temp_removed, "retention_days": cfg.retention_days}

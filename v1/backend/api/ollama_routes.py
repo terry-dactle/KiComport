@@ -68,4 +68,10 @@ async def list_models(request: Request, base_url: str | None = None):
         models = await client.list_models()
         return {"models": models, "base_url": target_url}
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Failed to list models: {exc}") from exc
+        hint = ""
+        if "Name or service not known" in str(exc):
+            hint = " Hostname is not reachable from the container. Use an IP (e.g., http://192.x.x.x:11434) or host.docker.internal if applicable."
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to list models via {target_url}/api/tags: {exc}.{hint}",
+        ) from exc

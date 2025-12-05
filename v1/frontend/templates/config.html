@@ -48,11 +48,10 @@
       </dl>
     </div>
     <div class="info-block">
-      <h4>Logging &amp; Retention</h4>
+      <h4>Logging</h4>
       <dl class="kv-list">
         <dt>Log level</dt><dd>{{ safe_config.get("log_level", "-") }}</dd>
         <dt>Log file</dt><dd class="mono">{{ safe_config.get("log_file", "-") }}</dd>
-        <dt>Retention (days)</dt><dd>{{ safe_config.get("retention_days", "-") }}</dd>
       </dl>
     </div>
   </div>
