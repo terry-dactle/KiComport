@@ -4,7 +4,7 @@
   <div class="card-header">
     <div>
       <h2>Diagnostics</h2>
-      <p class="muted">Quick snapshot of database activity and important paths.</p>
+      <p class="muted">Quick snapshot of database activity, health, and important paths.</p>
     </div>
   </div>
   <div class="stat-grid">
@@ -40,6 +40,24 @@
 </section>
 
 <section class="card">
+  <div class="card-header">
+    <div>
+      <h3>Health</h3>
+      <p class="muted">Backend liveness pulled from <code>/health</code>.</p>
+    </div>
+    <button type="button" id="health-refresh">Re-run check</button>
+  </div>
+  <div class="status-row" id="health-status">
+    <div class="status-dot {{ 'ok' if health and health.status == 'ok' else 'err' }}"></div>
+    <div>
+      <div class="status-title">{{ health.status.upper() if health and health.status else "UNKNOWN" }}</div>
+      <div class="muted">Timestamp {{ health.timestamp if health and health.timestamp else "not available" }}</div>
+    </div>
+  </div>
+  <pre class="config-dump" id="health-json">{{ health | tojson(indent=2) if health else '{}' }}</pre>
+</section>
+
+<section class="card">
   <h3>Paths &amp; Config</h3>
   <dl class="kv-list">
     <dt>Config file</dt><dd class="mono">{{ config_path or "-" }}</dd>
@@ -51,4 +69,53 @@
     <dt>3D models</dt><dd class="mono">{{ safe_config.get("kicad_3d_dir", "-") }}</dd>
   </dl>
 </section>
+<section class="card">
+  <details>
+    <summary><strong>API Docs &amp; Quick Links</strong></summary>
+    <p class="muted">OpenAPI docs live at <a href="/docs">/docs</a>. Common endpoints:</p>
+    <ul>
+      <li><code>GET /health</code> — liveness check</li>
+      <li><code>GET/PUT /api/config</code> — read/update config</li>
+      <li><code>POST /api/uploads</code> — upload a file</li>
+      <li><code>POST /api/uploads/from-url</code> — fetch a URL as an upload</li>
+      <li><code>GET /api/jobs</code>, <code>GET /api/jobs/{id}</code> — list/detail</li>
+      <li><code>POST /api/jobs/{id}/select</code> — save selections</li>
+      <li><code>POST /api/jobs/{id}/import</code> — import selections</li>
+      <li><code>GET /api/ollama/test</code> — test Ollama connectivity</li>
+    </ul>
+  </details>
+</section>
+<script>
+  const refreshBtn = document.getElementById('health-refresh');
+  const statusRow = document.getElementById('health-status');
+  const dot = statusRow?.querySelector('.status-dot');
+  const titleEl = statusRow?.querySelector('.status-title');
+  const tsEl = statusRow?.querySelector('.muted');
+  const jsonEl = document.getElementById('health-json');
+
+  function setStatus(data) {
+    if (!dot || !titleEl || !tsEl || !jsonEl) return;
+    const ok = data.status && data.status.toLowerCase() === "ok";
+    dot.classList.toggle("ok", ok);
+    dot.classList.toggle("err", !ok);
+    titleEl.textContent = data.status ? data.status.toUpperCase() : "UNKNOWN";
+    tsEl.textContent = data.timestamp ? `Timestamp ${data.timestamp}` : "Timestamp not available";
+    jsonEl.textContent = JSON.stringify(data, null, 2);
+  }
+
+  refreshBtn?.addEventListener('click', async () => {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = "Checking...";
+    try {
+      const resp = await fetch("/health");
+      const body = await resp.json();
+      setStatus(body);
+    } catch (err) {
+      setStatus({ status: "error", error: err?.message || "Failed to fetch" });
+    } finally {
+      refreshBtn.disabled = false;
+      refreshBtn.textContent = "Re-run check";
+    }
+  });
+</script>
 {% endblock %}

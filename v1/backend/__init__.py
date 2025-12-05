@@ -1,1 +1,1 @@
-"""Backend package for the Global KiCad Library Intake Server."""
+"""Backend package for the Global KiCad Library Import Server."""

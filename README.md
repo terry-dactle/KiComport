@@ -1,4 +1,4 @@
-# Global KiCad Library Intake Server
+# Global KiCad Library Import Server
 
 Dockerised FastAPI service that ingests KiCad library contributions, scans uploads for symbols/footprints/3D models, ranks candidates (heuristics + optional Ollama), and imports selected items into global KiCad library directories. A simple web UI guides uploads, review, and configuration.
 

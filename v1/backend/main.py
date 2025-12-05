@@ -26,7 +26,7 @@ STATIC_DIR = Path(__file__).resolve().parents[1] / "frontend" / "static"
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Global KiCad Library Intake Server", version="0.1.0", docs_url="/docs")
+    app = FastAPI(title="Global KiCad Library Import Server", version="0.1.0", docs_url="/docs")
     templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
     @app.on_event("startup")
@@ -130,7 +130,7 @@ def create_app() -> FastAPI:
             "index.html",
             {
                 "request": request,
-                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "app_name": config.app_name if config else "Global KiCad Library Import Server",
                 "config": config,
                 "jobs": jobs,
                 "recent_logs": recent_logs,
@@ -157,7 +157,7 @@ def create_app() -> FastAPI:
         cfg = getattr(request.app.state, "config", None)
         return templates.TemplateResponse(
             "job_detail.html",
-            {"request": request, "job": job, "app_name": cfg.app_name if cfg else "Global KiCad Library Intake Server"},
+            {"request": request, "job": job, "app_name": cfg.app_name if cfg else "Global KiCad Library Import Server"},
         )
 
     @app.get("/api-help", response_class=HTMLResponse)
@@ -167,7 +167,7 @@ def create_app() -> FastAPI:
             "api_help.html",
             {
                 "request": request,
-                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "app_name": config.app_name if config else "Global KiCad Library Import Server",
             },
         )
 
@@ -178,7 +178,7 @@ def create_app() -> FastAPI:
             "settings.html",
             {
                 "request": request,
-                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "app_name": config.app_name if config else "Global KiCad Library Import Server",
                 "config": config,
             },
         )
@@ -194,7 +194,7 @@ def create_app() -> FastAPI:
             "health.html",
             {
                 "request": request,
-                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "app_name": config.app_name if config else "Global KiCad Library Import Server",
                 "health": health,
             },
         )
@@ -208,7 +208,7 @@ def create_app() -> FastAPI:
             "config.html",
             {
                 "request": request,
-                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "app_name": config.app_name if config else "Global KiCad Library Import Server",
                 "config": config,
                 "safe_config": safe_config,
                 "config_path": config_path,
@@ -240,7 +240,7 @@ def create_app() -> FastAPI:
             "diagnostics.html",
             {
                 "request": request,
-                "app_name": config.app_name if config else "Global KiCad Library Intake Server",
+                "app_name": config.app_name if config else "Global KiCad Library Import Server",
                 "config": config,
                 "safe_config": safe_config,
                 "config_path": config_path,

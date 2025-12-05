@@ -1,10 +1,11 @@
-app_name: Global KiCad Library Intake Server
+app_name: Global KiCad Library Import Server
 host: 0.0.0.0
 port: 8000
 uploads_dir: ./uploads
 temp_dir: ./data/tmp
 data_dir: ./data
 database_path: ./data/app.db
+kicad_root_dir:
 kicad_symbol_dir: ./data/kicad/symbols
 kicad_footprint_dir: ./data/kicad/footprints
 kicad_3d_dir: ./data/kicad/3d

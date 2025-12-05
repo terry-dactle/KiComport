@@ -33,6 +33,7 @@
     <div class="info-block">
       <h4>Paths</h4>
       <dl class="kv-list">
+        <dt>KiCad root</dt><dd class="mono">{{ safe_config.get("kicad_root_dir", "-") }}</dd>
         <dt>Uploads</dt><dd class="mono">{{ safe_config.get("uploads_dir", "-") }}</dd>
         <dt>Temp</dt><dd class="mono">{{ safe_config.get("temp_dir", "-") }}</dd>
         <dt>Data</dt><dd class="mono">{{ safe_config.get("data_dir", "-") }}</dd>

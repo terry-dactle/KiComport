@@ -15,6 +15,7 @@ _PATH_FIELDS: Iterable[str] = (
     "temp_dir",
     "data_dir",
     "database_path",
+    "kicad_root_dir",
     "kicad_symbol_dir",
     "kicad_footprint_dir",
     "kicad_3d_dir",
@@ -24,13 +25,14 @@ _PATH_FIELDS: Iterable[str] = (
 class AppConfig(BaseModel):
     """Runtime configuration backed by YAML/JSON on disk."""
 
-    app_name: str = "Global KiCad Library Intake Server"
+    app_name: str = "Global KiCad Library Import Server"
     host: str = "0.0.0.0"
     port: int = 8000
     uploads_dir: Path = Path("./uploads")
     temp_dir: Path = Path("./data/tmp")
     data_dir: Path = Path("./data")
     database_path: Path = Path("./data/app.db")
+    kicad_root_dir: Optional[Path] = None
     kicad_symbol_dir: Path = Path("./data/kicad/symbols")
     kicad_footprint_dir: Path = Path("./data/kicad/footprints")
     kicad_3d_dir: Path = Path("./data/kicad/3d")
@@ -85,6 +87,7 @@ class AppConfigUpdate(BaseModel):
     kicad_symbol_dir: Optional[Path] = None
     kicad_footprint_dir: Optional[Path] = None
     kicad_3d_dir: Optional[Path] = None
+    kicad_root_dir: Optional[Path] = None
     ollama_enabled: Optional[bool] = None
     ollama_base_url: Optional[str] = None
     ollama_model: Optional[str] = None
@@ -136,6 +139,7 @@ def ensure_directories(config: AppConfig) -> None:
         config.temp_dir,
         config.data_dir,
         config.database_path.parent,
+        config.kicad_root_dir or config.kicad_symbol_dir.parent,
         config.kicad_symbol_dir,
         config.kicad_footprint_dir,
         config.kicad_3d_dir,
@@ -190,6 +194,15 @@ def load_config(config_path: Optional[Path] = None) -> AppConfig:
 def apply_update(existing: AppConfig, update: AppConfigUpdate, config_path: Optional[Path] = None) -> AppConfig:
     merged = existing.model_dump()
     merged.update({k: v for k, v in update.model_dump(exclude_unset=True).items() if v is not None})
+    update_payload = update.model_dump(exclude_unset=True)
+    if "kicad_root_dir" in update_payload and update_payload.get("kicad_root_dir"):
+        root = Path(update_payload["kicad_root_dir"])
+        if "kicad_symbol_dir" not in update_payload:
+            merged["kicad_symbol_dir"] = root / "symbols"
+        if "kicad_footprint_dir" not in update_payload:
+            merged["kicad_footprint_dir"] = root / "footprints"
+        if "kicad_3d_dir" not in update_payload:
+            merged["kicad_3d_dir"] = root / "3d"
     new_config = AppConfig.model_validate(merged)
     new_config.config_path = config_path or existing.config_path or DEFAULT_CONFIG_PATH
     new_config = normalize_paths(new_config, new_config.config_path.parent)

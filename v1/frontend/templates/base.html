@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ app_name if app_name else "Global KiCad Library Intake Server" }}</title>
+  <title>{{ app_name if app_name else "Global KiCad Library Import Server" }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
     {% set current_path = request.url.path %}
     <div class="container topbar-row">
       <div class="brand">
-        <h1>{{ app_name if app_name else "Global KiCad Library Intake Server" }}</h1>
+        <h1>{{ app_name if app_name else "Global KiCad Library Import Server" }}</h1>
       </div>
       <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
       <nav id="main-nav">
@@ -32,7 +32,7 @@
   </main>
   <footer class="footer">
     <div class="container">
-      <small>Dockerised KiCad library intake server (v1 bootstrap)</small>
+      <small>Dockerised KiCad library import server</small>
     </div>
   </footer>
   <script>
