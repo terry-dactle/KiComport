@@ -18,87 +18,98 @@
   <h3>Components & Candidates</h3>
   {% if job.components %}
   <form id="selection-form">
+    {% set all_symbols = [] %}
+    {% set all_footprints = [] %}
+    {% set all_models = [] %}
     {% for comp in job.components %}
-      {% set symbols = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) %}
-      {% set footprints = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) %}
-      {% set models = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) %}
-      <div class="component">
-        <h4>{{ comp.name }}</h4>
-        <div class="grid three-col">
-          <div class="candidate-card">
-            <div class="card-header small">
-              <h5>Symbols</h5>
-              <span class="muted">{{ symbols|length }} option{{ 's' if symbols|length != 1 else '' }}</span>
-            </div>
-            {% if symbols %}
-            <ul class="candidate-list">
-              {% for cand in symbols %}
-              <li>
-                <label>
-                  <input type="radio" name="symbol_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_symbol_id == cand.id %}checked{% endif %}>
-                  <span class="name">{{ cand.name }}</span>
-                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }}</span>
-                  <span class="muted mono">{{ cand.rel_path }}</span>
-                </label>
-              </li>
-              {% endfor %}
-              <li><label><input type="radio" name="symbol_{{ comp.id }}" value=""> None</label></li>
-            </ul>
-            {% else %}
-            <p class="muted">No symbol options.</p>
-            {% endif %}
-          </div>
-          <div class="candidate-card">
-            <div class="card-header small">
-              <h5>Footprints</h5>
-              <span class="muted">{{ footprints|length }} option{{ 's' if footprints|length != 1 else '' }}</span>
-            </div>
-            {% if footprints %}
-            <ul class="candidate-list">
-              {% for cand in footprints %}
-              <li>
-                <label>
-                  <input type="radio" name="footprint_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_footprint_id == cand.id %}checked{% endif %}>
-                  <span class="name">{{ cand.name }}</span>
-                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</span>
-                  <span class="muted mono">{{ cand.rel_path }}</span>
-                </label>
-              </li>
-              {% endfor %}
-              <li><label><input type="radio" name="footprint_{{ comp.id }}" value=""> None</label></li>
-            </ul>
-            {% else %}
-            <p class="muted">No footprint options.</p>
-            {% endif %}
-          </div>
-          <div class="candidate-card">
-            <div class="card-header small">
-              <h5>3D Models</h5>
-              <span class="muted">{{ models|length }} option{{ 's' if models|length != 1 else '' }}</span>
-            </div>
-            {% if models %}
-            <ul class="candidate-list">
-              {% for cand in models %}
-              <li>
-                <label>
-                  <input type="radio" name="model_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_model_id == cand.id %}checked{% endif %}>
-                  <span class="name">{{ cand.name }}</span>
-                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</span>
-                  <span class="muted mono">{{ cand.rel_path }}</span>
-                </label>
-              </li>
-              {% endfor %}
-              <li><label><input type="radio" name="model_{{ comp.id }}" value=""> None</label></li>
-            </ul>
-            {% else %}
-            <p class="muted">No model options.</p>
-            {% endif %}
-          </div>
-        </div>
-      </div>
+      {% set _ = all_symbols.append({"comp": comp, "cands": comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list }) %}
+      {% set _ = all_footprints.append({"comp": comp, "cands": comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list }) %}
+      {% set _ = all_models.append({"comp": comp, "cands": comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list }) %}
     {% endfor %}
-    <button type="submit">Save Selections</button>
-    <button type="button" id="import-btn">Import Selected</button>
+
+    <div class="candidate-block">
+      <div class="card-header small"><h4>Symbols</h4></div>
+      {% for bundle in all_symbols %}
+        <div class="component">
+          <h5>{{ bundle.comp.name }}</h5>
+          {% if bundle.cands %}
+          <ul class="candidate-list compact">
+            {% for cand in bundle.cands %}
+            <li>
+              <label>
+                <input type="radio" name="symbol_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_symbol_id == cand.id %}checked{% endif %}>
+                <span class="name">{{ cand.name }}</span>
+                <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</span>
+                <span class="muted mono">{{ cand.rel_path }}</span>
+              </label>
+            </li>
+            {% endfor %}
+            <li><label><input type="radio" name="symbol_{{ bundle.comp.id }}" value=""> None</label></li>
+          </ul>
+          {% else %}
+          <p class="muted">No symbol options.</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="candidate-block">
+      <div class="card-header small"><h4>Footprints</h4></div>
+      {% for bundle in all_footprints %}
+        <div class="component">
+          <h5>{{ bundle.comp.name }}</h5>
+          {% if bundle.cands %}
+          <ul class="candidate-list compact">
+            {% for cand in bundle.cands %}
+            <li>
+              <label>
+                <input type="radio" name="footprint_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_footprint_id == cand.id %}checked{% endif %}>
+                <span class="name">{{ cand.name }}</span>
+                <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</span>
+                <span class="muted mono">{{ cand.rel_path }}</span>
+              </label>
+            </li>
+            {% endfor %}
+            <li><label><input type="radio" name="footprint_{{ bundle.comp.id }}" value=""> None</label></li>
+          </ul>
+          {% else %}
+          <p class="muted">No footprint options.</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="candidate-block">
+      <div class="card-header small"><h4>3D Models</h4></div>
+      {% for bundle in all_models %}
+        <div class="component">
+          <h5>{{ bundle.comp.name }}</h5>
+          {% if bundle.cands %}
+          <ul class="candidate-list compact">
+            {% for cand in bundle.cands %}
+            <li>
+              <label>
+                <input type="radio" name="model_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_model_id == cand.id %}checked{% endif %}>
+                <span class="name">{{ cand.name }}</span>
+                <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</span>
+                <span class="muted mono">{{ cand.rel_path }}</span>
+              </label>
+            </li>
+            {% endfor %}
+            <li><label><input type="radio" name="model_{{ bundle.comp.id }}" value=""> None</label></li>
+          </ul>
+          {% else %}
+          <p class="muted">No model options.</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="actions">
+      <button type="submit">Save choices</button>
+      <button type="button" id="import-btn">Import to KiCad</button>
+      <p class="muted">Save picks first, then import copies the selected items into your KiCad library folders.</p>
+    </div>
   </form>
   {% else %}
   <p>No components found.</p>

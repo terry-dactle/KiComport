@@ -170,6 +170,8 @@ button:hover { opacity: 0.92; }
 .candidate-list .name { font-weight: 700; }
 .candidate-list .score { background: rgba(54,197,116,0.12); padding: 0.1rem 0.3rem; border-radius: 4px; display: inline-block; }
 .card-header.small { margin-bottom: 0.25rem; }
+.candidate-block { margin-bottom: 1rem; padding: 0.5rem 0; }
+.candidate-list.compact li { padding-bottom: 0.25rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

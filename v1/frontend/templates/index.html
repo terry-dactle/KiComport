@@ -51,6 +51,7 @@
         <th data-sort="filename">Filename</th>
         <th data-sort="status">Status</th>
         <th data-sort="updated">Updated</th>
+        <th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -60,6 +61,7 @@
         <td>{{ job.original_filename }}</td>
         <td><span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace('_', ' ') }}</span></td>
         <td class="updated-cell mono" data-updated="{{ job.updated_at.isoformat() if job.updated_at else '' }}">{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
+        <td><button class="danger delete-job" data-id="{{ job.id }}">Delete</button></td>
       </tr>
       {% endfor %}
     </tbody>
@@ -286,6 +288,28 @@
       const idx = Array.from(th.parentNode.children).indexOf(th);
       const numeric = th.getAttribute('data-sort') === 'id';
       sortJobs(idx, numeric);
+    });
+  });
+  document.querySelectorAll('.delete-job').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!confirm(`Delete job ${id}? This removes stored files.`)) return;
+      btn.disabled = true;
+      btn.textContent = "Deleting...";
+      try {
+        const resp = await fetch(`/api/jobs/${id}`, { method: "DELETE" });
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => ({}));
+          throw new Error(body.detail || resp.statusText);
+        }
+        const row = btn.closest('tr');
+        row?.remove();
+      } catch (err) {
+        setStatus(`Delete failed: ${err?.message || err}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Delete";
+      }
     });
   });
 
