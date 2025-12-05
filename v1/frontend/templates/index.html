@@ -31,8 +31,8 @@
 <section class="card">
   <h3>Recent Jobs</h3>
   <div class="table-actions">
-    <input type="search" id="job-filter" placeholder="Filter by filename, md5, status">
-    <select id="status-filter">
+    <input type="search" id="job-filter" class="modern-input" placeholder="Filter by filename, md5, status">
+    <select id="status-filter" class="modern-input select">
       <option value="">All statuses</option>
       <option value="pending">Pending</option>
       <option value="analyzing">Analyzing</option>
@@ -333,25 +333,26 @@
     }
   }
 
-  function parseLocalTimestamp(ts) {
-    const m = ts && ts.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
-    if (m) {
-      // Interpret as local time to avoid implicit UTC skew when timezone is missing.
-      return new Date(
-        Number(m[1]),
-        Number(m[2]) - 1,
-        Number(m[3]),
-        Number(m[4]),
-        Number(m[5]),
-        Number(m[6] || 0)
-      );
+  function parseTimestamp(ts) {
+    if (!ts) return null;
+    const hasTZ = /[zZ]|[+-]\d\d:?(\d\d)?$/.test(ts);
+    if (hasTZ) {
+      const d = new Date(ts);
+      return isNaN(d) ? null : d;
     }
-    return new Date(ts);
+    const m = ts.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (m) {
+      const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), Number(m[6] || 0)));
+      return isNaN(d) ? null : d;
+    }
+    const fallback = new Date(ts);
+    return isNaN(fallback) ? null : fallback;
   }
 
   function timeAgo(ts) {
     const now = new Date();
-    const then = parseLocalTimestamp(ts);
+    const then = parseTimestamp(ts);
+    if (!then) return "";
     const diff = (now - then) / 1000;
     if (isNaN(diff)) return "";
     if (diff < 60) return `${Math.max(1, Math.floor(diff))}s ago`;

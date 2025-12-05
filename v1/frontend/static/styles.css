@@ -161,7 +161,8 @@ button:hover { opacity: 0.92; }
 .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 .status-detail { margin-top: 0.35rem; padding: 0.45rem 0.55rem; background: rgba(0,0,0,0.25); border: 1px solid var(--border); border-radius: 8px; color: var(--text); max-width: 100%; overflow-x: auto; white-space: pre-wrap; word-break: break-word; font-size: 0.92rem; }
 .table-actions { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; }
-.table-actions input { width: 220px; max-width: 100%; }
+.table-actions input { flex: 1 1 320px; max-width: 100%; }
+.table-actions select { margin-left: auto; }
 .candidate-table { width: 100%; border-collapse: collapse; margin-top: 0.4rem; }
 .candidate-table th, .candidate-table td { border-bottom: 1px solid var(--border); padding: 0.3rem 0.4rem; text-align: left; }
 .candidate-table th { color: var(--muted); font-size: 0.9rem; }
@@ -213,6 +214,9 @@ button:hover { opacity: 0.92; }
 .none-label { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); cursor: pointer; }
 .none-radio { accent-color: var(--accent); }
 .select-input { width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid var(--border); background: #111823; color: var(--text); }
+.modern-input { padding: 0.48rem 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--text); font-weight: 600; }
+.modern-input:focus { outline: 2px solid rgba(54,197,116,0.4); border-color: rgba(54,197,116,0.6); background: rgba(255,255,255,0.05); }
+.modern-input.select { padding-right: 2.2rem; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

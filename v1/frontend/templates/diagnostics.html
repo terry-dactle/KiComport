@@ -54,7 +54,6 @@
       <div class="muted">Timestamp {{ health.timestamp if health and health.timestamp else "not available" }}</div>
     </div>
   </div>
-  <pre class="config-dump" id="health-json">{{ health | tojson(indent=2) if health else '{}' }}</pre>
 </section>
 
 <section class="card">
@@ -68,22 +67,6 @@
     <dt>Footprints</dt><dd class="mono">{{ safe_config.get("kicad_footprint_dir", "-") }}</dd>
     <dt>3D models</dt><dd class="mono">{{ safe_config.get("kicad_3d_dir", "-") }}</dd>
   </dl>
-</section>
-<section class="card">
-  <details>
-    <summary><strong>API Docs &amp; Quick Links</strong></summary>
-    <p class="muted">OpenAPI docs live at <a href="/docs">/docs</a>. Common endpoints:</p>
-    <ul>
-      <li><code>GET /health</code> — liveness check</li>
-      <li><code>GET/PUT /api/config</code> — read/update config</li>
-      <li><code>POST /api/uploads</code> — upload a file</li>
-      <li><code>POST /api/uploads/from-url</code> — fetch a URL as an upload</li>
-      <li><code>GET /api/jobs</code>, <code>GET /api/jobs/{id}</code> — list/detail</li>
-      <li><code>POST /api/jobs/{id}/select</code> — save selections</li>
-      <li><code>POST /api/jobs/{id}/import</code> — import selections</li>
-      <li><code>GET /api/ollama/test</code> — test Ollama connectivity</li>
-    </ul>
-  </details>
 </section>
 <script>
   const refreshBtn = document.getElementById('health-refresh');

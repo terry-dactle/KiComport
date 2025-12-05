@@ -25,14 +25,14 @@
       <div class="card-header small"><h4>Available models</h4></div>
       <select id="ollama-model-select" class="select-input" size="6"></select>
     </div>
+    <p id="ollama-model-hint" class="muted"></p>
     <div class="helper-row">
-      <button type="button" id="refresh-models">Refresh models</button>
-      <p id="ollama-model-hint" class="muted"></p>
+      <button type="button" id="refresh-models">Reload models</button>
     </div>
     <label>Log level<br><input type="text" id="log_level" name="log_level" value="{{ config.log_level if config else 'INFO' }}"></label><br>
     <label>Log file (optional)<br><input type="text" id="log_file" name="log_file" value="{{ config.log_file if config and config.log_file else '' }}"></label><br>
     <button type="submit">Save Settings</button>
-    <button type="button" id="ollama-test">Test Ollama</button>
+    <button type="button" id="ollama-test">Run connectivity test</button>
   </form>
   <p id="settings-status" class="muted"></p>
 </section>
