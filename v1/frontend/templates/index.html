@@ -130,7 +130,7 @@
   const statusFilter = document.getElementById('status-filter');
   const jobsTable = document.getElementById('jobs-table');
 
-  function setStatus(message, loading = false) {
+  function setStatus(message, detail = "", loading = false) {
     if (!statusEl) return;
     statusEl.innerHTML = "";
     if (loading) {
@@ -138,9 +138,21 @@
       span.className = 'upload-progress';
       span.innerHTML = '<span class="spinner"></span>' + message;
       statusEl.appendChild(span);
-    } else {
-      statusEl.textContent = message || "";
+      return;
     }
+    if (!detail) {
+      statusEl.textContent = message || "";
+      return;
+    }
+    const title = document.createElement('div');
+    title.textContent = message || "";
+    statusEl.appendChild(title);
+    const pre = document.createElement('pre');
+    pre.className = 'status-detail';
+    const maxLen = 420;
+    const txt = String(detail || "");
+    pre.textContent = txt.length > maxLen ? txt.slice(0, maxLen) + "…" : txt;
+    statusEl.appendChild(pre);
   }
 
   async function uploadFile(file) {
@@ -162,7 +174,7 @@
       setStatus(`Upload complete. Opening job ${body.job_id}...`);
       window.location.href = `/jobs/${body.job_id}`;
     } catch (err) {
-      setStatus(`Upload failed: ${err?.message || err}`);
+      setStatus("Upload failed", err?.message || err);
     } finally {
       fileInput.value = "";
     }
@@ -184,7 +196,7 @@
       const body = await safeJson(resp);
       if (!resp.ok) {
         const detail = body?.detail || resp.statusText;
-        setStatus(`URL fetch failed: ${detail}`);
+        setStatus("URL fetch failed", detail);
         return;
       }
       if (body.duplicate) {
@@ -195,7 +207,7 @@
       setStatus(`Download complete. Opening job ${body.job_id}...`);
       window.location.href = `/jobs/${body.job_id}`;
     } catch (err) {
-      setStatus(`URL fetch failed: ${err?.message || err}`);
+      setStatus("URL fetch failed", err?.message || err);
     }
   }
 
@@ -305,7 +317,7 @@
         const row = btn.closest('tr');
         row?.remove();
       } catch (err) {
-        setStatus(`Delete failed: ${err?.message || err}`);
+        setStatus("Delete failed", err?.message || err);
       } finally {
         btn.disabled = false;
         btn.textContent = "Delete";
@@ -321,9 +333,25 @@
     }
   }
 
+  function parseLocalTimestamp(ts) {
+    const m = ts && ts.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/);
+    if (m) {
+      // Interpret as local time to avoid implicit UTC skew when timezone is missing.
+      return new Date(
+        Number(m[1]),
+        Number(m[2]) - 1,
+        Number(m[3]),
+        Number(m[4]),
+        Number(m[5]),
+        Number(m[6] || 0)
+      );
+    }
+    return new Date(ts);
+  }
+
   function timeAgo(ts) {
     const now = new Date();
-    const then = new Date(ts);
+    const then = parseLocalTimestamp(ts);
     const diff = (now - then) / 1000;
     if (isNaN(diff)) return "";
     if (diff < 60) return `${Math.max(1, Math.floor(diff))}s ago`;

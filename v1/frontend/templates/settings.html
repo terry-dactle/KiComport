@@ -23,7 +23,6 @@
     <div class="option-stack" id="ollama-model-stack">
       <div class="card-header small"><h4>Available models</h4></div>
       <select id="ollama-model-select" class="select-input" size="6"></select>
-      <div id="model-list-display" class="mini-list"></div>
     </div>
     <label>Log level<br><input type="text" id="log_level" name="log_level" value="{{ config.log_level if config else 'INFO' }}"></label><br>
     <label>Log file (optional)<br><input type="text" id="log_file" name="log_file" value="{{ config.log_file if config and config.log_file else '' }}"></label><br>
@@ -98,21 +97,11 @@
         throw new Error(body.detail || "Request failed");
       }
       modelList.innerHTML = "";
-      const display = document.getElementById('model-list-display');
-      display.innerHTML = "";
       modelSelect.innerHTML = "";
       (body.models || []).forEach((name) => {
         const opt = document.createElement('option');
         opt.value = name;
         modelList.appendChild(opt);
-
-        const btn = document.createElement('button');
-        btn.type = "button";
-        btn.textContent = name;
-        btn.className = "chip";
-        btn.addEventListener('click', () => { modelInput.value = name; modelSelect.value = name; });
-        display.appendChild(btn);
-
         const optSelect = document.createElement('option');
         optSelect.value = name;
         optSelect.textContent = name;
