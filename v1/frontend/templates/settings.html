@@ -32,13 +32,13 @@
       <label>Ollama model<br><input type="text" id="ollama_model" name="ollama_model" list="ollama-models" value="{{ config.ollama_model if config else '' }}"></label>
       <datalist id="ollama-models"></datalist>
       <div class="option-stack" id="ollama-model-stack">
-        <div class="card-header small"><h4>Available models</h4></div>
-        <select id="ollama-model-select" class="select-input" size="6"></select>
-      </div>
-      <p id="ollama-model-hint" class="muted"></p>
-      <div class="helper-row">
+      <div class="card-header small helper-row">
+        <h4 style="margin: 0;">Available models</h4>
         <button type="button" id="refresh-models">Reload models</button>
       </div>
+      <select id="ollama-model-select" class="select-input" size="6"></select>
+    </div>
+    <p id="ollama-model-hint" class="muted"></p>
     </div>
     <hr>
     <div class="settings-section">
@@ -133,7 +133,7 @@
         modelSelect.appendChild(optSelect);
       });
       if (modelSelect.options.length) {
-        modelSelect.size = Math.min(8, modelSelect.options.length);
+        modelSelect.size = Math.min(12, Math.max(3, modelSelect.options.length));
         modelStack.hidden = false;
       } else {
         modelStack.hidden = true;

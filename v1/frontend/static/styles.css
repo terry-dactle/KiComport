@@ -125,6 +125,8 @@ button:hover { opacity: 0.92; }
 .logs li { border-bottom: 1px solid var(--border); padding: 0.3rem 0; }
 .card label { display: block; margin: 0.25rem 0; font-weight: 600; }
 .card input[type="text"], .card input[type="url"] { width: 100%; padding: 0.4rem; border-radius: 7px; border: 1px solid var(--border); background: #0f141b; color: var(--text); }
+.settings-section { display: flex; flex-direction: column; gap: 0.5rem; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 0.75rem 0; }
 .status-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
 .status-dot { width: 12px; height: 12px; border-radius: 999px; background: var(--border); box-shadow: 0 0 0 4px rgba(255,255,255,0.03); }
 .status-dot.ok { background: var(--accent); }
@@ -202,6 +204,7 @@ button:hover { opacity: 0.92; }
 .option-path::before { content: "Path · "; color: var(--muted); font-weight: 700; margin-right: 0.1rem; }
 .option-file::before { content: "File · "; color: var(--muted); font-weight: 700; margin-right: 0.1rem; }
 .count-pill { padding: 0.15rem 0.6rem; border-radius: 999px; background: rgba(255,255,255,0.06); color: var(--muted); font-weight: 700; font-size: 0.85rem; }
+#ollama-model-select { min-height: 120px; max-height: 480px; }
 .option-stack::-webkit-scrollbar { width: 8px; }
 .option-stack::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
 .chip-list { display: flex; flex-direction: column; gap: 0.35rem; }
