@@ -27,75 +27,66 @@
     <div class="grid three-col align-start candidate-columns">
       <div class="candidate-card">
         <div class="card-header small"><h4>Symbols</h4></div>
-        {% set any_symbols = false %}
+        {% set symbol_options = [] %}
         {% for comp in job.components %}
-          {% set cands = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list %}
-          {% if cands %}
-            {% set any_symbols = true %}
-            <div class="component-block">
-              <h5>{{ comp.name }}</h5>
-              <select class="select-input" name="symbol_select_{{ comp.id }}" data-target="symbol_{{ comp.id }}">
-                <option value="">None</option>
-                {% for cand in cands %}
-                  <option value="{{ cand.id }}" {% if comp.selected_symbol_id == cand.id %}selected{% endif %}>
-                    {{ cand.name }} ({{ "%.2f"|format(cand.combined_score) }}, pins {{ cand.pin_count or "-" }})
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-          {% endif %}
+          {% for cand in comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) %}
+            {% set _ = symbol_options.append({"comp": comp, "cand": cand}) %}
+          {% endfor %}
         {% endfor %}
-        {% if not any_symbols %}
+        {% if symbol_options %}
+          <select class="select-input full" name="symbol_global" data-target="symbol_all">
+            <option value="">None</option>
+            {% for option in symbol_options %}
+              <option value="{{ option.cand.id }}" {% if option.comp.selected_symbol_id == option.cand.id %}selected{% endif %}>
+                {{ option.comp.name }} — {{ option.cand.name }} ({{ "%.2f"|format(option.cand.combined_score) }}, pins {{ option.cand.pin_count or "-" }})
+              </option>
+            {% endfor %}
+          </select>
+        {% else %}
           <p class="muted">No symbol candidates.</p>
         {% endif %}
       </div>
 
       <div class="candidate-card">
         <div class="card-header small"><h4>Footprints</h4></div>
-        {% set any_fps = false %}
+        {% set fp_options = [] %}
         {% for comp in job.components %}
-          {% set cands = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list %}
-          {% if cands %}
-            {% set any_fps = true %}
-            <div class="component-block">
-              <h5>{{ comp.name }}</h5>
-              <select class="select-input" name="footprint_select_{{ comp.id }}" data-target="footprint_{{ comp.id }}">
-                <option value="">None</option>
-                {% for cand in cands %}
-                  <option value="{{ cand.id }}" {% if comp.selected_footprint_id == cand.id %}selected{% endif %}>
-                    {{ cand.name }} ({{ "%.2f"|format(cand.combined_score) }}, pads {{ cand.pad_count or "-" }})
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-          {% endif %}
+          {% for cand in comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) %}
+            {% set _ = fp_options.append({"comp": comp, "cand": cand}) %}
+          {% endfor %}
         {% endfor %}
-        {% if not any_fps %}
+        {% if fp_options %}
+          <select class="select-input full" name="footprint_global" data-target="footprint_all">
+            <option value="">None</option>
+            {% for option in fp_options %}
+              <option value="{{ option.cand.id }}" {% if option.comp.selected_footprint_id == option.cand.id %}selected{% endif %}>
+                {{ option.comp.name }} — {{ option.cand.name }} ({{ "%.2f"|format(option.cand.combined_score) }}, pads {{ option.cand.pad_count or "-" }})
+              </option>
+            {% endfor %}
+          </select>
+        {% else %}
           <p class="muted">No footprint candidates.</p>
         {% endif %}
       </div>
 
       <div class="candidate-card">
         <div class="card-header small"><h4>3D Models</h4></div>
-        {% set any_models = false %}
+        {% set model_options = [] %}
         {% for comp in job.components %}
-          {% set cands = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list %}
-          {% if cands %}
-            {% set any_models = true %}
-            <div class="component-block">
-              <h5>{{ comp.name }}</h5>
-              <select class="select-input" name="model_select_{{ comp.id }}" data-target="model_{{ comp.id }}">
-                <option value="">None</option>
-                {% for cand in cands %}
-                  <option value="{{ cand.id }}" {% if comp.selected_model_id == cand.id %}selected{% endif %}>
-                    {{ cand.name }} ({{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }})
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
-          {% endif %}
+          {% for cand in comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) %}
+            {% set _ = model_options.append({"comp": comp, "cand": cand}) %}
+          {% endfor %}
         {% endfor %}
-        {% if not any_models %}
+        {% if model_options %}
+          <select class="select-input full" name="model_global" data-target="model_all">
+            <option value="">None</option>
+            {% for option in model_options %}
+              <option value="{{ option.cand.id }}" {% if option.comp.selected_model_id == option.cand.id %}selected{% endif %}>
+                {{ option.comp.name }} — {{ option.cand.name }} ({{ "%.2f"|format(option.cand.combined_score) }} | {{ option.cand.description or "-" }})
+              </option>
+            {% endfor %}
+          </select>
+        {% else %}
           <p class="muted">No 3D model candidates.</p>
         {% endif %}
       </div>
@@ -165,11 +156,17 @@
     const form = document.getElementById('selection-form');
     if (!form) return { ok: false, message: "No form present" };
     const data = {};
+    const symbolMap = {};
+    const footprintMap = {};
+    const modelMap = {};
+    document.querySelectorAll('input[name^="symbol_"]').forEach((hidden) => { symbolMap[hidden.name.replace("symbol_", "")] = hidden.value || null; });
+    document.querySelectorAll('input[name^="footprint_"]').forEach((hidden) => { footprintMap[hidden.name.replace("footprint_", "")] = hidden.value || null; });
+    document.querySelectorAll('input[name^="model_"]').forEach((hidden) => { modelMap[hidden.name.replace("model_", "")] = hidden.value || null; });
     {% for comp in job.components %}
     data["{{ comp.id }}"] = {
-      symbol_id: form["symbol_{{ comp.id }}"]?.value || null,
-      footprint_id: form["footprint_{{ comp.id }}"]?.value || null,
-      model_id: form["model_{{ comp.id }}"]?.value || null,
+      symbol_id: symbolMap["{{ comp.id }}"] || null,
+      footprint_id: footprintMap["{{ comp.id }}"] || null,
+      model_id: modelMap["{{ comp.id }}"] || null,
     };
     {% endfor %}
     const resp = await fetch(`/api/jobs/${jobId}/select`, {
@@ -185,16 +182,20 @@
     document.querySelectorAll('.select-input').forEach((sel) => {
       sel.addEventListener('change', (e) => {
         const target = sel.getAttribute('data-target');
-        const hidden = document.querySelector(`input[name="${target}"]`);
-        if (hidden) hidden.value = sel.value;
+        if (target === "symbol_all") {
+          document.querySelectorAll('input[name^="symbol_"]').forEach((hidden) => { hidden.value = sel.value; });
+        } else if (target === "footprint_all") {
+          document.querySelectorAll('input[name^="footprint_"]').forEach((hidden) => { hidden.value = sel.value; });
+        } else if (target === "model_all") {
+          document.querySelectorAll('input[name^="model_"]').forEach((hidden) => { hidden.value = sel.value; });
+        } else {
+          const hidden = document.querySelector(`input[name="${target}"]`);
+          if (hidden) hidden.value = sel.value;
+        }
       });
     });
     // initialize hidden values from select defaults
-    document.querySelectorAll('.select-input').forEach((sel) => {
-      const target = sel.getAttribute('data-target');
-      const hidden = document.querySelector(`input[name="${target}"]`);
-      if (hidden) hidden.value = sel.value;
-    });
+    document.querySelectorAll('.select-input').forEach((sel) => sel.dispatchEvent(new Event("change")));
   }
   attachSelectableHandlers();
 
