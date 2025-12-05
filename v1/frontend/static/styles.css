@@ -19,6 +19,7 @@ body {
   color: var(--text);
   font-size: 15px;
 }
+.small { font-size: 0.9rem; }
 .container {
   width: min(1180px, 92vw);
   margin: 0 auto;
@@ -182,6 +183,17 @@ button:hover { opacity: 0.92; }
 .component-block { border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
 .component-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .candidate-columns .candidate-card { min-height: 100%; display: flex; flex-direction: column; gap: 0.4rem; }
+.option-stack { display: flex; flex-direction: column; gap: 0.5rem; max-height: 360px; overflow-y: auto; padding-right: 0.2rem; }
+.option-tile { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 0.55rem 0.65rem; background: #111823; color: var(--text); text-align: left; cursor: pointer; transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease; box-shadow: none; margin-top: 0; }
+.option-tile:hover { border-color: rgba(54,197,116,0.6); }
+.option-tile.selected { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(54,197,116,0.2); background: rgba(54,197,116,0.08); }
+.option-tile.none { justify-content: center; align-items: center; display: flex; font-weight: 700; color: var(--muted); }
+.option-title { font-size: 0.9rem; color: var(--muted); font-weight: 700; margin-bottom: 0.15rem; }
+.option-name { font-weight: 700; }
+.option-meta, .option-path { color: var(--muted); font-size: 0.9rem; }
+.option-path { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.option-stack::-webkit-scrollbar { width: 8px; }
+.option-stack::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
 .chip-list { display: flex; flex-direction: column; gap: 0.35rem; }
 .chip { border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.5rem; background: #111823; color: var(--text); font-weight: 600; cursor: pointer; }
 .chip.selectable-chip { display: flex; flex-direction: column; gap: 0.2rem; transition: border-color 0.15s ease, background 0.15s ease; }

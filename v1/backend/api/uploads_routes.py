@@ -278,7 +278,7 @@ async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Pat
                             out_file.write(chunk)
                 stored_path = Path(destination_dir) / f"{Path(tmp_path).name}_{upload_service.sanitize_filename(filename)}"
                 Path(tmp_path).rename(stored_path)
-                _validate_zip_or_raise(stored_path, suffix, content_type)
+                _validate_zip_or_raise(stored_path, suffix, content_type, source_url=str(resp.url))
                 md5 = upload_service.compute_md5(stored_path)
                 return stored_path, md5, filename
             except Exception:
@@ -317,9 +317,33 @@ def _file_summary(root: Path) -> Dict[str, Any]:
     return {"files": count, "exts": top_exts or "none", "samples": "; ".join(samples)}
 
 
-def _validate_zip_or_raise(path: Path, suffix: str, content_type: str | None = None) -> None:
+def _preview_text(path: Path, limit: int = 400) -> str:
+    try:
+        data = path.read_bytes()[:limit]
+        if not data or b"\x00" in data:
+            return ""
+        return data.decode(errors="ignore")
+    except Exception:
+        return ""
+
+
+def _validate_zip_or_raise(path: Path, suffix: str, content_type: str | None = None, source_url: str | None = None) -> None:
     if suffix != ".zip":
         return
     if not zipfile.is_zipfile(path):
+        preview = ""
+        size_note = ""
+        try:
+            size_note = f" size={path.stat().st_size}B"
+        except Exception:
+            size_note = ""
+        if content_type and content_type.startswith("text"):
+            preview = _preview_text(path)
+        elif not content_type:
+            preview = _preview_text(path)
         extra = f" (content-type {content_type})" if content_type else ""
-        raise ValueError(f"Invalid zip archive{extra}")
+        if source_url:
+            extra = f"{extra} url={source_url}"
+        if preview:
+            extra = f"{extra}. Preview: {preview}"
+        raise ValueError(f"Invalid zip archive{extra}{size_note}")

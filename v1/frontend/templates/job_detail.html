@@ -17,78 +17,115 @@
 <section class="card">
   <h3>Components & Candidates</h3>
 {% if job.components %}
-  <form id="selection-form">
-    {% for comp in job.components %}
-      <input type="hidden" name="symbol_{{ comp.id }}" value="{{ comp.selected_symbol_id or '' }}">
-      <input type="hidden" name="footprint_{{ comp.id }}" value="{{ comp.selected_footprint_id or '' }}">
-      <input type="hidden" name="model_{{ comp.id }}" value="{{ comp.selected_model_id or '' }}">
+  {% set symbols = namespace(options=[]) %}
+  {% set footprints = namespace(options=[]) %}
+  {% set models = namespace(options=[]) %}
+  {% set selected_symbol = namespace(id=None, comp=None) %}
+  {% set selected_footprint = namespace(id=None, comp=None) %}
+  {% set selected_model = namespace(id=None, comp=None) %}
+  {% for comp in job.components %}
+    {% if comp.selected_symbol_id and not selected_symbol.id %}
+      {% set selected_symbol.id = comp.selected_symbol_id %}
+      {% set selected_symbol.comp = comp.id %}
+    {% endif %}
+    {% if comp.selected_footprint_id and not selected_footprint.id %}
+      {% set selected_footprint.id = comp.selected_footprint_id %}
+      {% set selected_footprint.comp = comp.id %}
+    {% endif %}
+    {% if comp.selected_model_id and not selected_model.id %}
+      {% set selected_model.id = comp.selected_model_id %}
+      {% set selected_model.comp = comp.id %}
+    {% endif %}
+    {% for cand in comp.candidates | sort(attribute='combined_score', reverse=True) %}
+      {% if cand.type.value == 'symbol' %}
+        {% set _ = symbols.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pins": cand.pin_count, "path": cand.rel_path}) %}
+      {% elif cand.type.value == 'footprint' %}
+        {% set _ = footprints.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pads": cand.pad_count, "path": cand.rel_path}) %}
+      {% elif cand.type.value == 'model' %}
+        {% set _ = models.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "desc": cand.description, "path": cand.rel_path}) %}
+      {% endif %}
     {% endfor %}
-
+  {% endfor %}
+  <form id="selection-form">
+    <div id="selection-hidden-inputs" hidden>
+      {% for comp in job.components %}
+        <input type="hidden" name="symbol_{{ comp.id }}" value="{{ comp.selected_symbol_id or '' }}">
+        <input type="hidden" name="footprint_{{ comp.id }}" value="{{ comp.selected_footprint_id or '' }}">
+        <input type="hidden" name="model_{{ comp.id }}" value="{{ comp.selected_model_id or '' }}">
+      {% endfor %}
+    </div>
+    <div class="muted small">Pick one choice per type. Choosing an option fills that component and clears the rest for that type. Scroll inside each card to see all options.</div>
     <div class="grid three-col align-start candidate-columns">
       <div class="candidate-card">
-        <div class="card-header small"><h4>Symbols</h4></div>
-        {% set symbol_options = [] %}
-        {% for comp in job.components %}
-          {% for cand in comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) %}
-            {% set _ = symbol_options.append({"comp": comp, "cand": cand}) %}
-          {% endfor %}
-        {% endfor %}
-        {% if symbol_options %}
-          <select class="select-input full" name="symbol_global" data-target="symbol_all">
-            <option value="">None</option>
-            {% for option in symbol_options %}
-              <option value="{{ option.cand.id }}" {% if option.comp.selected_symbol_id == option.cand.id %}selected{% endif %}>
-                {{ option.comp.name }} — {{ option.cand.name }} ({{ "%.2f"|format(option.cand.combined_score) }}, pins {{ option.cand.pin_count or "-" }})
-              </option>
+        <div class="card-header small">
+          <h4>Symbols</h4>
+          <span class="muted small">{{ symbols.options|length }} option{{ '' if symbols.options|length == 1 else 's' }}</span>
+        </div>
+        <div class="option-stack" data-type="symbol">
+          {% if symbols.options %}
+            {% for opt in symbols.options | sort(attribute='score', reverse=True) %}
+              <button type="button" class="option-tile {% if opt.id == selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
+                <div class="option-title">{{ opt.comp_name }}</div>
+                <div class="option-name">{{ opt.name }}</div>
+                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} | Pins {{ opt.pins or "-" }}</div>
+                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
+              </button>
             {% endfor %}
-          </select>
-        {% else %}
-          <p class="muted">No symbol candidates.</p>
-        {% endif %}
+          {% else %}
+            <p class="muted">No symbol candidates.</p>
+          {% endif %}
+          <button type="button" class="option-tile none {% if not selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="">
+            None
+          </button>
+        </div>
       </div>
 
       <div class="candidate-card">
-        <div class="card-header small"><h4>Footprints</h4></div>
-        {% set fp_options = [] %}
-        {% for comp in job.components %}
-          {% for cand in comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) %}
-            {% set _ = fp_options.append({"comp": comp, "cand": cand}) %}
-          {% endfor %}
-        {% endfor %}
-        {% if fp_options %}
-          <select class="select-input full" name="footprint_global" data-target="footprint_all">
-            <option value="">None</option>
-            {% for option in fp_options %}
-              <option value="{{ option.cand.id }}" {% if option.comp.selected_footprint_id == option.cand.id %}selected{% endif %}>
-                {{ option.comp.name }} — {{ option.cand.name }} ({{ "%.2f"|format(option.cand.combined_score) }}, pads {{ option.cand.pad_count or "-" }})
-              </option>
+        <div class="card-header small">
+          <h4>Footprints</h4>
+          <span class="muted small">{{ footprints.options|length }} option{{ '' if footprints.options|length == 1 else 's' }}</span>
+        </div>
+        <div class="option-stack" data-type="footprint">
+          {% if footprints.options %}
+            {% for opt in footprints.options | sort(attribute='score', reverse=True) %}
+              <button type="button" class="option-tile {% if opt.id == selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
+                <div class="option-title">{{ opt.comp_name }}</div>
+                <div class="option-name">{{ opt.name }}</div>
+                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} | Pads {{ opt.pads or "-" }}</div>
+                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
+              </button>
             {% endfor %}
-          </select>
-        {% else %}
-          <p class="muted">No footprint candidates.</p>
-        {% endif %}
+          {% else %}
+            <p class="muted">No footprint candidates.</p>
+          {% endif %}
+          <button type="button" class="option-tile none {% if not selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="">
+            None
+          </button>
+        </div>
       </div>
 
       <div class="candidate-card">
-        <div class="card-header small"><h4>3D Models</h4></div>
-        {% set model_options = [] %}
-        {% for comp in job.components %}
-          {% for cand in comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) %}
-            {% set _ = model_options.append({"comp": comp, "cand": cand}) %}
-          {% endfor %}
-        {% endfor %}
-        {% if model_options %}
-          <select class="select-input full" name="model_global" data-target="model_all">
-            <option value="">None</option>
-            {% for option in model_options %}
-              <option value="{{ option.cand.id }}" {% if option.comp.selected_model_id == option.cand.id %}selected{% endif %}>
-                {{ option.comp.name }} — {{ option.cand.name }} ({{ "%.2f"|format(option.cand.combined_score) }} | {{ option.cand.description or "-" }})
-              </option>
+        <div class="card-header small">
+          <h4>3D Models</h4>
+          <span class="muted small">{{ models.options|length }} option{{ '' if models.options|length == 1 else 's' }}</span>
+        </div>
+        <div class="option-stack" data-type="model">
+          {% if models.options %}
+            {% for opt in models.options | sort(attribute='score', reverse=True) %}
+              <button type="button" class="option-tile {% if opt.id == selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
+                <div class="option-title">{{ opt.comp_name }}</div>
+                <div class="option-name">{{ opt.name }}</div>
+                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} | {{ opt.desc or "-" }}</div>
+                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
+              </button>
             {% endfor %}
-          </select>
-        {% else %}
-          <p class="muted">No 3D model candidates.</p>
-        {% endif %}
+          {% else %}
+            <p class="muted">No 3D model candidates.</p>
+          {% endif %}
+          <button type="button" class="option-tile none {% if not selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="">
+            None
+          </button>
+        </div>
       </div>
     </div>
 
@@ -178,26 +215,53 @@
     return { ok: resp.ok, body, message: body.detail || "" };
   }
 
-  function attachSelectableHandlers() {
-    document.querySelectorAll('.select-input').forEach((sel) => {
-      sel.addEventListener('change', (e) => {
-        const target = sel.getAttribute('data-target');
-        if (target === "symbol_all") {
-          document.querySelectorAll('input[name^="symbol_"]').forEach((hidden) => { hidden.value = sel.value; });
-        } else if (target === "footprint_all") {
-          document.querySelectorAll('input[name^="footprint_"]').forEach((hidden) => { hidden.value = sel.value; });
-        } else if (target === "model_all") {
-          document.querySelectorAll('input[name^="model_"]').forEach((hidden) => { hidden.value = sel.value; });
-        } else {
-          const hidden = document.querySelector(`input[name="${target}"]`);
-          if (hidden) hidden.value = sel.value;
-        }
+  function applyTypeSelection(type, candId, compId) {
+    document.querySelectorAll(`input[name^="${type}_"]`).forEach((hidden) => { hidden.value = ""; });
+    if (candId && compId) {
+      const target = document.querySelector(`input[name="${type}_${compId}"]`);
+      if (target) target.value = candId;
+    }
+  }
+
+  function markSelected(type, activeBtn) {
+    document.querySelectorAll(`.option-tile[data-type="${type}"]`).forEach((btn) => {
+      btn.classList.toggle('selected', btn === activeBtn);
+    });
+  }
+
+  function initOptionTiles() {
+    document.querySelectorAll('.option-tile').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.type;
+        applyTypeSelection(type, btn.dataset.candId || "", btn.dataset.compId || "");
+        markSelected(type, btn);
       });
     });
-    // initialize hidden values from select defaults
-    document.querySelectorAll('.select-input').forEach((sel) => sel.dispatchEvent(new Event("change")));
+    ["symbol", "footprint", "model"].forEach((type) => {
+      const active = document.querySelector(`.option-tile[data-type="${type}"].selected`);
+      if (active) {
+        applyTypeSelection(type, active.dataset.candId || "", active.dataset.compId || "");
+        return;
+      }
+      let chosen = null;
+      document.querySelectorAll(`input[name^="${type}_"]`).forEach((hidden) => {
+        if (!chosen && hidden.value) {
+          chosen = document.querySelector(`.option-tile[data-type="${type}"][data-cand-id="${hidden.value}"]`);
+        }
+      });
+      if (chosen) {
+        markSelected(type, chosen);
+        applyTypeSelection(type, chosen.dataset.candId || "", chosen.dataset.compId || "");
+      } else {
+        const noneBtn = document.querySelector(`.option-tile.none[data-type="${type}"]`);
+        if (noneBtn) {
+          markSelected(type, noneBtn);
+          applyTypeSelection(type, "", "");
+        }
+      }
+    });
   }
-  attachSelectableHandlers();
+  initOptionTiles();
 
   document.getElementById('selection-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();

@@ -20,7 +20,11 @@
       <button type="button" id="refresh-models">Refresh models</button>
       <p id="ollama-model-hint" class="muted"></p>
     </div>
-    <div id="model-list-display" class="mini-list"></div>
+    <div class="option-stack" id="ollama-model-stack">
+      <div class="card-header small"><h4>Available models</h4></div>
+      <select id="ollama-model-select" class="select-input" size="6"></select>
+      <div id="model-list-display" class="mini-list"></div>
+    </div>
     <label>Log level<br><input type="text" id="log_level" name="log_level" value="{{ config.log_level if config else 'INFO' }}"></label><br>
     <label>Log file (optional)<br><input type="text" id="log_file" name="log_file" value="{{ config.log_file if config and config.log_file else '' }}"></label><br>
     <button type="submit">Save Settings</button>
@@ -36,6 +40,8 @@
   const baseInput = document.getElementById('ollama_base_url');
   const modelInput = document.getElementById('ollama_model');
   const enabledBox = document.getElementById('ollama_enabled');
+  const modelSelect = document.getElementById('ollama-model-select');
+  const modelStack = document.getElementById('ollama-model-stack');
 
   function buildPayload() {
     const formData = new FormData(form);
@@ -80,6 +86,8 @@
       modelHint.textContent = "Enter an Ollama base URL to load models.";
       modelList.innerHTML = "";
       document.getElementById('model-list-display').innerHTML = "";
+      modelSelect.innerHTML = "";
+      modelStack.hidden = true;
       return;
     }
     modelHint.textContent = "Loading available models...";
@@ -92,6 +100,7 @@
       modelList.innerHTML = "";
       const display = document.getElementById('model-list-display');
       display.innerHTML = "";
+      modelSelect.innerHTML = "";
       (body.models || []).forEach((name) => {
         const opt = document.createElement('option');
         opt.value = name;
@@ -101,9 +110,20 @@
         btn.type = "button";
         btn.textContent = name;
         btn.className = "chip";
-        btn.addEventListener('click', () => { modelInput.value = name; });
+        btn.addEventListener('click', () => { modelInput.value = name; modelSelect.value = name; });
         display.appendChild(btn);
+
+        const optSelect = document.createElement('option');
+        optSelect.value = name;
+        optSelect.textContent = name;
+        modelSelect.appendChild(optSelect);
       });
+      if (modelSelect.options.length) {
+        modelSelect.size = Math.min(8, modelSelect.options.length);
+        modelStack.hidden = false;
+      } else {
+        modelStack.hidden = true;
+      }
       modelHint.textContent = (body.models && body.models.length)
         ? `Loaded ${body.models.length} model option(s). Click a chip to select.`
         : "No models reported by Ollama. Check the base URL and network.";
@@ -144,5 +164,10 @@
   loadModels();
   baseInput?.addEventListener('change', loadModels);
   document.getElementById('refresh-models').addEventListener('click', loadModels);
+  modelSelect?.addEventListener('change', () => {
+    if (modelSelect.value) {
+      modelInput.value = modelSelect.value;
+    }
+  });
 </script>
 {% endblock %}
