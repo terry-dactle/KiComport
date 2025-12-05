@@ -64,7 +64,7 @@
         <div class="option-stack" data-type="symbol">
           {% if symbols.options %}
             {% for opt in symbols.options | sort(attribute='score', reverse=True) %}
-              <button type="button" class="option-tile {% if opt.id == selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
+              <button type="button" class="option-tile {% if opt.id == selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
                 <div class="option-head">
                   <div class="option-name">{{ opt.name }}</div>
                   {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
@@ -84,6 +84,7 @@
             None
           </button>
         </div>
+        <div class="viewer-panel" id="viewer-symbol">Hover a symbol to preview its path.</div>
       </div>
 
       <div class="candidate-card">
@@ -94,7 +95,7 @@
         <div class="option-stack" data-type="footprint">
           {% if footprints.options %}
             {% for opt in footprints.options | sort(attribute='score', reverse=True) %}
-              <button type="button" class="option-tile {% if opt.id == selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
+              <button type="button" class="option-tile {% if opt.id == selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
                 <div class="option-head">
                   <div class="option-name">{{ opt.name }}</div>
                   {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
@@ -114,6 +115,7 @@
             None
           </button>
         </div>
+        <div class="viewer-panel" id="viewer-footprint">Hover a footprint to preview its path.</div>
       </div>
 
       <div class="candidate-card">
@@ -124,7 +126,7 @@
         <div class="option-stack" data-type="model">
           {% if models.options %}
             {% for opt in models.options | sort(attribute='score', reverse=True) %}
-              <button type="button" class="option-tile {% if opt.id == selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
+              <button type="button" class="option-tile {% if opt.id == selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
                 <div class="option-head">
                   <div class="option-name">{{ opt.name }}</div>
                   {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
@@ -144,6 +146,7 @@
             None
           </button>
         </div>
+        <div class="viewer-panel" id="viewer-model">Hover a model to preview its path.</div>
       </div>
     </div>
 
@@ -247,13 +250,36 @@
     });
   }
 
+  const viewers = {
+    symbol: document.getElementById('viewer-symbol'),
+    footprint: document.getElementById('viewer-footprint'),
+    model: document.getElementById('viewer-model'),
+  };
+
+  function setPreview(type, btn) {
+    const viewer = viewers[type];
+    if (!viewer) return;
+    if (!btn) {
+      viewer.textContent = `Hover a ${type} to preview its path.`;
+      return;
+    }
+    const name = btn.dataset.name || "Unknown";
+    const file = btn.dataset.file || "";
+    const path = btn.dataset.path || "";
+    const meta = [name, file, path].filter(Boolean).join(" — ");
+    viewer.textContent = meta || "No preview available";
+  }
+
   function initOptionTiles() {
     document.querySelectorAll('.option-tile').forEach((btn) => {
       btn.addEventListener('click', () => {
         const type = btn.dataset.type;
         applyTypeSelection(type, btn.dataset.candId || "", btn.dataset.compId || "");
         markSelected(type, btn);
+        setPreview(type, btn);
       });
+      btn.addEventListener('mouseenter', () => setPreview(btn.dataset.type, btn));
+      btn.addEventListener('mouseleave', () => setPreview(btn.dataset.type, null));
     });
     ["symbol", "footprint", "model"].forEach((type) => {
       const active = document.querySelector(`.option-tile[data-type="${type}"].selected`);
