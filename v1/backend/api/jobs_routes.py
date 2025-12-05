@@ -175,3 +175,23 @@ def delete_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> 
             except Exception:
                 pass
     db.delete(job)
+
+
+@router.get("/candidates/{candidate_id}/preview")
+def candidate_preview(candidate_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    cand = db.get(CandidateFile, candidate_id)
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    try:
+        with open(cand.path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read(2000)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to read candidate: {exc}") from exc
+    return {
+        "id": cand.id,
+        "type": cand.type.value,
+        "name": cand.name,
+        "path": cand.path,
+        "rel_path": cand.rel_path,
+        "content_preview": content,
+    }
