@@ -3,6 +3,12 @@ from __future__ import annotations
 import shutil
 import zipfile
 from pathlib import Path
+try:
+    import rarfile  # type: ignore
+    HAS_RAR = True
+except Exception:
+    rarfile = None
+    HAS_RAR = False
 from typing import Iterable
 
 
@@ -13,9 +19,17 @@ def extract_if_needed(stored_path: Path, temp_root: Path) -> Path:
         shutil.rmtree(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    if stored_path.suffix.lower() == ".zip" and not zipfile.is_zipfile(stored_path):
+    suffix = stored_path.suffix.lower()
+    if suffix == ".zip" and not zipfile.is_zipfile(stored_path):
         raise ValueError("Invalid zip archive")
-    if zipfile.is_zipfile(stored_path):
+    if suffix == ".rar":
+        if not HAS_RAR:
+            raise ValueError("RAR support not available; install rarfile/unrar")
+        if not rarfile.is_rarfile(stored_path):
+            raise ValueError("Invalid rar archive")
+        with rarfile.RarFile(stored_path) as rf:
+            rf.extractall(target_dir)
+    elif zipfile.is_zipfile(stored_path):
         _safe_extract_zip(stored_path, target_dir)
     else:
         # Non-zip uploads are placed in their own folder for scanning

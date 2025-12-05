@@ -29,6 +29,10 @@ def looks_like_part_number(name: str) -> bool:
 
 def quality_score_for_candidate(cf: CandidateFile) -> float:
     score = 0.0
+    size = cf.metadata_json.get("size", 0) if isinstance(cf.metadata_json, dict) else 0
+    if size:
+        # Favor files with some substance; cap bonus
+        score += min(0.05, size / 1_000_000 * 0.01)
     if cf.description:
         score += 0.05
     if cf.type == CandidateType.symbol:
@@ -38,7 +42,7 @@ def quality_score_for_candidate(cf: CandidateFile) -> float:
         if cf.pad_count and cf.pad_count > 0:
             score += 0.05
     elif cf.type == CandidateType.model:
-        if cf.metadata_json.get("size", 1) > 0:
+        if size > 0:
             score += 0.05
         if Path(cf.path).suffix.lower() in {".step", ".stp"}:
             score += 0.05

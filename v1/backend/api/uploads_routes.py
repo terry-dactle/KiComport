@@ -18,7 +18,7 @@ from ..services import extract, jobs as job_service, ollama as ollama_service, r
 
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
-ALLOWED_EXTS = {".zip", ".kicad_sym", ".kicad_mod", ".stp", ".step", ".wrl", ".obj"}
+ALLOWED_EXTS = {".zip", ".rar", ".kicad_sym", ".kicad_mod", ".stp", ".step", ".wrl", ".obj"}
 MAX_URL_DOWNLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
 REJECT_CONTENT_TYPES = {"text/html", "text/plain"}
 
@@ -176,7 +176,12 @@ def _persist_components(db: Session, job_id: int, candidates: list[scan_service.
         db.add(comp)
         db.flush()
         response_candidates = []
+        seen: set[tuple[str, str]] = set()
         for cand in cand_list:
+            key = (cand.type.value, str(cand.rel_path))
+            if key in seen:
+                continue
+            seen.add(key)
             cf = CandidateFile(
                 component_id=comp.id,
                 type=cand.type,
