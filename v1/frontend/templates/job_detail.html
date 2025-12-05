@@ -273,7 +273,7 @@
     }
     viewer.textContent = "Loading preview...";
     try {
-      const resp = await fetch(`/api/candidates/${id}/preview`);
+      const resp = await fetch(`/api/jobs/candidates/${id}/preview`);
       const body = await resp.json();
       if (!resp.ok) throw new Error(body.detail || resp.statusText);
       const text = body.content_preview || "No preview available";
@@ -281,6 +281,7 @@
       viewer.textContent = text;
     } catch (err) {
       viewer.textContent = `Preview unavailable: ${err?.message || err}`;
+      console.error("Preview fetch failed", { type, id, error: err });
     }
   }
 

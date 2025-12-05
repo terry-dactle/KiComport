@@ -183,6 +183,14 @@ def candidate_preview(candidate_id: int, db: Session = Depends(get_db)) -> Dict[
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found")
     try:
+        path_obj = Path(cand.path)
+        if not path_obj.exists():
+            raise HTTPException(status_code=404, detail=f"File not found at {cand.path}")
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to access candidate path: {exc}") from exc
+    try:
         with open(cand.path, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read(2000)
     except Exception as exc:
