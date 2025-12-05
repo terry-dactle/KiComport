@@ -127,6 +127,31 @@ button:hover { opacity: 0.92; }
 .card input[type="text"], .card input[type="url"] { width: 100%; padding: 0.4rem; border-radius: 7px; border: 1px solid var(--border); background: #0f141b; color: var(--text); }
 .settings-section { display: flex; flex-direction: column; gap: 0.5rem; }
 hr { border: 0; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+.inline-status { margin: 0.2rem 0 0.4rem; }
+.toggle { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none; }
+.toggle input { display: none; }
+.toggle-slider {
+  width: 44px;
+  height: 24px;
+  background: var(--border);
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.15s ease;
+}
+.toggle-slider::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s ease;
+}
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider::after { transform: translateX(20px); }
+.toggle-label { font-weight: 700; }
 .status-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
 .status-dot { width: 12px; height: 12px; border-radius: 999px; background: var(--border); box-shadow: 0 0 0 4px rgba(255,255,255,0.03); }
 .status-dot.ok { background: var(--accent); }
