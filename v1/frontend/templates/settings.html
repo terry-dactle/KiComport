@@ -27,14 +27,15 @@
         <span class="toggle-label">Ollama enabled</span>
       </label>
       <br>
-      <div class="helper-row">
+    <div class="helper-row">
       <label style="flex:1;">Ollama base URL<br><input type="text" id="ollama_base_url" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}" placeholder="Use a reachable address from this container (e.g., http://192.168.20.3:11434 or http://host.docker.internal:11434)."></label>
       <button type="button" id="ollama-test">Test Ollama</button>
     </div>
+      <p id="ollama-test-status" class="muted inline-status"></p>
       <label>Ollama model<br><input type="text" id="ollama_model" name="ollama_model" list="ollama-models" value="{{ config.ollama_model if config else '' }}"></label>
       <datalist id="ollama-models"></datalist>
       <div class="option-stack" id="ollama-model-stack">
-      <div class="card-header small helper-row">
+      <div class="card-header small helper-row" style="align-items:center;">
         <h4 style="margin: 0;">Available models</h4>
         <button type="button" id="refresh-models">Reload models</button>
       </div>
@@ -64,6 +65,7 @@
   const enabledBox = document.getElementById('ollama_enabled');
   const modelSelect = document.getElementById('ollama-model-select');
   const modelStack = document.getElementById('ollama-model-stack');
+  const ollamaTestStatus = document.getElementById('ollama-test-status');
   const dataDirInput = document.getElementById('data_dir');
   const symbolInput = document.getElementById('kicad_symbol_dir');
   const footprintInput = document.getElementById('kicad_footprint_dir');
@@ -148,36 +150,34 @@
     }
   }
 
-  const ollamaTestStatus = document.getElementById('ollama-test-status');
-
   document.getElementById('ollama-test').addEventListener('click', async () => {
     const enabled = enabledBox.checked;
     const baseUrl = baseInput.value.trim();
     const model = modelInput.value.trim();
     if (!baseUrl || !model) {
-      statusEl.textContent = "Set base URL and model to run the test.";
+      if (ollamaTestStatus) ollamaTestStatus.textContent = "Set base URL and model to run the test.";
       return;
     }
-    statusEl.textContent = "Running Ollama test...";
+    if (ollamaTestStatus) ollamaTestStatus.textContent = "Running Ollama test...";
     const params = new URLSearchParams({ enabled: String(enabled), base_url: baseUrl, model });
     try {
       const resp = await fetch(`/api/ollama/test?${params.toString()}`);
       const body = await resp.json();
       if (!resp.ok) {
-        statusEl.textContent = "Ollama test failed: " + (body.detail || resp.statusText);
+        if (ollamaTestStatus) ollamaTestStatus.textContent = "Ollama test failed: " + (body.detail || resp.statusText);
         return;
       }
       if (body.enabled === false) {
-        statusEl.textContent = "Enable Ollama and save before testing.";
+        if (ollamaTestStatus) ollamaTestStatus.textContent = "Enable Ollama and save before testing.";
         return;
       }
       const msg = body.ok
         ? `Ollama OK via ${body.base_url} using ${body.model}`
         : `Ollama test failed: ${body.error || "unknown error"}. Requested URL: ${body.requested_url || "n/a"}`;
-      statusEl.textContent = msg;
+      if (ollamaTestStatus) ollamaTestStatus.textContent = msg;
     } catch (err) {
       const msg = "Ollama test failed: " + (err?.message || err);
-      statusEl.textContent = msg;
+      if (ollamaTestStatus) ollamaTestStatus.textContent = msg;
     }
   });
 
