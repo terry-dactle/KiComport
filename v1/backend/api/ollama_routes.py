@@ -50,6 +50,7 @@ async def ollama_test(
             "base_url": target_url,
             "model": target_model,
             "hint": "Verify the base URL is reachable from the app container and Ollama is listening on this address/port. If Ollama runs on the host, try http://192.168.20.3:11434 or http://host.docker.internal:11434.",
+            "debug": {"timeout": cfg.ollama_timeout_sec, "retries": cfg.ollama_max_retries},
         }
 
 

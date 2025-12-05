@@ -16,104 +16,113 @@
 
 <section class="card">
   <h3>Components & Candidates</h3>
-  {% if job.components %}
+{% if job.components %}
   <form id="selection-form">
-    {% set all_symbols = [] %}
-    {% set all_footprints = [] %}
-    {% set all_models = [] %}
+    {% set symbols_by_comp = [] %}
+    {% set footprints_by_comp = [] %}
+    {% set models_by_comp = [] %}
     {% for comp in job.components %}
-      {% set _ = all_symbols.append({"comp": comp, "cands": comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list }) %}
-      {% set _ = all_footprints.append({"comp": comp, "cands": comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list }) %}
-      {% set _ = all_models.append({"comp": comp, "cands": comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list }) %}
+      {% set symbols = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list %}
+      {% set footprints = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list %}
+      {% set models = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list %}
+      {% if symbols|length > 0 %}
+        {% set _ = symbols_by_comp.append({"comp": comp, "cands": symbols}) %}
+      {% endif %}
+      {% if footprints|length > 0 %}
+        {% set _ = footprints_by_comp.append({"comp": comp, "cands": footprints}) %}
+      {% endif %}
+      {% if models|length > 0 %}
+        {% set _ = models_by_comp.append({"comp": comp, "cands": models}) %}
+      {% endif %}
     {% endfor %}
 
     <div class="candidate-block">
       <div class="card-header small"><h4>Symbols</h4></div>
-      {% for bundle in all_symbols %}
-        <div class="component">
-          <h5>{{ bundle.comp.name }}</h5>
-          {% if bundle.cands %}
-          <ul class="candidate-list compact">
-            {% for cand in bundle.cands %}
-            <li>
-              <label>
-                <input type="radio" name="symbol_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_symbol_id == cand.id %}checked{% endif %}>
-                <span class="name">{{ cand.name }}</span>
-                <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</span>
-                <span class="muted mono">{{ cand.rel_path }}</span>
-              </label>
-            </li>
-            {% endfor %}
-            <li><label><input type="radio" name="symbol_{{ bundle.comp.id }}" value=""> None</label></li>
-          </ul>
-          {% else %}
-          <p class="muted">No symbol options.</p>
-          {% endif %}
-        </div>
-      {% endfor %}
+      {% if symbols_by_comp %}
+        {% for bundle in symbols_by_comp %}
+          <div class="component">
+            <h5>{{ bundle.comp.name }}</h5>
+            <ul class="candidate-list compact">
+              {% for cand in bundle.cands %}
+              <li>
+                <label>
+                  <input type="radio" name="symbol_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_symbol_id == cand.id %}checked{% endif %}>
+                  <span class="name">{{ cand.name }}</span>
+                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</span>
+                  <span class="muted mono">{{ cand.rel_path }}</span>
+                </label>
+              </li>
+              {% endfor %}
+              <li><label><input type="radio" name="symbol_{{ bundle.comp.id }}" value=""> None</label></li>
+            </ul>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">No symbol candidates found in this job.</p>
+      {% endif %}
     </div>
 
     <div class="candidate-block">
       <div class="card-header small"><h4>Footprints</h4></div>
-      {% for bundle in all_footprints %}
-        <div class="component">
-          <h5>{{ bundle.comp.name }}</h5>
-          {% if bundle.cands %}
-          <ul class="candidate-list compact">
-            {% for cand in bundle.cands %}
-            <li>
-              <label>
-                <input type="radio" name="footprint_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_footprint_id == cand.id %}checked{% endif %}>
-                <span class="name">{{ cand.name }}</span>
-                <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</span>
-                <span class="muted mono">{{ cand.rel_path }}</span>
-              </label>
-            </li>
-            {% endfor %}
-            <li><label><input type="radio" name="footprint_{{ bundle.comp.id }}" value=""> None</label></li>
-          </ul>
-          {% else %}
-          <p class="muted">No footprint options.</p>
-          {% endif %}
-        </div>
-      {% endfor %}
+      {% if footprints_by_comp %}
+        {% for bundle in footprints_by_comp %}
+          <div class="component">
+            <h5>{{ bundle.comp.name }}</h5>
+            <ul class="candidate-list compact">
+              {% for cand in bundle.cands %}
+              <li>
+                <label>
+                  <input type="radio" name="footprint_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_footprint_id == cand.id %}checked{% endif %}>
+                  <span class="name">{{ cand.name }}</span>
+                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</span>
+                  <span class="muted mono">{{ cand.rel_path }}</span>
+                </label>
+              </li>
+              {% endfor %}
+              <li><label><input type="radio" name="footprint_{{ bundle.comp.id }}" value=""> None</label></li>
+            </ul>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">No footprint candidates found in this job.</p>
+      {% endif %}
     </div>
 
     <div class="candidate-block">
       <div class="card-header small"><h4>3D Models</h4></div>
-      {% for bundle in all_models %}
-        <div class="component">
-          <h5>{{ bundle.comp.name }}</h5>
-          {% if bundle.cands %}
-          <ul class="candidate-list compact">
-            {% for cand in bundle.cands %}
-            <li>
-              <label>
-                <input type="radio" name="model_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_model_id == cand.id %}checked{% endif %}>
-                <span class="name">{{ cand.name }}</span>
-                <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</span>
-                <span class="muted mono">{{ cand.rel_path }}</span>
-              </label>
-            </li>
-            {% endfor %}
-            <li><label><input type="radio" name="model_{{ bundle.comp.id }}" value=""> None</label></li>
-          </ul>
-          {% else %}
-          <p class="muted">No model options.</p>
-          {% endif %}
-        </div>
-      {% endfor %}
+      {% if models_by_comp %}
+        {% for bundle in models_by_comp %}
+          <div class="component">
+            <h5>{{ bundle.comp.name }}</h5>
+            <ul class="candidate-list compact">
+              {% for cand in bundle.cands %}
+              <li>
+                <label>
+                  <input type="radio" name="model_{{ bundle.comp.id }}" value="{{ cand.id }}" {% if bundle.comp.selected_model_id == cand.id %}checked{% endif %}>
+                  <span class="name">{{ cand.name }}</span>
+                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</span>
+                  <span class="muted mono">{{ cand.rel_path }}</span>
+                </label>
+              </li>
+              {% endfor %}
+              <li><label><input type="radio" name="model_{{ bundle.comp.id }}" value=""> None</label></li>
+            </ul>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted">No 3D model candidates found in this job.</p>
+      {% endif %}
     </div>
 
     <div class="actions">
       <button type="submit">Save choices</button>
-      <button type="button" id="import-btn">Import to KiCad</button>
-      <p class="muted">Save picks first, then import copies the selected items into your KiCad library folders.</p>
+      <button type="button" id="import-btn">Save + import to KiCad</button>
+      <p class="muted">Save choices stores your picks. Import copies the selected items into your KiCad library folders.</p>
     </div>
   </form>
-  {% else %}
+{% else %}
   <p>No components found.</p>
-  {% endif %}
+{% endif %}
 </section>
 
 <section class="card">
@@ -163,15 +172,15 @@
       setActionStatus(`Remove failed: ${err?.message || err}`);
     }
   });
-  document.getElementById('selection-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  async function saveSelections() {
+    const form = document.getElementById('selection-form');
+    if (!form) return { ok: false, message: "No form present" };
     const data = {};
-    const form = e.target;
     {% for comp in job.components %}
     data["{{ comp.id }}"] = {
-      symbol_id: form["symbol_{{ comp.id }}"].value || null,
-      footprint_id: form["footprint_{{ comp.id }}"].value || null,
-      model_id: form["model_{{ comp.id }}"].value || null,
+      symbol_id: form["symbol_{{ comp.id }}"]?.value || null,
+      footprint_id: form["footprint_{{ comp.id }}"]?.value || null,
+      model_id: form["model_{{ comp.id }}"]?.value || null,
     };
     {% endfor %}
     const resp = await fetch(`/api/jobs/${jobId}/select`, {
@@ -180,13 +189,35 @@
       body: JSON.stringify(data),
     });
     const body = await resp.json();
-    alert("Selections saved: " + JSON.stringify(body));
+    return { ok: resp.ok, body, message: body.detail || "" };
+  }
+
+  document.getElementById('selection-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setActionStatus("Saving choices...");
+    try {
+      const result = await saveSelections();
+      if (!result.ok) throw new Error(result.message || "Failed to save choices");
+      setActionStatus("Choices saved.");
+    } catch (err) {
+      setActionStatus(`Save failed: ${err?.message || err}`);
+    }
   });
 
   document.getElementById('import-btn')?.addEventListener('click', async () => {
-    const resp = await fetch(`/api/jobs/${jobId}/import`, { method: "POST" });
-    const body = await resp.json();
-    alert("Import result: " + JSON.stringify(body));
+    setActionStatus("Saving choices before import...");
+    try {
+      const saved = await saveSelections();
+      if (!saved.ok) throw new Error(saved.message || "Failed to save choices");
+      setActionStatus("Importing to KiCad...");
+      const resp = await fetch(`/api/jobs/${jobId}/import`, { method: "POST" });
+      const body = await resp.json();
+      if (!resp.ok) throw new Error(body.detail || body.error || resp.statusText);
+      setActionStatus("Import complete.");
+      alert("Import complete.");
+    } catch (err) {
+      setActionStatus(`Import failed: ${err?.message || err}`);
+    }
   });
 </script>
 {% endblock %}

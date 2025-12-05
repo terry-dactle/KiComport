@@ -247,11 +247,17 @@ async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Pat
                 raise ValueError("File too large to fetch")
             content_type = (resp.headers.get("content-type") or "").split(";")[0].lower()
             if suffix not in ALLOWED_EXTS and content_type in REJECT_CONTENT_TYPES:
+                preview = ""
+                try:
+                    preview = (await resp.aread())[:200].decode(errors="ignore")
+                except Exception:
+                    preview = ""
                 info = {
                     "status": resp.status_code,
                     "content_type": content_type,
                     "content_length": content_length,
                     "url": str(resp.url),
+                    "preview": preview,
                 }
                 raise ValueError(f"Rejected content type {content_type}. Likely an expired/HTML page. Details: {info}")
             destination_dir.mkdir(parents=True, exist_ok=True)
