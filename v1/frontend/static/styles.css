@@ -190,8 +190,9 @@ button:hover { opacity: 0.92; }
 .option-tile.none { justify-content: center; align-items: center; display: flex; font-weight: 700; color: var(--muted); }
 .option-title { font-size: 0.9rem; color: var(--muted); font-weight: 700; margin-bottom: 0.15rem; }
 .option-name { font-weight: 700; }
-.option-meta, .option-path { color: var(--muted); font-size: 0.9rem; }
-.option-path { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.option-tag { color: var(--muted); font-size: 0.9rem; }
+.option-meta, .option-path, .option-file { color: var(--muted); font-size: 0.9rem; }
+.option-path, .option-file { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .option-stack::-webkit-scrollbar { width: 8px; }
 .option-stack::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
 .chip-list { display: flex; flex-direction: column; gap: 0.35rem; }

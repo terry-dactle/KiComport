@@ -38,11 +38,11 @@
     {% endif %}
     {% for cand in comp.candidates | sort(attribute='combined_score', reverse=True) %}
       {% if cand.type.value == 'symbol' %}
-        {% set _ = symbols.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pins": cand.pin_count, "path": cand.rel_path}) %}
+        {% set _ = symbols.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pins": cand.pin_count, "path": cand.rel_path, "file": cand.rel_path.name if cand.rel_path else cand.name}) %}
       {% elif cand.type.value == 'footprint' %}
-        {% set _ = footprints.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pads": cand.pad_count, "path": cand.rel_path}) %}
+        {% set _ = footprints.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pads": cand.pad_count, "path": cand.rel_path, "file": cand.rel_path.name if cand.rel_path else cand.name}) %}
       {% elif cand.type.value == 'model' %}
-        {% set _ = models.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "desc": cand.description, "path": cand.rel_path}) %}
+        {% set _ = models.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "desc": cand.description, "path": cand.rel_path, "file": cand.rel_path.name if cand.rel_path else cand.name}) %}
       {% endif %}
     {% endfor %}
   {% endfor %}
@@ -65,10 +65,11 @@
           {% if symbols.options %}
             {% for opt in symbols.options | sort(attribute='score', reverse=True) %}
               <button type="button" class="option-tile {% if opt.id == selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
-                <div class="option-title">{{ opt.comp_name }}</div>
                 <div class="option-name">{{ opt.name }}</div>
-                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} | Pins {{ opt.pins or "-" }}</div>
-                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
+                {% if opt.comp_name != opt.name %}<div class="option-tag">Component: {{ opt.comp_name }}</div>{% endif %}
+                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} · Pins {{ opt.pins or "-" }}</div>
+                {% if opt.file %}<div class="option-file mono small">File: {{ opt.file }}</div>{% endif %}
+                {% if opt.path %}<div class="option-path mono small">Path: {{ opt.path }}</div>{% endif %}
               </button>
             {% endfor %}
           {% else %}
@@ -89,10 +90,11 @@
           {% if footprints.options %}
             {% for opt in footprints.options | sort(attribute='score', reverse=True) %}
               <button type="button" class="option-tile {% if opt.id == selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
-                <div class="option-title">{{ opt.comp_name }}</div>
                 <div class="option-name">{{ opt.name }}</div>
-                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} | Pads {{ opt.pads or "-" }}</div>
-                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
+                {% if opt.comp_name != opt.name %}<div class="option-tag">Component: {{ opt.comp_name }}</div>{% endif %}
+                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} · Pads {{ opt.pads or "-" }}</div>
+                {% if opt.file %}<div class="option-file mono small">File: {{ opt.file }}</div>{% endif %}
+                {% if opt.path %}<div class="option-path mono small">Path: {{ opt.path }}</div>{% endif %}
               </button>
             {% endfor %}
           {% else %}
@@ -113,10 +115,11 @@
           {% if models.options %}
             {% for opt in models.options | sort(attribute='score', reverse=True) %}
               <button type="button" class="option-tile {% if opt.id == selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}">
-                <div class="option-title">{{ opt.comp_name }}</div>
                 <div class="option-name">{{ opt.name }}</div>
-                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} | {{ opt.desc or "-" }}</div>
-                {% if opt.path %}<div class="option-path mono small">{{ opt.path }}</div>{% endif %}
+                {% if opt.comp_name != opt.name %}<div class="option-tag">Component: {{ opt.comp_name }}</div>{% endif %}
+                <div class="option-meta">Score {{ "%.2f"|format(opt.score or 0) }} · {{ opt.desc or "-" }}</div>
+                {% if opt.file %}<div class="option-file mono small">File: {{ opt.file }}</div>{% endif %}
+                {% if opt.path %}<div class="option-path mono small">Path: {{ opt.path }}</div>{% endif %}
               </button>
             {% endfor %}
           {% else %}
