@@ -18,38 +18,22 @@
   <h3>Components & Candidates</h3>
 {% if job.components %}
   <form id="selection-form">
-    {% set symbols_by_comp = [] %}
-    {% set footprints_by_comp = [] %}
-    {% set models_by_comp = [] %}
-    {% for comp in job.components %}
-      {% set symbols = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list %}
-      {% set footprints = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list %}
-      {% set models = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list %}
-      {% if symbols|length > 0 %}
-        {% set _ = symbols_by_comp.append({"comp": comp, "cands": symbols}) %}
-      {% endif %}
-      {% if footprints|length > 0 %}
-        {% set _ = footprints_by_comp.append({"comp": comp, "cands": footprints}) %}
-      {% endif %}
-      {% if models|length > 0 %}
-        {% set _ = models_by_comp.append({"comp": comp, "cands": models}) %}
-      {% endif %}
-    {% endfor %}
     {% for comp in job.components %}
       <input type="hidden" name="symbol_{{ comp.id }}" value="{{ comp.selected_symbol_id or '' }}">
       <input type="hidden" name="footprint_{{ comp.id }}" value="{{ comp.selected_footprint_id or '' }}">
       <input type="hidden" name="model_{{ comp.id }}" value="{{ comp.selected_model_id or '' }}">
-    {% endfor %}
-
-    <div class="candidate-block horizontal">
-      <div class="card-header small"><h4>Symbols</h4></div>
-      {% if symbols_by_comp %}
-        {% for bundle in symbols_by_comp %}
-          <div class="component">
-            <h5>{{ bundle.comp.name }}</h5>
+      {% set symbols = comp.candidates | selectattr('type.value', 'equalto', 'symbol') | sort(attribute='combined_score', reverse=True) | list %}
+      {% set footprints = comp.candidates | selectattr('type.value', 'equalto', 'footprint') | sort(attribute='combined_score', reverse=True) | list %}
+      {% set models = comp.candidates | selectattr('type.value', 'equalto', 'model') | sort(attribute='combined_score', reverse=True) | list %}
+      <div class="component-row">
+        <h4>{{ comp.name }}</h4>
+        <div class="grid three-col">
+          {% if symbols %}
+          <div class="candidate-card">
+            <div class="card-header small"><h5>Symbols</h5></div>
             <ul class="candidate-list compact">
-              {% for cand in bundle.cands %}
-              <li class="selectable" data-input="symbol_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
+              {% for cand in symbols %}
+              <li class="selectable" data-input="symbol_{{ comp.id }}" data-value="{{ cand.id }}">
                 <div class="choice">
                   <div class="name">{{ cand.name }}</div>
                   <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</div>
@@ -57,24 +41,17 @@
                 </div>
               </li>
               {% endfor %}
-              <li class="selectable none-option" data-input="symbol_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
+              <li class="selectable none-option" data-input="symbol_{{ comp.id }}" data-value=""><div class="choice muted">None</div></li>
             </ul>
           </div>
-        {% endfor %}
-      {% else %}
-        <p class="muted">No symbol candidates found in this job.</p>
-      {% endif %}
-    </div>
+          {% endif %}
 
-    <div class="candidate-block horizontal">
-      <div class="card-header small"><h4>Footprints</h4></div>
-      {% if footprints_by_comp %}
-        {% for bundle in footprints_by_comp %}
-          <div class="component">
-            <h5>{{ bundle.comp.name }}</h5>
+          {% if footprints %}
+          <div class="candidate-card">
+            <div class="card-header small"><h5>Footprints</h5></div>
             <ul class="candidate-list compact">
-              {% for cand in bundle.cands %}
-              <li class="selectable" data-input="footprint_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
+              {% for cand in footprints %}
+              <li class="selectable" data-input="footprint_{{ comp.id }}" data-value="{{ cand.id }}">
                 <div class="choice">
                   <div class="name">{{ cand.name }}</div>
                   <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</div>
@@ -82,24 +59,17 @@
                 </div>
               </li>
               {% endfor %}
-              <li class="selectable none-option" data-input="footprint_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
+              <li class="selectable none-option" data-input="footprint_{{ comp.id }}" data-value=""><div class="choice muted">None</div></li>
             </ul>
           </div>
-        {% endfor %}
-      {% else %}
-        <p class="muted">No footprint candidates found in this job.</p>
-      {% endif %}
-    </div>
+          {% endif %}
 
-    <div class="candidate-block horizontal">
-      <div class="card-header small"><h4>3D Models</h4></div>
-      {% if models_by_comp %}
-        {% for bundle in models_by_comp %}
-          <div class="component">
-            <h5>{{ bundle.comp.name }}</h5>
+          {% if models %}
+          <div class="candidate-card">
+            <div class="card-header small"><h5>3D Models</h5></div>
             <ul class="candidate-list compact">
-              {% for cand in bundle.cands %}
-              <li class="selectable" data-input="model_{{ bundle.comp.id }}" data-value="{{ cand.id }}">
+              {% for cand in models %}
+              <li class="selectable" data-input="model_{{ comp.id }}" data-value="{{ cand.id }}">
                 <div class="choice">
                   <div class="name">{{ cand.name }}</div>
                   <div class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</div>
@@ -107,14 +77,13 @@
                 </div>
               </li>
               {% endfor %}
-              <li class="selectable none-option" data-input="model_{{ bundle.comp.id }}" data-value=""><div class="choice muted">None</div></li>
+              <li class="selectable none-option" data-input="model_{{ comp.id }}" data-value=""><div class="choice muted">None</div></li>
             </ul>
           </div>
-        {% endfor %}
-      {% else %}
-        <p class="muted">No 3D model candidates found in this job.</p>
-      {% endif %}
-    </div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
 
     <div class="card actions-card">
       <h4>Save & Import</h4>

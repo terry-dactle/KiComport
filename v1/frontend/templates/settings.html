@@ -121,7 +121,7 @@
       }
       statusEl.textContent = body.ok
         ? `Ollama OK via ${body.base_url} using ${body.model}`
-        : `Ollama test failed: ${body.error || "unknown error"}`;
+        : `Ollama test failed: ${body.error || "unknown error"}. Requested URL: ${body.requested_url || "n/a"}`;
     } catch (err) {
       statusEl.textContent = "Ollama test failed: " + (err?.message || err);
     }
