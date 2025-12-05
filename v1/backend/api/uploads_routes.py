@@ -265,8 +265,9 @@ async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Pat
                     "preview": preview,
                 }
                 raise ValueError(
-                    f"Rejected content type {content_type}. The URL returned HTML (likely a login/SSO page) instead of a zip. "
-                    f"Download the file manually or provide a direct download link. Details: {info}"
+                    f"URL returned HTML (likely a login/SSO page) instead of a zip. "
+                    f"Download the file manually and upload it here, or provide a direct zip download link. "
+                    f"Details: {info}"
                 )
             destination_dir.mkdir(parents=True, exist_ok=True)
             fd, tmp_path = tempfile.mkstemp(prefix="upload_url_", dir=destination_dir)
@@ -347,7 +348,7 @@ def _validate_zip_or_raise(path: Path, suffix: str, content_type: str | None = N
         extra = f" (content-type {content_type})" if content_type else ""
         if source_url:
             extra = f"{extra} url={source_url}"
-        guidance = " The URL responded with HTML, likely a login/expired link. Download the file manually or provide a direct zip link."
+        guidance = " The URL responded with HTML, likely a login/expired link. Download the file manually and upload it here, or provide a direct zip link."
         if preview:
             extra = f"{extra}. Preview: {preview}"
         raise ValueError(f"Invalid zip archive{extra}{size_note}.{guidance}")
