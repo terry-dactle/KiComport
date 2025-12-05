@@ -123,10 +123,10 @@ button:hover { opacity: 0.92; }
 .candidate { display: block; padding: 0.15rem 0; }
 .logs { list-style: none; padding-left: 0; }
 .logs li { border-bottom: 1px solid var(--border); padding: 0.3rem 0; }
-.card label { display: block; margin: 0.25rem 0; font-weight: 600; }
+.card label { display: block; margin: 0.15rem 0 0.1rem; font-weight: 600; }
 .card input[type="text"], .card input[type="url"] { width: 100%; padding: 0.4rem; border-radius: 7px; border: 1px solid var(--border); background: #0f141b; color: var(--text); }
-.settings-section { display: flex; flex-direction: column; gap: 0.5rem; }
-hr { border: 0; border-top: 1px solid var(--border); margin: 0.75rem 0; }
+.settings-section { display: flex; flex-direction: column; gap: 0.35rem; }
+hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .inline-status { margin: 0.2rem 0 0.4rem; }
 .toggle { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; user-select: none; }
 .toggle input { display: none; }

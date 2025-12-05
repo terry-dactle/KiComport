@@ -7,9 +7,8 @@
     <div class="settings-section">
       <label>Uploads dir<br><input type="text" id="uploads_dir" name="uploads_dir" value="{{ config.uploads_dir if config else '' }}"></label><br>
       <label>Temp dir<br><input type="text" id="temp_dir" name="temp_dir" value="{{ config.temp_dir if config else '' }}"></label><br>
-      <label>Data dir<br><input type="text" id="data_dir" name="data_dir" value="{{ config.data_dir if config else '' }}"></label><br>
       <div class="helper-row">
-        <span class="muted small">Use data dir to set KiCad library paths</span>
+        <label style="flex:1;">Data dir<br><input type="text" id="data_dir" name="data_dir" value="{{ config.data_dir if config else '' }}"></label>
         <button type="button" id="apply-kicad-root">Change paths</button>
       </div>
       <label>DB path<br><input type="text" id="database_path" name="database_path" value="{{ config.database_path if config else '' }}"></label><br>
