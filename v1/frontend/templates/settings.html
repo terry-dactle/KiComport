@@ -2,20 +2,20 @@
 {% block content %}
 <section class="card">
   <h2>Settings</h2>
-  <p class="muted">Update directories and Ollama options. Values are saved via the Config API.</p>
+  <hr>
   <form id="settings-form">
     <div class="settings-section">
       <label>Uploads dir<br><input type="text" id="uploads_dir" name="uploads_dir" value="{{ config.uploads_dir if config else '' }}"></label><br>
       <label>Temp dir<br><input type="text" id="temp_dir" name="temp_dir" value="{{ config.temp_dir if config else '' }}"></label><br>
       <label>Data dir<br><input type="text" id="data_dir" name="data_dir" value="{{ config.data_dir if config else '' }}"></label><br>
+      <div class="helper-row">
+        <span class="muted small">Use data dir to set KiCad library paths</span>
+        <button type="button" id="apply-kicad-root">Change paths</button>
+      </div>
       <label>DB path<br><input type="text" id="database_path" name="database_path" value="{{ config.database_path if config else '' }}"></label><br>
     </div>
     <hr>
     <div class="settings-section">
-      <div class="helper-row">
-        <label style="flex:1;">KiCad root (optional)<br><input type="text" id="kicad_root_dir" name="kicad_root_dir" value="{{ config.kicad_root_dir if config and config.kicad_root_dir else '' }}" placeholder="/path/to/kicad"></label>
-        <button type="button" id="apply-kicad-root">Change paths</button>
-      </div>
       <label>Symbol dir<br><input type="text" id="kicad_symbol_dir" name="kicad_symbol_dir" value="{{ config.kicad_symbol_dir if config else '' }}"></label><br>
       <label>Footprint dir<br><input type="text" id="kicad_footprint_dir" name="kicad_footprint_dir" value="{{ config.kicad_footprint_dir if config else '' }}"></label><br>
       <label>3D dir<br><input type="text" id="kicad_3d_dir" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
@@ -66,7 +66,7 @@
   const enabledBox = document.getElementById('ollama_enabled');
   const modelSelect = document.getElementById('ollama-model-select');
   const modelStack = document.getElementById('ollama-model-stack');
-  const kicadRootInput = document.getElementById('kicad_root_dir');
+  const dataDirInput = document.getElementById('data_dir');
   const symbolInput = document.getElementById('kicad_symbol_dir');
   const footprintInput = document.getElementById('kicad_footprint_dir');
   const modelDirInput = document.getElementById('kicad_3d_dir');
@@ -198,11 +198,11 @@
     }
   });
   document.getElementById('apply-kicad-root')?.addEventListener('click', () => {
-    const root = (kicadRootInput?.value || "").trim().replace(/\/+$/, "");
+    const root = (dataDirInput?.value || "").trim().replace(/\/+$/, "");
     if (!root) return;
-    if (symbolInput) symbolInput.value = `${root}/symbols`;
-    if (footprintInput) footprintInput.value = `${root}/footprints`;
-    if (modelDirInput) modelDirInput.value = `${root}/3d`;
+    if (symbolInput) symbolInput.value = `${root}/kicad/symbols`.replace(/\/+/, "/");
+    if (footprintInput) footprintInput.value = `${root}/kicad/footprints`.replace(/\/+/, "/");
+    if (modelDirInput) modelDirInput.value = `${root}/kicad/3d`.replace(/\/+/, "/");
   });
 </script>
 {% endblock %}
