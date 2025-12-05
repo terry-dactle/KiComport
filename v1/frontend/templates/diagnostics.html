@@ -74,19 +74,18 @@
   const dot = statusRow?.querySelector('.status-dot');
   const titleEl = statusRow?.querySelector('.status-title');
   const tsEl = statusRow?.querySelector('.muted');
-  const jsonEl = document.getElementById('health-json');
 
   function setStatus(data) {
-    if (!dot || !titleEl || !tsEl || !jsonEl) return;
+    if (!dot || !titleEl || !tsEl) return;
     const ok = data.status && data.status.toLowerCase() === "ok";
     dot.classList.toggle("ok", ok);
     dot.classList.toggle("err", !ok);
     titleEl.textContent = data.status ? data.status.toUpperCase() : "UNKNOWN";
     tsEl.textContent = data.timestamp ? `Timestamp ${data.timestamp}` : "Timestamp not available";
-    jsonEl.textContent = JSON.stringify(data, null, 2);
   }
 
-  refreshBtn?.addEventListener('click', async () => {
+  async function runHealth() {
+    if (!refreshBtn) return;
     refreshBtn.disabled = true;
     refreshBtn.textContent = "Checking...";
     try {
@@ -99,6 +98,9 @@
       refreshBtn.disabled = false;
       refreshBtn.textContent = "Re-run check";
     }
-  });
+  }
+
+  refreshBtn?.addEventListener('click', runHealth);
+  runHealth();
 </script>
 {% endblock %}

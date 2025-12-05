@@ -8,16 +8,18 @@
     <label>Temp dir<br><input type="text" id="temp_dir" name="temp_dir" value="{{ config.temp_dir if config else '' }}"></label><br>
     <label>Data dir<br><input type="text" id="data_dir" name="data_dir" value="{{ config.data_dir if config else '' }}"></label><br>
     <label>DB path<br><input type="text" id="database_path" name="database_path" value="{{ config.database_path if config else '' }}"></label><br>
-    <label>KiCad root (optional)<br><input type="text" id="kicad_root_dir" name="kicad_root_dir" value="{{ config.kicad_root_dir if config and config.kicad_root_dir else '' }}" placeholder="/path/to/kicad"></label>
     <div class="helper-row">
-      <button type="button" id="apply-kicad-root">Apply root to library paths</button>
-      <p class="muted">Sets Symbols/Footprints/3D to root/symbols, root/footprints, root/3d.</p>
+      <label style="flex:1;">KiCad root (optional)<br><input type="text" id="kicad_root_dir" name="kicad_root_dir" value="{{ config.kicad_root_dir if config and config.kicad_root_dir else '' }}" placeholder="/path/to/kicad"></label>
+      <button type="button" id="apply-kicad-root">Change paths</button>
     </div>
     <label>Symbol dir<br><input type="text" id="kicad_symbol_dir" name="kicad_symbol_dir" value="{{ config.kicad_symbol_dir if config else '' }}"></label><br>
     <label>Footprint dir<br><input type="text" id="kicad_footprint_dir" name="kicad_footprint_dir" value="{{ config.kicad_footprint_dir if config else '' }}"></label><br>
     <label>3D dir<br><input type="text" id="kicad_3d_dir" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
     <label><input type="checkbox" id="ollama_enabled" name="ollama_enabled" {% if config and config.ollama_enabled %}checked{% endif %}> Ollama enabled</label><br>
-    <label>Ollama base URL<br><input type="text" id="ollama_base_url" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}"></label>
+    <div class="helper-row">
+      <label style="flex:1;">Ollama base URL<br><input type="text" id="ollama_base_url" name="ollama_base_url" value="{{ config.ollama_base_url if config else '' }}"></label>
+      <button type="button" id="ollama-test">Test Ollama</button>
+    </div>
     <p class="muted">Use a reachable address from this container (e.g., http://192.168.20.3:11434 or http://host.docker.internal:11434).</p>
     <label>Ollama model<br><input type="text" id="ollama_model" name="ollama_model" list="ollama-models" value="{{ config.ollama_model if config else '' }}"></label>
     <datalist id="ollama-models"></datalist>
@@ -32,7 +34,6 @@
     <label>Log level<br><input type="text" id="log_level" name="log_level" value="{{ config.log_level if config else 'INFO' }}"></label><br>
     <label>Log file (optional)<br><input type="text" id="log_file" name="log_file" value="{{ config.log_file if config and config.log_file else '' }}"></label><br>
     <button type="submit">Save Settings</button>
-    <button type="button" id="ollama-test">Run connectivity test</button>
   </form>
   <p id="settings-status" class="muted"></p>
 </section>
