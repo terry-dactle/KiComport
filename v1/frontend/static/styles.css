@@ -183,16 +183,16 @@ button:hover { opacity: 0.92; }
 .component-block { border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
 .component-block:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
 .candidate-columns .candidate-card { min-height: 100%; display: flex; flex-direction: column; gap: 0.4rem; }
-.option-stack { display: flex; flex-direction: column; gap: 0.6rem; max-height: 360px; overflow-y: auto; padding-right: 0.2rem; }
-.option-tile { width: 100%; border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 0.85rem; background: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(17,24,35,0.9)); color: var(--text); text-align: left; cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease; margin-top: 0; }
-.option-tile:hover { border-color: rgba(54,197,116,0.5); box-shadow: 0 12px 24px rgba(0,0,0,0.25); transform: translateY(-1px); }
-.option-tile.selected { border-color: var(--accent); box-shadow: 0 10px 26px rgba(54,197,116,0.22); background: linear-gradient(135deg, rgba(54,197,116,0.14), rgba(17,24,35,0.95)); }
-.option-tile.none { justify-content: center; align-items: center; display: flex; font-weight: 700; color: var(--muted); background: rgba(255,255,255,0.02); }
-.option-name { font-weight: 800; letter-spacing: 0.01em; }
-.option-tag { color: var(--muted); font-size: 0.9rem; margin-top: 0.15rem; }
-.option-meta { color: var(--muted); font-size: 0.92rem; margin-top: 0.25rem; font-weight: 600; }
+.option-stack { display: flex; flex-direction: column; gap: 0.55rem; max-height: 340px; overflow-y: auto; padding-right: 0.2rem; }
+.option-tile { width: 100%; border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.8rem; background: rgba(255,255,255,0.02); color: var(--text); text-align: left; cursor: pointer; transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease; margin-top: 0; }
+.option-tile:hover { border-color: rgba(54,197,116,0.4); box-shadow: 0 8px 18px rgba(0,0,0,0.2); }
+.option-tile.selected { border-color: var(--accent); box-shadow: 0 8px 20px rgba(54,197,116,0.2); background: rgba(54,197,116,0.08); }
+.option-tile.none { justify-content: center; align-items: center; display: flex; font-weight: 700; color: var(--muted); background: rgba(255,255,255,0.03); }
+.option-name { font-weight: 800; letter-spacing: 0.01em; margin-bottom: 0.1rem; }
+.option-tag { color: var(--muted); font-size: 0.9rem; margin-bottom: 0.1rem; }
+.option-meta { color: var(--muted); font-size: 0.92rem; font-weight: 700; }
 .option-meta::before { content: "• "; color: var(--border); margin-right: 0.1rem; }
-.option-path, .option-file { color: var(--muted); font-size: 0.88rem; margin-top: 0.15rem; padding: 0.25rem 0.35rem; background: rgba(255,255,255,0.03); border-radius: 6px; }
+.option-path, .option-file { color: var(--muted); font-size: 0.88rem; margin-top: 0.12rem; padding: 0.25rem 0.35rem; background: rgba(255,255,255,0.03); border-radius: 6px; }
 .option-path, .option-file { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .option-file::before { content: "File "; color: var(--muted); font-weight: 700; margin-right: 0.2rem; }
 .option-path::before { content: "Path "; color: var(--muted); font-weight: 700; margin-right: 0.2rem; }
