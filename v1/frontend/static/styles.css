@@ -192,6 +192,7 @@ button:hover { opacity: 0.92; }
 .none-line { margin-top: 0.3rem; }
 .none-label { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); cursor: pointer; }
 .none-radio { accent-color: var(--accent); }
+.select-input { width: 100%; padding: 0.4rem; border-radius: 8px; border: 1px solid var(--border); background: #111823; color: var(--text); }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

@@ -34,15 +34,14 @@
             {% set any_symbols = true %}
             <div class="component-block">
               <h5>{{ comp.name }}</h5>
-              <div class="chip-list">
+              <select class="select-input" name="symbol_select_{{ comp.id }}" data-target="symbol_{{ comp.id }}">
+                <option value="">None</option>
                 {% for cand in cands %}
-                <div class="chip selectable-chip" data-input="symbol_{{ comp.id }}" data-value="{{ cand.id }}">
-                  <div class="title">{{ cand.name }}</div>
-                  <div class="meta">Score {{ "%.2f"|format(cand.combined_score) }} | Pins {{ cand.pin_count or "-" }}</div>
-                </div>
+                  <option value="{{ cand.id }}" {% if comp.selected_symbol_id == cand.id %}selected{% endif %}>
+                    {{ cand.name }} ({{ "%.2f"|format(cand.combined_score) }}, pins {{ cand.pin_count or "-" }})
+                  </option>
                 {% endfor %}
-                <div class="chip selectable-chip none-option" data-input="symbol_{{ comp.id }}" data-value="">None</div>
-              </div>
+              </select>
             </div>
           {% endif %}
         {% endfor %}
@@ -60,16 +59,14 @@
             {% set any_fps = true %}
             <div class="component-block">
               <h5>{{ comp.name }}</h5>
-              <div class="chip-list">
+              <select class="select-input" name="footprint_select_{{ comp.id }}" data-target="footprint_{{ comp.id }}">
+                <option value="">None</option>
                 {% for cand in cands %}
-                <div class="chip selectable-chip" data-input="footprint_{{ comp.id }}" data-value="{{ cand.id }}">
-                  <div class="title">{{ cand.name }}</div>
-                  <div class="meta">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</div>
-                  <div class="muted mono small">{{ cand.rel_path }}</div>
-                </div>
+                  <option value="{{ cand.id }}" {% if comp.selected_footprint_id == cand.id %}selected{% endif %}>
+                    {{ cand.name }} ({{ "%.2f"|format(cand.combined_score) }}, pads {{ cand.pad_count or "-" }})
+                  </option>
                 {% endfor %}
-                <div class="chip selectable-chip none-option" data-input="footprint_{{ comp.id }}" data-value="">None</div>
-              </div>
+              </select>
             </div>
           {% endif %}
         {% endfor %}
@@ -87,16 +84,14 @@
             {% set any_models = true %}
             <div class="component-block">
               <h5>{{ comp.name }}</h5>
-              <div class="chip-list">
+              <select class="select-input" name="model_select_{{ comp.id }}" data-target="model_{{ comp.id }}">
+                <option value="">None</option>
                 {% for cand in cands %}
-                <div class="chip selectable-chip" data-input="model_{{ comp.id }}" data-value="{{ cand.id }}">
-                  <div class="title">{{ cand.name }}</div>
-                  <div class="meta">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</div>
-                  <div class="muted mono small">{{ cand.rel_path }}</div>
-                </div>
+                  <option value="{{ cand.id }}" {% if comp.selected_model_id == cand.id %}selected{% endif %}>
+                    {{ cand.name }} ({{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }})
+                  </option>
                 {% endfor %}
-                <div class="chip selectable-chip none-option" data-input="model_{{ comp.id }}" data-value="">None</div>
-              </div>
+              </select>
             </div>
           {% endif %}
         {% endfor %}
@@ -187,25 +182,18 @@
   }
 
   function attachSelectableHandlers() {
-    document.querySelectorAll('.selectable-chip').forEach((item) => {
-      item.addEventListener('click', () => {
-        const inputName = item.getAttribute('data-input');
-        const val = item.getAttribute('data-value');
-        const hidden = document.querySelector(`input[name="${inputName}"]`);
-        if (hidden) hidden.value = val || "";
-        // clear selection in same group
-        document.querySelectorAll(`.selectable-chip[data-input="${inputName}"]`).forEach((el) => el.classList.remove('selected'));
-        item.classList.add('selected');
+    document.querySelectorAll('.select-input').forEach((sel) => {
+      sel.addEventListener('change', (e) => {
+        const target = sel.getAttribute('data-target');
+        const hidden = document.querySelector(`input[name="${target}"]`);
+        if (hidden) hidden.value = sel.value;
       });
     });
-    // preselect existing values
-    document.querySelectorAll('.selectable-chip').forEach((item) => {
-      const inputName = item.getAttribute('data-input');
-      const val = item.getAttribute('data-value');
-      const hidden = document.querySelector(`input[name="${inputName}"]`);
-      if (hidden && hidden.value === val) {
-        item.classList.add('selected');
-      }
+    // initialize hidden values from select defaults
+    document.querySelectorAll('.select-input').forEach((sel) => {
+      const target = sel.getAttribute('data-target');
+      const hidden = document.querySelector(`input[name="${target}"]`);
+      if (hidden) hidden.value = sel.value;
     });
   }
   attachSelectableHandlers();
