@@ -43,7 +43,14 @@ async def ollama_test(
         result = await client.health()
         return {"enabled": True, "ok": True, "result": result, "base_url": target_url, "model": target_model}
     except Exception as exc:
-        return {"enabled": True, "ok": False, "error": str(exc), "base_url": target_url, "model": target_model}
+        return {
+            "enabled": True,
+            "ok": False,
+            "error": str(exc),
+            "base_url": target_url,
+            "model": target_model,
+            "hint": "Verify the base URL is reachable from the app container and Ollama is listening on this address/port.",
+        }
 
 
 @router.get("/models")

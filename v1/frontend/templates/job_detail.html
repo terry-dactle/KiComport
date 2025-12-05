@@ -37,7 +37,7 @@
                 <label>
                   <input type="radio" name="symbol_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_symbol_id == cand.id %}checked{% endif %}>
                   <span class="name">{{ cand.name }}</span>
-                  <span class="score mono">{{ "%.2f"|format(cand.combined_score) }}</span>
+                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }}</span>
                   <span class="muted mono">{{ cand.rel_path }}</span>
                 </label>
               </li>
@@ -60,8 +60,7 @@
                 <label>
                   <input type="radio" name="footprint_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_footprint_id == cand.id %}checked{% endif %}>
                   <span class="name">{{ cand.name }}</span>
-                  <span class="score mono">{{ "%.2f"|format(cand.combined_score) }}</span>
-                  <span class="muted">Pads {{ cand.pad_count or "-" }}</span>
+                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | Pads {{ cand.pad_count or "-" }}</span>
                   <span class="muted mono">{{ cand.rel_path }}</span>
                 </label>
               </li>
@@ -84,8 +83,7 @@
                 <label>
                   <input type="radio" name="model_{{ comp.id }}" value="{{ cand.id }}" {% if comp.selected_model_id == cand.id %}checked{% endif %}>
                   <span class="name">{{ cand.name }}</span>
-                  <span class="score mono">{{ "%.2f"|format(cand.combined_score) }}</span>
-                  <span class="muted">{{ cand.description or "-" }}</span>
+                  <span class="muted">Score {{ "%.2f"|format(cand.combined_score) }} | {{ cand.description or "-" }}</span>
                   <span class="muted mono">{{ cand.rel_path }}</span>
                 </label>
               </li>
