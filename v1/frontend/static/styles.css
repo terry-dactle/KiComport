@@ -128,7 +128,7 @@ button:hover { opacity: 0.92; }
 .settings-section { display: flex; flex-direction: column; gap: 0.35rem; }
 hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .inline-status { margin: 0.2rem 0 0.4rem; }
-.toggle { display: inline-flex; align-items: center; gap: 0.85rem; cursor: pointer; user-select: none; }
+.toggle { display: inline-flex; align-items: center; gap: 1.2rem; cursor: pointer; user-select: none; padding: 0.1rem 0; }
 .toggle input { display: none; }
 .toggle-slider {
   width: 44px;
@@ -153,7 +153,8 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 }
 .toggle input:checked + .toggle-slider { background: var(--accent); }
 .toggle input:checked + .toggle-slider::after { transform: translateX(20px); }
-.toggle-label { font-weight: 800; letter-spacing: 0.02em; text-transform: capitalize; }
+.toggle-label { font-weight: 800; letter-spacing: 0.02em; }
+.toggle-label::first-letter { text-transform: uppercase; font-size: 1.05em; }
 .status-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
 .status-dot { width: 12px; height: 12px; border-radius: 999px; background: var(--border); box-shadow: 0 0 0 4px rgba(255,255,255,0.03); }
 .status-dot.ok { background: var(--accent); }
