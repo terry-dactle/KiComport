@@ -254,21 +254,19 @@ def _render_symbol_svg(path: Path) -> str:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
-    label_gap = 6.0
+    label_gap = 8.0
     import math
-    # Precompute label extents for bounds
-    for p in pins:
-        x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
-        xs.append(x); ys.append(y)
-        ang = math.radians(rot)
-        dirx = math.cos(ang); diry = math.sin(ang)
-        # account for name+number both sides of the pin
-        num_pos = (x + dirx * (length * 0.6), y + diry * (length * 0.6))
-        name_pos = (x + dirx * (length + label_gap), y + diry * (length + label_gap))
-        xs.extend([num_pos[0], name_pos[0]]); ys.extend([num_pos[1], name_pos[1]])
     for poly in polys:
         for x, y in poly:
             xs.append(x); ys.append(y)
+    for p in pins:
+        x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
+        ang = math.radians(rot)
+        dirx = math.cos(ang); diry = math.sin(ang)
+        xs.append(x); ys.append(y)
+        xs.append(x + dirx * length); ys.append(y + diry * length)
+        xs.append(x - dirx * 2); ys.append(y - diry * 2)  # number near body
+        xs.append(x + dirx * (length + label_gap)); ys.append(y + diry * (length + label_gap))  # name outside
     minx, maxx = min(xs) - 4, max(xs) + 4
     miny, maxy = min(ys) - 4, max(ys) + 4
     width = maxx - minx
@@ -284,31 +282,23 @@ def _render_symbol_svg(path: Path) -> str:
     for p in pins:
         x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         ang = math.radians(rot)
-        dirx = math.cos(ang)
-        diry = math.sin(ang)
-        dx = dirx * length
-        dy = diry * length
-        x2 = x + dx
-        y2 = y + dy
+        dirx = math.cos(ang); diry = math.sin(ang)
+        x2 = x + dirx * length
+        y2 = y + diry * length
         svg.append(f'<line x1="{tx(x)}" y1="{ty(y)}" x2="{tx(x2)}" y2="{ty(y2)}" stroke="#36c574" stroke-width="2" />')
         svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
-        label = f"{p['number']} {p['name']}".strip()
-        if label:
-            # split number and name to mirror KiCad ordering (number near body, name outside)
-            num_txt = str(p.get("number") or "").strip()
-            name_txt = str(p.get("name") or "").strip()
-            # Number closer to body
-            num_x = x + dirx * (length * 0.6)
-            num_y = y + diry * (length * 0.6)
-            # Name outside
+        num_txt = str(p.get("number") or "").strip()
+        name_txt = str(p.get("name") or "").strip()
+        if num_txt:
+            num_x = x - dirx * 2
+            num_y = y - diry * 2
+            anchor = "end" if dirx < -0.1 else "start" if dirx > 0.1 else "middle"
+            svg.append(f'<text x="{tx(num_x)}" y="{ty(num_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{num_txt}</text>')
+        if name_txt:
             name_x = x + dirx * (length + label_gap)
             name_y = y + diry * (length + label_gap)
-            if num_txt:
-                anchor = "end" if dirx < -0.2 else "start" if dirx > 0.2 else "middle"
-                svg.append(f'<text x="{tx(num_x)}" y="{ty(num_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{num_txt}</text>')
-            if name_txt:
-                anchor = "start" if dirx >= 0 else "end" if dirx < 0 else "middle"
-                svg.append(f'<text x="{tx(name_x)}" y="{ty(name_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{name_txt}</text>')
+            anchor = "start" if dirx >= 0 else "end" if dirx < 0 else "middle"
+            svg.append(f'<text x="{tx(name_x)}" y="{ty(name_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{name_txt}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
