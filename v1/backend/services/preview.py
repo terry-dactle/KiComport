@@ -254,12 +254,15 @@ def _render_symbol_svg(path: Path) -> str:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
+    label_pad = 12.0
+    import math
     for p in pins:
         x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         xs.append(x); ys.append(y)
-        # extend bounds by pin length
-        dx = length * (1 if abs(rot) < 45 else -1 if rot > 135 or rot < -135 else 0)
-        dy = length * ( -1 if 45 <= rot <= 135 else 1 if -135 <= rot <= -45 else 0)
+        ang = math.radians(rot)
+        dirx = math.cos(ang); diry = math.sin(ang)
+        dx = dirx * (length + label_pad)
+        dy = diry * (length + label_pad)
         xs.append(x + dx); ys.append(y + dy)
     for poly in polys:
         for x, y in poly:
@@ -276,7 +279,6 @@ def _render_symbol_svg(path: Path) -> str:
     for poly in polys:
         pts = " ".join(f"{tx(x)},{ty(y)}" for x, y in poly)
         svg.append(f'<polyline points="{pts}" fill="none" stroke="#9aa6b7" stroke-width="2" />')
-    import math
     for p in pins:
         x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         ang = math.radians(rot)
@@ -290,14 +292,14 @@ def _render_symbol_svg(path: Path) -> str:
         svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
         label = f"{p['number']} {p['name']}".strip()
         if label:
-            # place label slightly past the pin end, anchor based on direction
-            offset = 8
+            offset = label_pad * 0.8
             lx = tx(x2 + dirx * offset)
             ly = ty(y2 + diry * offset)
-            anchor = "start"
-            if dirx < -0.1:
+            if dirx < -0.2:
                 anchor = "end"
-            elif abs(dirx) <= 0.1 and diry < 0:
+            elif dirx > 0.2:
+                anchor = "start"
+            else:
                 anchor = "middle"
             svg.append(f'<text x="{lx}" y="{ly}" fill="#e9edf5" font-size="12" text-anchor="{anchor}" dy="4">{label}</text>')
     svg.append('</svg>')
