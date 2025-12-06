@@ -223,6 +223,7 @@ def _render_symbol_svg(path: Path) -> str:
         if stripped.startswith("(pin "):
             try:
                 parts = stripped.replace("(", " ").replace(")", " ").split()
+                pin_type = parts[1] if len(parts) > 1 else ""
                 idx_at = parts.index("at") + 1
                 x = float(parts[idx_at])
                 y = float(parts[idx_at + 1])
@@ -233,7 +234,7 @@ def _render_symbol_svg(path: Path) -> str:
                         length = float(parts[parts.index("length") + 1])
                     except Exception:
                         pass
-                pins.append({"x": x, "y": y, "length": length, "rot": rot, "name": "", "number": ""})
+                pins.append({"x": x, "y": y, "length": length, "rot": rot, "name": "", "number": "", "ptype": pin_type})
             except Exception:
                 continue
         # Attach name/number to last pin when encountered
@@ -264,11 +265,17 @@ def _render_symbol_svg(path: Path) -> str:
         ang = math.radians(rot)
         dirx = math.cos(ang); diry = math.sin(ang)
         xs.append(x); ys.append(y)
-        xs.append(x + dirx * length); ys.append(y + diry * length)
-        if dirx >= 0:  # pointing right
-            xs.extend([x - 4, x + length + label_gap]); ys.extend([y, y])
-        else:  # pointing left
-            xs.extend([x + length + 4, x - label_gap]); ys.extend([y, y])
+        endx = x + dirx * length
+        endy = y + diry * length
+        xs.append(endx); ys.append(endy)
+        # number near pin start, name near pin end, type outside start
+        numx = x + dirx * 2
+        numy = y + diry * 2
+        namex = endx + dirx * 2
+        namey = endy + diry * 2
+        typex = x - dirx * label_gap
+        typey = y - diry * label_gap
+        xs.extend([numx, namex, typex]); ys.extend([numy, namey, typey])
     minx, maxx = min(xs) - 4, max(xs) + 4
     miny, maxy = min(ys) - 4, max(ys) + 4
     width = maxx - minx
@@ -291,16 +298,21 @@ def _render_symbol_svg(path: Path) -> str:
         svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
         num_txt = str(p.get("number") or "").strip()
         name_txt = str(p.get("name") or "").strip()
+        type_txt = str(p.get("ptype") or "").strip()
         if dirx >= 0:  # right-facing
+            if num_txt:
+                svg.append(f'<text x="{tx(x + 2)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
+            if name_txt:
+                svg.append(f'<text x="{tx(x2 + 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
+            if type_txt:
+                svg.append(f'<text x="{tx(x - label_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="end" dy="4">{type_txt}</text>')
+        else:  # left-facing
             if num_txt:
                 svg.append(f'<text x="{tx(x - 2)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
             if name_txt:
-                svg.append(f'<text x="{tx(x + length + label_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
-        else:  # left-facing
-            if num_txt:
-                svg.append(f'<text x="{tx(x + length + 2)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
-            if name_txt:
-                svg.append(f'<text x="{tx(x - label_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
+                svg.append(f'<text x="{tx(x2 - 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
+            if type_txt:
+                svg.append(f'<text x="{tx(x + label_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="start" dy="4">{type_txt}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
