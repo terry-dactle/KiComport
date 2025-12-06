@@ -180,7 +180,7 @@ def _render_footprint_svg(path: Path) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
     # titles
-    ty_text = ty(maxy - 10)
+    ty_text = ty(maxy - 12)
     for i, (lbl, val) in enumerate(top_text[:2]):  # reference then value
         svg.append(f'<text x="{tx((minx+maxx)/2)}" y="{ty_text - i*14}" fill="#9fc4ff" font-size="12" text-anchor="middle">{val}</text>')
     for x, y, sx, sy, rot, pad_id in pads:
@@ -271,12 +271,19 @@ def _render_symbol_svg(path: Path) -> str:
     xs = []
     ys = []
     label_gap = 10.0
-    num_gap = 12.0
-    type_gap = 18.0
+    num_gap = 6.0
+    type_gap = 14.0
     import math
+    # Track body edges for placement reference
+    body_minx = body_maxx = None
     for poly in polys:
         for x, y in poly:
             xs.append(x); ys.append(y)
+            body_minx = x if body_minx is None else min(body_minx, x)
+            body_maxx = x if body_maxx is None else max(body_maxx, x)
+    # include title positions in bounds
+    for lbl, val in top_text:
+        xs.append(0); ys.append(0)
     for p in pins:
         x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         ang = math.radians(rot)
@@ -285,14 +292,15 @@ def _render_symbol_svg(path: Path) -> str:
         endx = x + dirx * length
         endy = y + diry * length
         xs.append(endx); ys.append(endy)
-        if dirx >= 0:  # right facing (left side pins)
-            xs.extend([x - type_gap, x - num_gap, x + length + label_gap])
-            ys.extend([y, y, y])
-        else:  # left facing (right side pins)
-            xs.extend([x + type_gap, x + num_gap, x - length - label_gap])
-            ys.extend([y, y, y])
-    minx, maxx = min(xs) - 8, max(xs) + 8
-    miny, maxy = min(ys) - 22, max(ys) + 28  # extra headroom for titles
+        # for bounds, place type farthest, number mid, name near body
+        if dirx >= 0:  # left column pins pointing right
+            xs.extend([x - type_gap, x - num_gap, endx + label_gap])
+            ys.extend([y, y, endy])
+        else:  # right column pins pointing left
+            xs.extend([x + type_gap, x + num_gap, endx - label_gap])
+            ys.extend([y, y, endy])
+    minx, maxx = min(xs) - 10, max(xs) + 10
+    miny, maxy = min(ys) - 26, max(ys) + 32  # extra headroom for titles
     width = maxx - minx
     height = maxy - miny
     scale = 400.0 / max(width, height)
