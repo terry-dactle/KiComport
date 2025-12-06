@@ -254,16 +254,18 @@ def _render_symbol_svg(path: Path) -> str:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
-    label_pad = 12.0
+    label_gap = 6.0
     import math
+    # Precompute label extents for bounds
     for p in pins:
         x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         xs.append(x); ys.append(y)
         ang = math.radians(rot)
         dirx = math.cos(ang); diry = math.sin(ang)
-        dx = dirx * (length + label_pad)
-        dy = diry * (length + label_pad)
-        xs.append(x + dx); ys.append(y + dy)
+        # account for name+number both sides of the pin
+        num_pos = (x + dirx * (length * 0.6), y + diry * (length * 0.6))
+        name_pos = (x + dirx * (length + label_gap), y + diry * (length + label_gap))
+        xs.extend([num_pos[0], name_pos[0]]); ys.extend([num_pos[1], name_pos[1]])
     for poly in polys:
         for x, y in poly:
             xs.append(x); ys.append(y)
@@ -292,16 +294,21 @@ def _render_symbol_svg(path: Path) -> str:
         svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
         label = f"{p['number']} {p['name']}".strip()
         if label:
-            offset = label_pad * 0.8
-            lx = tx(x2 + dirx * offset)
-            ly = ty(y2 + diry * offset)
-            if dirx < -0.2:
-                anchor = "end"
-            elif dirx > 0.2:
-                anchor = "start"
-            else:
-                anchor = "middle"
-            svg.append(f'<text x="{lx}" y="{ly}" fill="#e9edf5" font-size="12" text-anchor="{anchor}" dy="4">{label}</text>')
+            # split number and name to mirror KiCad ordering (number near body, name outside)
+            num_txt = str(p.get("number") or "").strip()
+            name_txt = str(p.get("name") or "").strip()
+            # Number closer to body
+            num_x = x + dirx * (length * 0.6)
+            num_y = y + diry * (length * 0.6)
+            # Name outside
+            name_x = x + dirx * (length + label_gap)
+            name_y = y + diry * (length + label_gap)
+            if num_txt:
+                anchor = "end" if dirx < -0.2 else "start" if dirx > 0.2 else "middle"
+                svg.append(f'<text x="{tx(num_x)}" y="{ty(num_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{num_txt}</text>')
+            if name_txt:
+                anchor = "start" if dirx >= 0 else "end" if dirx < 0 else "middle"
+                svg.append(f'<text x="{tx(name_x)}" y="{ty(name_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{name_txt}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
