@@ -265,8 +265,10 @@ def _render_symbol_svg(path: Path) -> str:
         dirx = math.cos(ang); diry = math.sin(ang)
         xs.append(x); ys.append(y)
         xs.append(x + dirx * length); ys.append(y + diry * length)
-        xs.append(x - dirx * 2); ys.append(y - diry * 2)  # number near body
-        xs.append(x + dirx * (length + label_gap)); ys.append(y + diry * (length + label_gap))  # name outside
+        if dirx >= 0:  # pointing right
+            xs.extend([x - 4, x + length + label_gap]); ys.extend([y, y])
+        else:  # pointing left
+            xs.extend([x + length + 4, x - label_gap]); ys.extend([y, y])
     minx, maxx = min(xs) - 4, max(xs) + 4
     miny, maxy = min(ys) - 4, max(ys) + 4
     width = maxx - minx
@@ -289,16 +291,16 @@ def _render_symbol_svg(path: Path) -> str:
         svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
         num_txt = str(p.get("number") or "").strip()
         name_txt = str(p.get("name") or "").strip()
-        if num_txt:
-            num_x = x - dirx * 2
-            num_y = y - diry * 2
-            anchor = "end" if dirx < -0.1 else "start" if dirx > 0.1 else "middle"
-            svg.append(f'<text x="{tx(num_x)}" y="{ty(num_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{num_txt}</text>')
-        if name_txt:
-            name_x = x + dirx * (length + label_gap)
-            name_y = y + diry * (length + label_gap)
-            anchor = "start" if dirx >= 0 else "end" if dirx < 0 else "middle"
-            svg.append(f'<text x="{tx(name_x)}" y="{ty(name_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{name_txt}</text>')
+        if dirx >= 0:  # right-facing
+            if num_txt:
+                svg.append(f'<text x="{tx(x - 2)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
+            if name_txt:
+                svg.append(f'<text x="{tx(x + length + label_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
+        else:  # left-facing
+            if num_txt:
+                svg.append(f'<text x="{tx(x + length + 2)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
+            if name_txt:
+                svg.append(f'<text x="{tx(x - label_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
