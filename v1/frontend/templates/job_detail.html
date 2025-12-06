@@ -263,24 +263,28 @@
     if (!viewer) return;
     if (!btn) {
       const label = type === "symbol" ? "symbol" : type === "footprint" ? "footprint" : "model";
-      viewer.textContent = `Hover a ${label} to see file contents.`;
+      viewer.innerHTML = `<div class="muted">Hover a ${label} to see file contents.</div>`;
       return;
     }
     const id = btn.dataset.candId;
     if (previewCache[id]) {
-      viewer.textContent = previewCache[id];
+      viewer.innerHTML = previewCache[id];
       return;
     }
-    viewer.textContent = "Loading preview...";
+    viewer.innerHTML = "Loading preview...";
     try {
-      const resp = await fetch(`/api/jobs/candidates/${id}/preview`);
+      const resp = await fetch(`/api/jobs/candidates/${id}/render`);
       const body = await resp.json();
       if (!resp.ok) throw new Error(body.detail || resp.statusText);
-      const text = body.content_preview || "No preview available";
-      previewCache[id] = text;
-      viewer.textContent = text;
+      const img = body.image_data
+        ? `<img src="${body.image_data}" alt="preview" class="preview-image">`
+        : "<div class='muted'>No preview available</div>";
+      const note = body.note ? `<div class="muted small">${body.note}</div>` : "";
+      const content = `${img}${note}`;
+      previewCache[id] = content;
+      viewer.innerHTML = content;
     } catch (err) {
-      viewer.textContent = `Preview unavailable: ${err?.message || err}`;
+      viewer.innerHTML = `<div class="muted">Preview unavailable: ${err?.message || err}</div>`;
       console.error("Preview fetch failed", { type, id, error: err });
     }
   }

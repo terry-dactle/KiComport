@@ -11,6 +11,7 @@ from ..db.deps import get_db
 from ..db.models import CandidateFile, CandidateType, Component, Job, JobStatus
 from ..services import importer, jobs as job_service, ranking
 from ..services import extract, scan as scan_service
+from ..services import preview as preview_service
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -203,3 +204,17 @@ def candidate_preview(candidate_id: int, db: Session = Depends(get_db)) -> Dict[
         "rel_path": cand.rel_path,
         "content_preview": content,
     }
+
+
+@router.get("/candidates/{candidate_id}/render")
+def candidate_render(candidate_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+    cand = db.get(CandidateFile, candidate_id)
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    try:
+        image_data, note = preview_service.render_candidate_preview(cand)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Candidate file not found")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Render failed: {exc}") from exc
+    return {"id": cand.id, "image_data": image_data, "note": note, "type": cand.type.value}
