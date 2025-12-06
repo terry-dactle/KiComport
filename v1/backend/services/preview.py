@@ -180,7 +180,7 @@ def _render_footprint_svg(path: Path) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
     # titles
-    ty_text = ty(maxy - 12)
+    ty_text = ty(maxy - 14)
     for i, (lbl, val) in enumerate(top_text[:2]):  # reference then value
         svg.append(f'<text x="{tx((minx+maxx)/2)}" y="{ty_text - i*14}" fill="#9fc4ff" font-size="12" text-anchor="middle">{val}</text>')
     for x, y, sx, sy, rot, pad_id in pads:
@@ -270,8 +270,7 @@ def _render_symbol_svg(path: Path) -> str:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
-    label_gap = 10.0
-    num_gap = 6.0
+    label_gap = 8.0
     type_gap = 14.0
     import math
     # Track body edges for placement reference
@@ -281,7 +280,7 @@ def _render_symbol_svg(path: Path) -> str:
             xs.append(x); ys.append(y)
             body_minx = x if body_minx is None else min(body_minx, x)
             body_maxx = x if body_maxx is None else max(body_maxx, x)
-    # include title positions in bounds
+    # include title positions in bounds (centered later)
     for lbl, val in top_text:
         xs.append(0); ys.append(0)
     for p in pins:
@@ -292,15 +291,15 @@ def _render_symbol_svg(path: Path) -> str:
         endx = x + dirx * length
         endy = y + diry * length
         xs.append(endx); ys.append(endy)
-        # for bounds, place type farthest, number mid, name near body
+        # bounds: type outside start, number near start, name at body edge
         if dirx >= 0:  # left column pins pointing right
-            xs.extend([x - type_gap, x - num_gap, endx + label_gap])
+            xs.extend([x - type_gap, x - label_gap, endx - 2])
             ys.extend([y, y, endy])
         else:  # right column pins pointing left
-            xs.extend([x + type_gap, x + num_gap, endx - label_gap])
+            xs.extend([x + type_gap, x + label_gap, endx + 2])
             ys.extend([y, y, endy])
-    minx, maxx = min(xs) - 10, max(xs) + 10
-    miny, maxy = min(ys) - 26, max(ys) + 32  # extra headroom for titles
+    minx, maxx = min(xs) - 12, max(xs) + 12
+    miny, maxy = min(ys) - 32, max(ys) + 36  # extra headroom for titles
     width = maxx - minx
     height = maxy - miny
     scale = 400.0 / max(width, height)
@@ -326,16 +325,17 @@ def _render_symbol_svg(path: Path) -> str:
             if type_txt:
                 svg.append(f'<text x="{tx(x - type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="end" dy="4">{type_txt}</text>')
             if num_txt:
-                svg.append(f'<text x="{tx(x - num_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
+                svg.append(f'<text x="{tx(x)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
             if name_txt:
-                svg.append(f'<text x="{tx(x2 + label_gap)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
+                # anchor to body edge (inside)
+                svg.append(f'<text x="{tx(x2 - 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
         else:  # right column pins (pointing left)
             if type_txt:
                 svg.append(f'<text x="{tx(x + type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="start" dy="4">{type_txt}</text>')
             if num_txt:
-                svg.append(f'<text x="{tx(x + num_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
+                svg.append(f'<text x="{tx(x)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
             if name_txt:
-                svg.append(f'<text x="{tx(x2 - label_gap)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
+                svg.append(f'<text x="{tx(x2 + 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
