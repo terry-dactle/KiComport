@@ -179,6 +179,10 @@ def _render_footprint_svg(path: Path) -> str:
     def ty(y): return (maxy - y) * scale  # flip y
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
+    # titles
+    ty_text = ty(maxy - 8)
+    for i, (lbl, val) in enumerate(top_text[:2]):  # reference then value
+        svg.append(f'<text x="{tx((minx+maxx)/2)}" y="{ty_text - i*14}" fill="#9fc4ff" font-size="12" text-anchor="middle">{val}</text>')
     for x, y, sx, sy, rot, pad_id in pads:
         cx = tx(x)
         cy = ty(y)
@@ -201,8 +205,19 @@ def _render_symbol_svg(path: Path) -> str:
     polys = []
     poly_collect = False
     current_poly = []
+    top_text = []
     for ln in lines:
         stripped = ln.strip()
+        if stripped.startswith("(property \"Value\"") or stripped.startswith("(property \"Reference\""):
+            # capture reference/value to show above
+            try:
+                parts = stripped.split("\"")
+                if len(parts) >= 4:
+                    label = parts[1]  # e.g., Reference or Value
+                    value = parts[3]
+                    top_text.append((label, value))
+            except Exception:
+                pass
         if stripped.startswith("(polyline"):
             poly_collect = True
             current_poly = []
@@ -268,16 +283,15 @@ def _render_symbol_svg(path: Path) -> str:
         endx = x + dirx * length
         endy = y + diry * length
         xs.append(endx); ys.append(endy)
-        # number near pin start, name near pin end, type outside start
-        numx = x + dirx * 2
-        numy = y + diry * 2
-        namex = endx + dirx * 2
-        namey = endy + diry * 2
-        typex = x - dirx * label_gap
-        typey = y - diry * label_gap
+        numx = x - dirx * 3
+        numy = y - diry * 3
+        namex = endx + dirx * 3
+        namey = endy + diry * 3
+        typex = x - dirx * (label_gap)
+        typey = y - diry * (label_gap)
         xs.extend([numx, namex, typex]); ys.extend([numy, namey, typey])
-    minx, maxx = min(xs) - 4, max(xs) + 4
-    miny, maxy = min(ys) - 4, max(ys) + 4
+    minx, maxx = min(xs) - 6, max(xs) + 6
+    miny, maxy = min(ys) - 12, max(ys) + 18  # extra headroom for titles
     width = maxx - minx
     height = maxy - miny
     scale = 400.0 / max(width, height)
@@ -301,16 +315,16 @@ def _render_symbol_svg(path: Path) -> str:
         type_txt = str(p.get("ptype") or "").strip()
         if dirx >= 0:  # right-facing
             if num_txt:
-                svg.append(f'<text x="{tx(x + 2)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
+                svg.append(f'<text x="{tx(x - 4)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
             if name_txt:
-                svg.append(f'<text x="{tx(x2 + 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
+                svg.append(f'<text x="{tx(x2 + 4)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
             if type_txt:
                 svg.append(f'<text x="{tx(x - label_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="end" dy="4">{type_txt}</text>')
         else:  # left-facing
             if num_txt:
-                svg.append(f'<text x="{tx(x - 2)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
+                svg.append(f'<text x="{tx(x + 4)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
             if name_txt:
-                svg.append(f'<text x="{tx(x2 - 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
+                svg.append(f'<text x="{tx(x2 - 4)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
             if type_txt:
                 svg.append(f'<text x="{tx(x + label_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="start" dy="4">{type_txt}</text>')
     svg.append('</svg>')
