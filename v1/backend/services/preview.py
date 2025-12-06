@@ -270,7 +270,9 @@ def _render_symbol_svg(path: Path) -> str:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
-    label_gap = 12.0
+    label_gap = 10.0
+    num_gap = 12.0
+    type_gap = 18.0
     import math
     for poly in polys:
         for x, y in poly:
@@ -283,11 +285,14 @@ def _render_symbol_svg(path: Path) -> str:
         endx = x + dirx * length
         endy = y + diry * length
         xs.append(endx); ys.append(endy)
-        # bounding for text placements
-        xs.extend([x - dirx * label_gap, x + dirx * (length + label_gap)])
-        ys.extend([y - diry * label_gap, y + diry * label_gap])
-    minx, maxx = min(xs) - 6, max(xs) + 6
-    miny, maxy = min(ys) - 18, max(ys) + 24  # extra headroom for titles
+        if dirx >= 0:  # right facing (left side pins)
+            xs.extend([x - type_gap, x - num_gap, x + length + label_gap])
+            ys.extend([y, y, y])
+        else:  # left facing (right side pins)
+            xs.extend([x + type_gap, x + num_gap, x - length - label_gap])
+            ys.extend([y, y, y])
+    minx, maxx = min(xs) - 8, max(xs) + 8
+    miny, maxy = min(ys) - 22, max(ys) + 28  # extra headroom for titles
     width = maxx - minx
     height = maxy - miny
     scale = 400.0 / max(width, height)
@@ -309,22 +314,20 @@ def _render_symbol_svg(path: Path) -> str:
         num_txt = str(p.get("number") or "").strip()
         name_txt = str(p.get("name") or "").strip()
         type_txt = str(p.get("ptype") or "").strip()
-        # positions relative to pin direction
-        num_x = x - dirx * 4
-        num_y = y - diry * 4
-        name_x = x2 + dirx * 4
-        name_y = y2 + diry * 4
-        type_x = x - dirx * (label_gap)
-        type_y = y - diry * (label_gap)
-        if num_txt:
-            anchor = "end" if dirx < -0.1 else "start" if dirx > 0.1 else "middle"
-            svg.append(f'<text x="{tx(num_x)}" y="{ty(num_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{num_txt}</text>')
-        if name_txt:
-            anchor = "start" if dirx >= 0 else "end"
-            svg.append(f'<text x="{tx(name_x)}" y="{ty(name_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{name_txt}</text>')
-        if type_txt:
-            anchor = "end" if dirx < 0 else "start"
-            svg.append(f'<text x="{tx(type_x)}" y="{ty(type_y)}" fill="#8fa3c2" font-size="10" text-anchor="{anchor}" dy="4">{type_txt}</text>')
+        if dirx >= 0:  # left column pins (pointing right)
+            if type_txt:
+                svg.append(f'<text x="{tx(x - type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="end" dy="4">{type_txt}</text>')
+            if num_txt:
+                svg.append(f'<text x="{tx(x - num_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
+            if name_txt:
+                svg.append(f'<text x="{tx(x2 + label_gap)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
+        else:  # right column pins (pointing left)
+            if type_txt:
+                svg.append(f'<text x="{tx(x + type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="start" dy="4">{type_txt}</text>')
+            if num_txt:
+                svg.append(f'<text x="{tx(x + num_gap)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
+            if name_txt:
+                svg.append(f'<text x="{tx(x2 - label_gap)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
