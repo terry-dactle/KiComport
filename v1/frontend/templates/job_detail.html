@@ -84,7 +84,7 @@
             None
           </button>
         </div>
-        <div class="viewer-panel" id="viewer-symbol">Hover a symbol to see its file path (visual preview not available).</div>
+        <div class="viewer-panel" id="viewer-symbol">Select a symbol to see its preview.</div>
       </div>
 
       <div class="candidate-card">
@@ -115,7 +115,7 @@
             None
           </button>
         </div>
-        <div class="viewer-panel" id="viewer-footprint">Hover a footprint to see its file path (visual preview not available).</div>
+        <div class="viewer-panel" id="viewer-footprint">Select a footprint to see its preview.</div>
       </div>
 
       <div class="candidate-card">
@@ -146,15 +146,42 @@
             None
           </button>
         </div>
-        <div class="viewer-panel" id="viewer-model">Hover a model to see its file path (visual preview not available).</div>
+        <div class="viewer-panel" id="viewer-model">Select a model to see its preview.</div>
       </div>
     </div>
 
+    <div class="card dest-card">
+      <h4>Destination folders</h4>
+      <div class="dest-grid">
+        <label>
+          Symbols (root: {{ import_paths.symbol_root or 'not set' }})
+          <input type="text" id="symbol-subdir" list="symbol-folders" placeholder="Leave blank for root">
+          <datalist id="symbol-folders">
+            {% for d in import_paths.symbol_subdirs %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          </datalist>
+        </label>
+        <label>
+          Footprints (root: {{ import_paths.footprint_root or 'not set' }})
+          <input type="text" id="footprint-subdir" list="footprint-folders" placeholder="Leave blank for root">
+          <datalist id="footprint-folders">
+            {% for d in import_paths.footprint_subdirs %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          </datalist>
+        </label>
+        <label>
+          3D Models (root: {{ import_paths.model_root or 'not set' }})
+          <input type="text" id="model-subdir" list="model-folders" placeholder="Leave blank for root">
+          <datalist id="model-folders">
+            {% for d in import_paths.model_subdirs %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          </datalist>
+        </label>
+      </div>
+      <p class="muted small">Choose an existing subfolder or type a new one; it will be created under the root.</p>
+    </div>
+
     <div class="card actions-card">
-      <h4>Save & Import</h4>
+      <h4>Import</h4>
       <div class="actions">
-        <button type="submit">Save</button>
-        <button type="button" id="import-btn">Save and Import</button>
+        <button type="button" id="import-btn">Import</button>
       </div>
     </div>
   </form>
@@ -257,13 +284,17 @@
   };
 
   const previewCache = {};
+  const destInputs = {
+    symbol: document.getElementById('symbol-subdir'),
+    footprint: document.getElementById('footprint-subdir'),
+    model: document.getElementById('model-subdir'),
+  };
 
   async function fetchPreview(type, btn) {
     const viewer = viewers[type];
     if (!viewer) return;
     if (!btn) {
-      const label = type === "symbol" ? "symbol" : type === "footprint" ? "footprint" : "model";
-      viewer.innerHTML = `<div class="muted">Hover a ${label} to see file contents.</div>`;
+      viewer.innerHTML = `<div class="muted">Select an option to see its preview.</div>`;
       return;
     }
     const id = btn.dataset.candId;
@@ -297,8 +328,6 @@
         markSelected(type, btn);
         fetchPreview(type, btn);
       });
-      btn.addEventListener('mouseenter', () => fetchPreview(btn.dataset.type, btn));
-      btn.addEventListener('mouseleave', () => fetchPreview(btn.dataset.type, null));
     });
     ["symbol", "footprint", "model"].forEach((type) => {
       const active = document.querySelector(`.option-tile[data-type="${type}"].selected`);
@@ -336,25 +365,22 @@
   }
   initOptionTiles();
 
-  document.getElementById('selection-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    setActionStatus("Saving choices...");
-    try {
-      const result = await saveSelections();
-      if (!result.ok) throw new Error(result.message || "Failed to save choices");
-      setActionStatus("Choices saved.");
-    } catch (err) {
-      setActionStatus(`Save failed: ${err?.message || err}`);
-    }
-  });
-
   document.getElementById('import-btn')?.addEventListener('click', async () => {
     setActionStatus("Saving choices before import...");
     try {
       const saved = await saveSelections();
       if (!saved.ok) throw new Error(saved.message || "Failed to save choices");
       setActionStatus("Importing to KiCad...");
-      const resp = await fetch(`/api/jobs/${jobId}/import`, { method: "POST" });
+      const payload = {
+        symbol_subdir: destInputs.symbol?.value?.trim() || null,
+        footprint_subdir: destInputs.footprint?.value?.trim() || null,
+        model_subdir: destInputs.model?.value?.trim() || null,
+      };
+      const resp = await fetch(`/api/jobs/${jobId}/import`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
       const body = await resp.json();
       if (!resp.ok) throw new Error(body.detail || body.error || resp.statusText);
       setActionStatus("Import complete.");

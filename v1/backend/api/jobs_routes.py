@@ -66,18 +66,39 @@ def save_selection(
     return {"job_id": job.id, "status": job.status.value, "request_id": getattr(request.state, "request_id", None)}
 
 
+def _safe_target(base: Path, sub_path: str | None) -> Path:
+    if not sub_path:
+        return base
+    sub = Path(sub_path)
+    # prevent escaping the root
+    clean = (base / sub).resolve()
+    try:
+        clean.relative_to(base.resolve())
+    except Exception:
+        return base
+    return clean
+
+
 @router.post("/{job_id}/import")
-def import_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
+async def import_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    payload: Dict[str, Any] = {}
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
     config = get_config(request)
+    symbol_root = Path(config.kicad_symbol_dir)
+    footprint_root = Path(config.kicad_footprint_dir)
+    model_root = Path(config.kicad_3d_dir)
     counts = importer.import_job_selection(
         db,
         job,
-        symbol_dir=Path(config.kicad_symbol_dir),
-        footprint_dir=Path(config.kicad_footprint_dir),
-        model_dir=Path(config.kicad_3d_dir),
+        symbol_dir=_safe_target(symbol_root, payload.get("symbol_subdir")),
+        footprint_dir=_safe_target(footprint_root, payload.get("footprint_subdir")),
+        model_dir=_safe_target(model_root, payload.get("model_subdir")),
     )
     return {"job_id": job.id, "status": job.status.value, "imported": counts, "request_id": getattr(request.state, "request_id", None)}
 

@@ -138,6 +138,17 @@ def create_app() -> FastAPI:
             },
         )
 
+    def _list_subdirs(root: str) -> list[str]:
+        try:
+            base = Path(root)
+            if not base.exists():
+                return []
+            subs = [str(p.relative_to(base)) for p in base.rglob("*") if p.is_dir()]
+            subs.sort()
+            return subs
+        except Exception:
+            return []
+
     @app.get("/jobs/{job_id}", response_class=HTMLResponse)
     async def job_detail(job_id: int, request: Request):
         session = _get_session()
@@ -155,9 +166,22 @@ def create_app() -> FastAPI:
         finally:
             session.close()
         cfg = getattr(request.app.state, "config", None)
+        import_paths = {
+            "symbol_root": getattr(cfg, "kicad_symbol_dir", ""),
+            "footprint_root": getattr(cfg, "kicad_footprint_dir", ""),
+            "model_root": getattr(cfg, "kicad_3d_dir", ""),
+            "symbol_subdirs": _list_subdirs(getattr(cfg, "kicad_symbol_dir", "")) if cfg else [],
+            "footprint_subdirs": _list_subdirs(getattr(cfg, "kicad_footprint_dir", "")) if cfg else [],
+            "model_subdirs": _list_subdirs(getattr(cfg, "kicad_3d_dir", "")) if cfg else [],
+        }
         return templates.TemplateResponse(
             "job_detail.html",
-            {"request": request, "job": job, "app_name": cfg.app_name if cfg else "Global KiCad Library Import Server"},
+            {
+                "request": request,
+                "job": job,
+                "app_name": cfg.app_name if cfg else "Global KiCad Library Import Server",
+                "import_paths": import_paths,
+            },
         )
 
     @app.get("/api-help", response_class=HTMLResponse)

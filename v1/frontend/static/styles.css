@@ -252,6 +252,9 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .modern-input { padding: 0.48rem 0.65rem; border-radius: 10px; border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.03); color: var(--text); font-weight: 600; }
 .modern-input:focus { outline: 2px solid rgba(54,197,116,0.4); border-color: rgba(54,197,116,0.6); background: rgba(255,255,255,0.05); }
 .modern-input.select { padding-right: 2.2rem; }
+.dest-card .dest-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.dest-card label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.dest-card input { width: 100%; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {

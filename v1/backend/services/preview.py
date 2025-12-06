@@ -193,23 +193,59 @@ def _render_footprint_svg(path: Path) -> str:
 def _render_symbol_svg(path: Path) -> str:
     lines = path.read_text(errors="ignore").splitlines()
     pins = []
+    polys = []
+    poly_collect = False
+    current_poly = []
     for ln in lines:
         ln = ln.strip()
+        if ln.startswith("(polyline"):
+            poly_collect = True
+            current_poly = []
+            continue
+        if poly_collect:
+            if ln.startswith(")"):
+                if current_poly:
+                    polys.append(current_poly)
+                poly_collect = False
+                continue
+            if ln.startswith("(xy"):
+                try:
+                    parts = ln.replace("(", " ").replace(")", " ").split()
+                    x = float(parts[1]); y = float(parts[2])
+                    current_poly.append((x, y))
+                except Exception:
+                    continue
         if ln.startswith("(pin "):
             try:
                 parts = ln.replace("(", " ").replace(")", " ").split()
                 idx_at = parts.index("at") + 1
                 x = float(parts[idx_at])
                 y = float(parts[idx_at + 1])
-                pins.append((x, y))
+                rot = float(parts[idx_at + 2]) if parts[idx_at + 2].replace(".", "", 1).lstrip("-").isdigit() else 0.0
+                length = 5.0
+                if "length" in parts:
+                    try:
+                        length = float(parts[parts.index("length") + 1])
+                    except Exception:
+                        pass
+                pins.append((x, y, length, rot))
             except Exception:
                 continue
     if not pins:
         raise RuntimeError("No pins parsed")
-    xs = [p[0] for p in pins]
-    ys = [p[1] for p in pins]
-    minx, maxx = min(xs) - 2, max(xs) + 2
-    miny, maxy = min(ys) - 2, max(ys) + 2
+    xs = []
+    ys = []
+    for x, y, length, rot in pins:
+        xs.append(x); ys.append(y)
+        # extend bounds by pin length
+        dx = length * (1 if abs(rot) < 45 else -1 if rot > 135 or rot < -135 else 0)
+        dy = length * ( -1 if 45 <= rot <= 135 else 1 if -135 <= rot <= -45 else 0)
+        xs.append(x + dx); ys.append(y + dy)
+    for poly in polys:
+        for x, y in poly:
+            xs.append(x); ys.append(y)
+    minx, maxx = min(xs) - 4, max(xs) + 4
+    miny, maxy = min(ys) - 4, max(ys) + 4
     width = maxx - minx
     height = maxy - miny
     scale = 400.0 / max(width, height)
@@ -217,8 +253,19 @@ def _render_symbol_svg(path: Path) -> str:
     def ty(y): return (maxy - y) * scale
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
-    for x, y in pins:
-        svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="4" fill="#36c574" stroke="#2ea043" />')
+    for poly in polys:
+        pts = " ".join(f"{tx(x)},{ty(y)}" for x, y in poly)
+        svg.append(f'<polyline points="{pts}" fill="none" stroke="#9aa6b7" stroke-width="2" />')
+    for x, y, length, rot in pins:
+        # pin line
+        import math
+        ang = math.radians(rot)
+        dx = math.cos(ang) * length
+        dy = math.sin(ang) * length
+        x2 = x + dx
+        y2 = y + dy
+        svg.append(f'<line x1="{tx(x)}" y1="{ty(y)}" x2="{tx(x2)}" y2="{ty(y2)}" stroke="#36c574" stroke-width="2" />')
+        svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
