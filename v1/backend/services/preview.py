@@ -280,17 +280,26 @@ def _render_symbol_svg(path: Path) -> str:
     for p in pins:
         x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         ang = math.radians(rot)
-        dx = math.cos(ang) * length
-        dy = math.sin(ang) * length
+        dirx = math.cos(ang)
+        diry = math.sin(ang)
+        dx = dirx * length
+        dy = diry * length
         x2 = x + dx
         y2 = y + dy
         svg.append(f'<line x1="{tx(x)}" y1="{ty(y)}" x2="{tx(x2)}" y2="{ty(y2)}" stroke="#36c574" stroke-width="2" />')
         svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
         label = f"{p['number']} {p['name']}".strip()
         if label:
-            lx = tx(x2)
-            ly = ty(y2)
-            svg.append(f'<text x="{lx}" y="{ly}" fill="#e9edf5" font-size="12" dx="4" dy="4">{label}</text>')
+            # place label slightly past the pin end, anchor based on direction
+            offset = 8
+            lx = tx(x2 + dirx * offset)
+            ly = ty(y2 + diry * offset)
+            anchor = "start"
+            if dirx < -0.1:
+                anchor = "end"
+            elif abs(dirx) <= 0.1 and diry < 0:
+                anchor = "middle"
+            svg.append(f'<text x="{lx}" y="{ly}" fill="#e9edf5" font-size="12" text-anchor="{anchor}" dy="4">{label}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
