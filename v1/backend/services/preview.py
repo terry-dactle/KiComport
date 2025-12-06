@@ -180,9 +180,11 @@ def _render_footprint_svg(path: Path) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
     # titles
-    ty_text = ty(maxy - 14)
+    title_cx = (body_minx + body_maxx) / 2 if body_minx is not None and body_maxx is not None else (minx + maxx) / 2
+    title_y_base = (body_maxy + 8) if body_maxy is not None else maxy - 18
+    ty_text = ty(title_y_base)
     for i, (lbl, val) in enumerate(top_text[:2]):  # reference then value
-        svg.append(f'<text x="{tx((minx+maxx)/2)}" y="{ty_text - i*14}" fill="#9fc4ff" font-size="12" text-anchor="middle">{val}</text>')
+        svg.append(f'<text x="{tx(title_cx)}" y="{ty_text - i*14}" fill="#9fc4ff" font-size="12" text-anchor="middle">{val}</text>')
     for x, y, sx, sy, rot, pad_id in pads:
         cx = tx(x)
         cy = ty(y)
@@ -270,17 +272,22 @@ def _render_symbol_svg(path: Path) -> str:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
-    label_gap = 8.0
-    type_gap = 14.0
+    label_gap = 8.0     # distance from body edge for pin name (inside)
+    num_gap = 10.0      # distance from pin origin along normal for number
+    type_gap = 20.0     # distance from pin origin opposite direction for type
     import math
     # Track body edges for placement reference
     body_minx = body_maxx = None
+    body_miny = body_maxy = None
     for poly in polys:
         for x, y in poly:
             xs.append(x); ys.append(y)
             body_minx = x if body_minx is None else min(body_minx, x)
             body_maxx = x if body_maxx is None else max(body_maxx, x)
+            body_miny = y if body_miny is None else min(body_miny, y)
+            body_maxy = y if body_maxy is None else max(body_maxy, y)
     # include title positions in bounds (centered later)
+    # we will place them relative to body; for now ensure arrays non-empty
     for lbl, val in top_text:
         xs.append(0); ys.append(0)
     for p in pins:
@@ -291,13 +298,9 @@ def _render_symbol_svg(path: Path) -> str:
         endx = x + dirx * length
         endy = y + diry * length
         xs.append(endx); ys.append(endy)
-        # bounds: type outside start, number near start, name at body edge
-        if dirx >= 0:  # left column pins pointing right
-            xs.extend([x - type_gap, x - label_gap, endx - 2])
-            ys.extend([y, y, endy])
-        else:  # right column pins pointing left
-            xs.extend([x + type_gap, x + label_gap, endx + 2])
-            ys.extend([y, y, endy])
+        # bounds: type far outside, number near origin, name at body edge
+        xs.extend([x - dirx * type_gap, x - dirx * num_gap, endx + dirx * 2])
+        ys.extend([y - diry * type_gap, y - diry * num_gap, endy + diry * 2])
     minx, maxx = min(xs) - 12, max(xs) + 12
     miny, maxy = min(ys) - 32, max(ys) + 36  # extra headroom for titles
     width = maxx - minx
@@ -321,15 +324,15 @@ def _render_symbol_svg(path: Path) -> str:
         num_txt = str(p.get("number") or "").strip()
         name_txt = str(p.get("name") or "").strip()
         type_txt = str(p.get("ptype") or "").strip()
-        if dirx >= 0:  # left column pins (pointing right)
+        # position type outside pin tail, number at pin start, name at body edge
+        if dirx >= 0:  # left side pins pointing right
             if type_txt:
                 svg.append(f'<text x="{tx(x - type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="end" dy="4">{type_txt}</text>')
             if num_txt:
                 svg.append(f'<text x="{tx(x)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
             if name_txt:
-                # anchor to body edge (inside)
                 svg.append(f'<text x="{tx(x2 - 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
-        else:  # right column pins (pointing left)
+        else:  # right side pins pointing left
             if type_txt:
                 svg.append(f'<text x="{tx(x + type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="start" dy="4">{type_txt}</text>')
             if num_txt:
