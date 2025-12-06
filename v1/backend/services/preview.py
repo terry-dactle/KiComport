@@ -180,7 +180,7 @@ def _render_footprint_svg(path: Path) -> str:
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
     # titles
-    ty_text = ty(maxy - 8)
+    ty_text = ty(maxy - 10)
     for i, (lbl, val) in enumerate(top_text[:2]):  # reference then value
         svg.append(f'<text x="{tx((minx+maxx)/2)}" y="{ty_text - i*14}" fill="#9fc4ff" font-size="12" text-anchor="middle">{val}</text>')
     for x, y, sx, sy, rot, pad_id in pads:
@@ -270,7 +270,7 @@ def _render_symbol_svg(path: Path) -> str:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
-    label_gap = 8.0
+    label_gap = 12.0
     import math
     for poly in polys:
         for x, y in poly:
@@ -283,15 +283,11 @@ def _render_symbol_svg(path: Path) -> str:
         endx = x + dirx * length
         endy = y + diry * length
         xs.append(endx); ys.append(endy)
-        numx = x - dirx * 3
-        numy = y - diry * 3
-        namex = endx + dirx * 3
-        namey = endy + diry * 3
-        typex = x - dirx * (label_gap)
-        typey = y - diry * (label_gap)
-        xs.extend([numx, namex, typex]); ys.extend([numy, namey, typey])
+        # bounding for text placements
+        xs.extend([x - dirx * label_gap, x + dirx * (length + label_gap)])
+        ys.extend([y - diry * label_gap, y + diry * label_gap])
     minx, maxx = min(xs) - 6, max(xs) + 6
-    miny, maxy = min(ys) - 12, max(ys) + 18  # extra headroom for titles
+    miny, maxy = min(ys) - 18, max(ys) + 24  # extra headroom for titles
     width = maxx - minx
     height = maxy - miny
     scale = 400.0 / max(width, height)
@@ -313,20 +309,22 @@ def _render_symbol_svg(path: Path) -> str:
         num_txt = str(p.get("number") or "").strip()
         name_txt = str(p.get("name") or "").strip()
         type_txt = str(p.get("ptype") or "").strip()
-        if dirx >= 0:  # right-facing
-            if num_txt:
-                svg.append(f'<text x="{tx(x - 4)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
-            if name_txt:
-                svg.append(f'<text x="{tx(x2 + 4)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
-            if type_txt:
-                svg.append(f'<text x="{tx(x - label_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="end" dy="4">{type_txt}</text>')
-        else:  # left-facing
-            if num_txt:
-                svg.append(f'<text x="{tx(x + 4)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
-            if name_txt:
-                svg.append(f'<text x="{tx(x2 - 4)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
-            if type_txt:
-                svg.append(f'<text x="{tx(x + label_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="start" dy="4">{type_txt}</text>')
+        # positions relative to pin direction
+        num_x = x - dirx * 4
+        num_y = y - diry * 4
+        name_x = x2 + dirx * 4
+        name_y = y2 + diry * 4
+        type_x = x - dirx * (label_gap)
+        type_y = y - diry * (label_gap)
+        if num_txt:
+            anchor = "end" if dirx < -0.1 else "start" if dirx > 0.1 else "middle"
+            svg.append(f'<text x="{tx(num_x)}" y="{ty(num_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{num_txt}</text>')
+        if name_txt:
+            anchor = "start" if dirx >= 0 else "end"
+            svg.append(f'<text x="{tx(name_x)}" y="{ty(name_y)}" fill="#e9edf5" font-size="11" text-anchor="{anchor}" dy="4">{name_txt}</text>')
+        if type_txt:
+            anchor = "end" if dirx < 0 else "start"
+            svg.append(f'<text x="{tx(type_x)}" y="{ty(type_y)}" fill="#8fa3c2" font-size="10" text-anchor="{anchor}" dy="4">{type_txt}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
