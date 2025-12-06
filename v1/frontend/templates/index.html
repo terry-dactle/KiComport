@@ -4,22 +4,16 @@
   <div class="card-header">
     <div>
       <h2>Upload</h2>
-      <p class="muted">Drop a KiCad archive or library file, or provide a URL. Upload starts automatically.</p>
+      <p class="muted">Drop a compressed archive or library file, or provide a URL. Upload starts automatically.</p>
     </div>
   </div>
   <form id="upload-form">
     <div id="drop-zone" class="drop-zone">
       <input type="file" id="file" name="file" hidden>
       <p><strong>Drop file here</strong> or click to browse</p>
-      <p class="muted">Zip, symbol, footprint, or 3D model files are supported.</p>
+      <p class="muted">Compressed, symbol, footprint, or 3D model files are supported.</p>
     </div>
-    <div class="helper-row">
-      <span class="chip">zip</span>
-      <span class="chip">.kicad_sym</span>
-      <span class="chip">.kicad_mod</span>
-      <span class="chip">.stp / .step</span>
-      <span class="chip">.wrl / .obj</span>
-    </div>
+    
     <div class="url-row">
       <input type="url" id="url-input" name="url" placeholder="https://example.com/library.zip">
       <button type="button" id="fetch-url">Fetch URL</button>

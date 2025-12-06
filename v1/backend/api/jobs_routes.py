@@ -239,3 +239,14 @@ def candidate_render(candidate_id: int, db: Session = Depends(get_db)) -> Dict[s
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Render failed: {exc}") from exc
     return {"id": cand.id, "image_data": image_data, "note": note, "type": cand.type.value}
+
+
+@router.get("/candidates/{candidate_id}/download")
+def candidate_download(candidate_id: int, db: Session = Depends(get_db)):
+    cand = db.get(CandidateFile, candidate_id)
+    if not cand:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    path = Path(cand.path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Candidate file not found")
+    return FileResponse(path, filename=path.name, media_type="application/octet-stream")

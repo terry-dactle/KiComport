@@ -102,19 +102,21 @@ def render_candidate_preview(cand: CandidateFile) -> Tuple[str, str]:
         raise FileNotFoundError(str(path))
     if cand.type in {CandidateType.symbol, CandidateType.footprint}:
         try:
-            return _render_symbol_or_footprint(cand)
+            img, _ = _render_symbol_or_footprint(cand)
+            return img, ""
         except Exception as exc:
             fallback_note = f"Rendering via kicad-cli failed: {exc}. Trying lightweight parser."
             try:
                 if cand.type == CandidateType.footprint:
-                    return _render_footprint_svg(path), "Rendered via lightweight footprint parser."
+                    return _render_footprint_svg(path), ""
                 else:
-                    return _render_symbol_svg(path), "Rendered via lightweight symbol parser."
+                    return _render_symbol_svg(path), ""
             except Exception as exc2:
                 fallback_note = f"Render parsers failed: {exc2}. Showing text preview."
     elif cand.type == CandidateType.model:
         try:
-            return _render_3d(cand)
+            img, _ = _render_3d(cand)
+            return img, ""
         except Exception as exc:
             fallback_note = f"3D rendering failed: {exc}. Showing text preview."
     else:
@@ -149,6 +151,7 @@ def _render_footprint_svg(path: Path) -> str:
             # crude parse: pad "num" type shape (at x y rot?) (size sx sy)
             try:
                 parts = line.replace("(", " ").replace(")", " ").split()
+                pad_id = parts[1] if len(parts) > 1 else ""
                 idx_at = parts.index("at") + 1
                 x = float(parts[idx_at])
                 y = float(parts[idx_at + 1])
@@ -156,14 +159,14 @@ def _render_footprint_svg(path: Path) -> str:
                 idx_size = parts.index("size") + 1
                 sx = float(parts[idx_size])
                 sy = float(parts[idx_size + 1])
-                pads.append((x, y, sx, sy, rot))
+                pads.append((x, y, sx, sy, rot, pad_id))
             except Exception:
                 continue
     if not pads:
         raise RuntimeError("No pads parsed")
     xs = []
     ys = []
-    for x, y, sx, sy, _ in pads:
+    for x, y, sx, sy, *_ in pads:
         xs.extend([x - sx / 2, x + sx / 2])
         ys.extend([y - sy / 2, y + sy / 2])
     minx, maxx = min(xs) - 1, max(xs) + 1
@@ -176,13 +179,15 @@ def _render_footprint_svg(path: Path) -> str:
     def ty(y): return (maxy - y) * scale  # flip y
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
-    for x, y, sx, sy, rot in pads:
+    for x, y, sx, sy, rot, pad_id in pads:
         cx = tx(x)
         cy = ty(y)
         rw = sx * scale
         rh = sy * scale
         svg.append(f'<g transform="translate({cx},{cy}) rotate({-rot})">')
         svg.append(f'<rect x="{-rw/2}" y="{-rh/2}" width="{rw}" height="{rh}" fill="#36c574" fill-opacity="0.5" stroke="#2ea043" />')
+        if pad_id:
+            svg.append(f'<text x="0" y="4" fill="#e9edf5" font-size="12" text-anchor="middle">{pad_id}</text>')
         svg.append('</g>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
@@ -197,27 +202,27 @@ def _render_symbol_svg(path: Path) -> str:
     poly_collect = False
     current_poly = []
     for ln in lines:
-        ln = ln.strip()
-        if ln.startswith("(polyline"):
+        stripped = ln.strip()
+        if stripped.startswith("(polyline"):
             poly_collect = True
             current_poly = []
             continue
         if poly_collect:
-            if ln.startswith(")"):
+            if stripped.startswith(")"):
                 if current_poly:
                     polys.append(current_poly)
                 poly_collect = False
                 continue
-            if ln.startswith("(xy"):
+            if stripped.startswith("(xy"):
                 try:
-                    parts = ln.replace("(", " ").replace(")", " ").split()
+                    parts = stripped.replace("(", " ").replace(")", " ").split()
                     x = float(parts[1]); y = float(parts[2])
                     current_poly.append((x, y))
                 except Exception:
                     continue
-        if ln.startswith("(pin "):
+        if stripped.startswith("(pin "):
             try:
-                parts = ln.replace("(", " ").replace(")", " ").split()
+                parts = stripped.replace("(", " ").replace(")", " ").split()
                 idx_at = parts.index("at") + 1
                 x = float(parts[idx_at])
                 y = float(parts[idx_at + 1])
@@ -228,14 +233,29 @@ def _render_symbol_svg(path: Path) -> str:
                         length = float(parts[parts.index("length") + 1])
                     except Exception:
                         pass
-                pins.append((x, y, length, rot))
+                pins.append({"x": x, "y": y, "length": length, "rot": rot, "name": "", "number": ""})
             except Exception:
                 continue
+        # Attach name/number to last pin when encountered
+        if pins:
+            if stripped.startswith("(name "):
+                try:
+                    val = stripped.split("\"")[1]
+                    pins[-1]["name"] = val
+                except Exception:
+                    pass
+            if stripped.startswith("(number "):
+                try:
+                    val = stripped.split("\"")[1]
+                    pins[-1]["number"] = val
+                except Exception:
+                    pass
     if not pins:
         raise RuntimeError("No pins parsed")
     xs = []
     ys = []
-    for x, y, length, rot in pins:
+    for p in pins:
+        x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         xs.append(x); ys.append(y)
         # extend bounds by pin length
         dx = length * (1 if abs(rot) < 45 else -1 if rot > 135 or rot < -135 else 0)
@@ -256,9 +276,9 @@ def _render_symbol_svg(path: Path) -> str:
     for poly in polys:
         pts = " ".join(f"{tx(x)},{ty(y)}" for x, y in poly)
         svg.append(f'<polyline points="{pts}" fill="none" stroke="#9aa6b7" stroke-width="2" />')
-    for x, y, length, rot in pins:
-        # pin line
-        import math
+    import math
+    for p in pins:
+        x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         ang = math.radians(rot)
         dx = math.cos(ang) * length
         dy = math.sin(ang) * length
@@ -266,6 +286,11 @@ def _render_symbol_svg(path: Path) -> str:
         y2 = y + dy
         svg.append(f'<line x1="{tx(x)}" y1="{ty(y)}" x2="{tx(x2)}" y2="{ty(y2)}" stroke="#36c574" stroke-width="2" />')
         svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
+        label = f"{p['number']} {p['name']}".strip()
+        if label:
+            lx = tx(x2)
+            ly = ty(y2)
+            svg.append(f'<text x="{lx}" y="{ly}" fill="#e9edf5" font-size="12" dx="4" dy="4">{label}</text>')
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
