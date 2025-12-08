@@ -118,7 +118,8 @@ def render_candidate_preview(cand: CandidateFile) -> Tuple[str, str]:
             img, _ = _render_3d(cand)
             return img, ""
         except Exception as exc:
-            fallback_note = f"3D rendering failed server-side ({exc}). Browser viewer may render it on selection."
+            # Server-side 3D libs missing; let the browser viewer handle it without showing an error note.
+            return "", ""
     else:
         fallback_note = "Showing text preview."
 

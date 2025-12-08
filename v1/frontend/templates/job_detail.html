@@ -341,10 +341,17 @@
       previewCache[id] = content;
       if (type === "model") {
         const noteEl = document.getElementById('model-preview-note');
-        if (noteEl) noteEl.innerHTML = showNote ? noteRaw : "";
+        if (noteEl) {
+          if (showNote) {
+            noteEl.textContent = "Server render unavailable; using browser preview.";
+          } else {
+            noteEl.textContent = "";
+          }
+        }
         const fallback = document.getElementById('model-fallback');
-        if (fallback) fallback.innerHTML = content;
-        viewer.innerHTML = content || "<div class='muted'>Rendering in canvas...</div>";
+        // Keep model viewer clean; rely on browser render instead of server text previews.
+        if (fallback) fallback.innerHTML = "";
+        viewer.innerHTML = "<div class='muted'>Rendering in browser...</div>";
       } else {
         viewer.innerHTML = content;
       }
@@ -406,7 +413,10 @@
       } else if (nameHint.includes('.step') || nameHint.includes('.stp')) {
         try {
           const occtImport = await import('https://cdn.jsdelivr.net/npm/occt-import-js@1.1.0/dist/occt-import-js.js');
-          const occt = await occtImport.default();
+          const baseOcct = 'https://cdn.jsdelivr.net/npm/occt-import-js@1.1.0/dist/';
+          const occt = await occtImport.default({
+            locateFile: (file) => `${baseOcct}${file}`,
+          });
           const result = occt.ReadStepFile(arrayBuf, undefined, { compress: true });
           if (result && result.meshes && result.meshes.length) {
             const group = new THREE.Group();
