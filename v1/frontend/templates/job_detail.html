@@ -434,7 +434,7 @@
       }
 
       if (!mesh) {
-        clearModelCanvas("Unsupported 3D format in browser viewer (try STL/OBJ/WRL).");
+        clearModelCanvas("Unsupported 3D format in browser viewer (try STL/OBJ/WRL/STEP).");
         if (noteEl) noteEl.textContent = "";
         return;
       }
@@ -468,10 +468,10 @@
       animate();
       currentModelUrl = URL.createObjectURL(blob);
         if (noteEl) noteEl.textContent = "Browser-rendered preview (rotate/zoom).";
-      } catch (err) {
-        clearModelCanvas(`3D preview failed: ${err?.message || err}`);
-        if (noteEl) noteEl.textContent = "";
-      }
+    } catch (err) {
+      clearModelCanvas(`3D preview failed: ${err?.message || err}`);
+      if (noteEl) noteEl.textContent = "";
+    }
   }
 
   function initOptionTiles() {
