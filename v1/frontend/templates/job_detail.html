@@ -373,12 +373,13 @@
 
   async function loadThree() {
     if (threeLoaded) return threeLoaded;
+    const threeBase = 'https://unpkg.com/three@0.160.0';
     threeLoaded = Promise.all([
-      import('https://unpkg.com/three@0.160.0/build/three.module.js'),
-      import('https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js'),
-      import('https://unpkg.com/three@0.160.0/examples/jsm/loaders/OBJLoader.js'),
-      import('https://unpkg.com/three@0.160.0/examples/jsm/loaders/STLLoader.js'),
-      import('https://unpkg.com/three@0.160.0/examples/jsm/loaders/VRMLLoader.js'),
+      import(`${threeBase}/build/three.module.js?module`),
+      import(`${threeBase}/examples/jsm/controls/OrbitControls.js?module`),
+      import(`${threeBase}/examples/jsm/loaders/OBJLoader.js?module`),
+      import(`${threeBase}/examples/jsm/loaders/STLLoader.js?module`),
+      import(`${threeBase}/examples/jsm/loaders/VRMLLoader.js?module`),
     ]).then(([THREE, { OrbitControls }, { OBJLoader }, { STLLoader }, { VRMLLoader }]) => ({ THREE, OrbitControls, OBJLoader, STLLoader, VRMLLoader }));
     return threeLoaded;
   }
