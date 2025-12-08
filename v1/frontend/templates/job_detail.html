@@ -532,6 +532,31 @@
     win.classList.toggle('modal-open');
   });
 
+  // simple pan for modal-open symbol window (drag)
+  let isPanning = false;
+  let startX = 0, startY = 0;
+  let translateX = 0, translateY = 0;
+  document.addEventListener('mousedown', (e) => {
+    if (!(e.target instanceof HTMLElement)) return;
+    const win = e.target.closest('.symbol-window.modal-open');
+    if (!win) return;
+    isPanning = true;
+    startX = e.clientX - translateX;
+    startY = e.clientY - translateY;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    translateX = e.clientX - startX;
+    translateY = e.clientY - startY;
+    document.querySelectorAll('.symbol-window.modal-open .symbol-inner').forEach((el) => {
+      (el as HTMLElement).style.transform = `translate(${translateX}px, ${translateY}px)`;
+    });
+  });
+  document.addEventListener('mouseup', () => {
+    isPanning = false;
+  });
+
   document.getElementById('import-btn')?.addEventListener('click', async () => {
     setActionStatus("Saving choices before import...");
     try {
