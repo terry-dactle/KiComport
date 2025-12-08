@@ -351,7 +351,7 @@
         const fallback = document.getElementById('model-fallback');
         // Keep model viewer clean; rely on browser render instead of server text previews.
         if (fallback) fallback.innerHTML = "";
-        viewer.innerHTML = "<div class='muted'>Rendering in browser...</div>";
+        // Do not replace the model viewer structure; renderModel will paint into canvas area.
       } else {
         viewer.innerHTML = content;
       }
@@ -449,8 +449,9 @@
       }
 
       if (!mesh) {
-        clearModelCanvas(`Unsupported 3D format in browser viewer (try STL/OBJ/WRL/STEP). <a href="/api/jobs/candidates/${id}/download" target="_blank">Download model</a>`);
-        if (noteEl) noteEl.textContent = "";
+        const msg = `Unsupported 3D format in browser viewer (try STL/OBJ/WRL/STEP). <a href="/api/jobs/candidates/${id}/download" target="_blank">Download model</a>`;
+        clearModelCanvas(msg);
+        if (noteEl) noteEl.innerHTML = msg;
         return;
       }
 
@@ -484,8 +485,9 @@
       currentModelUrl = URL.createObjectURL(blob);
       if (noteEl) noteEl.textContent = "Browser-rendered preview (rotate/zoom).";
     } catch (err) {
-      clearModelCanvas(`3D preview failed: ${err?.message || err}. <a href="/api/jobs/candidates/${id}/download" target="_blank">Download model</a>`);
-      if (noteEl) noteEl.textContent = "";
+      const msg = `3D preview failed: ${err?.message || err}. <a href="/api/jobs/candidates/${id}/download" target="_blank">Download model</a>`;
+      clearModelCanvas(msg);
+      if (noteEl) noteEl.innerHTML = msg;
     }
   }
 
