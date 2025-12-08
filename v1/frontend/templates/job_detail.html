@@ -325,10 +325,10 @@
       const note = noteRaw ? `<div class="muted small">${noteRaw}</div>` : "";
       const showNote = noteRaw && /fail|error|missing|unsupported/i.test(noteRaw);
       const content = `${img}${showNote ? note : ""}`;
-      if (type === "symbol") {
+      if (type === "symbol" || type === "footprint") {
         const wrapped = `
-          <div class="symbol-window">
-            <div class="symbol-inner">
+          <div class="preview-window">
+            <div class="preview-inner">
               ${img}
             </div>
           </div>
@@ -523,28 +523,28 @@
   }
   initOptionTiles();
 
-  // click-to-toggle fullscreen for symbol window
+  // click-to-toggle fullscreen for preview window (symbols/footprints)
   document.addEventListener('click', (e) => {
     const target = e.target;
     if (!(target instanceof HTMLElement)) return;
-    const win = target.closest('.symbol-window');
+    const win = target.closest('.preview-window');
     if (!win) return;
     if (win.classList.contains('modal-open')) {
       win.classList.remove('modal-open');
-      const inner = win.querySelector('.symbol-inner');
+      const inner = win.querySelector('.preview-inner');
       if (inner instanceof HTMLElement) inner.style.transform = "translate(0px, 0px)";
     } else {
       win.classList.add('modal-open');
     }
   });
 
-  // simple pan for modal-open symbol window (drag)
+  // simple pan for modal-open preview window (drag)
   let isPanning = false;
   let startX = 0, startY = 0;
   let translateX = 0, translateY = 0;
   document.addEventListener('mousedown', (e) => {
     if (!(e.target instanceof HTMLElement)) return;
-    const win = e.target.closest('.symbol-window.modal-open');
+    const win = e.target.closest('.preview-window.modal-open');
     if (!win) return;
     isPanning = true;
     startX = e.clientX - translateX;
@@ -555,7 +555,7 @@
     if (!isPanning) return;
     translateX = e.clientX - startX;
     translateY = e.clientY - startY;
-    document.querySelectorAll('.symbol-window.modal-open .symbol-inner').forEach((el) => {
+    document.querySelectorAll('.preview-window.modal-open .preview-inner').forEach((el) => {
       el.style.transform = `translate(${translateX}px, ${translateY}px)`;
     });
   });
