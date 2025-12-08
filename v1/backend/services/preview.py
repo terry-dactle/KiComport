@@ -344,7 +344,7 @@ def _render_symbol_svg(path: Path) -> str:
         if num_txt:
             num_x = x0
             num_y = y0
-            svg.append(f'<text x="{num_x}" y="{num_y}" fill="#e9edf5" font-size="11" text-anchor="middle" dy="4">{num_txt}</text>')
+            svg.append(f'<text x="{num_x}" y="{num_y}" fill="#e9edf5" font-size="12" font-weight="700" text-anchor="middle" dy="4">{num_txt}</text>')
 
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
