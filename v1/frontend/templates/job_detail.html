@@ -384,6 +384,26 @@
     return threeLoaded;
   }
 
+  let occtLoaded = null;
+  async function loadOcct() {
+    if (occtLoaded) return occtLoaded;
+    const urls = [
+      'https://cdn.jsdelivr.net/npm/occt-import-js@1.1.0/dist/occt-import-js.js?module',
+      'https://unpkg.com/occt-import-js@1.1.0/dist/occt-import-js.js?module',
+    ];
+    for (const url of urls) {
+      try {
+        const mod = await import(url);
+        const base = url.slice(0, url.lastIndexOf('/') + 1);
+        occtLoaded = { mod, base };
+        return occtLoaded;
+      } catch (e) {
+        console.warn("OCCT import failed for", url, e);
+      }
+    }
+    throw new Error("Could not load OCCT importer from CDN");
+  }
+
   function clearModelCanvas(msg = "") {
     const canvasWrap = document.getElementById('model-canvas');
     if (!canvasWrap) return;
@@ -423,10 +443,9 @@
         mesh = loader.parse(new TextDecoder().decode(new Uint8Array(arrayBuf)));
       } else if (nameHint.includes('.step') || nameHint.includes('.stp')) {
         try {
-          const occtImport = await import('https://cdn.jsdelivr.net/npm/occt-import-js@1.1.0/dist/occt-import-js.js');
-          const baseOcct = 'https://cdn.jsdelivr.net/npm/occt-import-js@1.1.0/dist/';
-          const occt = await occtImport.default({
-            locateFile: (file) => `${baseOcct}${file}`,
+          const { mod, base } = await loadOcct();
+          const occt = await mod.default({
+            locateFile: (file) => `${base}${file}`,
           });
           const result = occt.ReadStepFile(arrayBuf, undefined, { compress: true });
           if (result && result.meshes && result.meshes.length) {
@@ -453,8 +472,9 @@
           }
         } catch (e) {
           console.error("STEP render failed", e);
-          clearModelCanvas(`STEP parse failed: ${e?.message || e}. <a href="/api/jobs/candidates/${id}/download" target="_blank">Download model</a>`);
-          if (noteEl) noteEl.textContent = "";
+          const msg = `STEP parse failed: ${e?.message || e}. <a href="/api/jobs/candidates/${id}/download" target="_blank">Download model</a>`;
+          clearModelCanvas(msg);
+          if (noteEl) noteEl.innerHTML = msg;
           return;
         }
       }
