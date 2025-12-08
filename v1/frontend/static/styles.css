@@ -240,10 +240,10 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .preview-image { max-width: 100%; height: auto; display: block; border: 1px solid var(--border); border-radius: 6px; background: #0f141b; }
 .viewer-panel #model-canvas { min-height: 240px; margin-top: 0.5rem; }
 .viewer-panel canvas { width: 100%; height: auto; display: block; border-radius: 6px; }
-.symbol-window { width: 400px; height: 400px; overflow: hidden; border: 1px solid #444; background: #111; position: relative; margin: 0 auto; }
+.symbol-window { width: 95%; max-width: 900px; height: 70vh; overflow: hidden; border: 1px solid #444; background: #111; position: relative; margin: 0 auto; }
 .symbol-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transform-origin: center center; transition: transform 0.2s ease-out; }
-.symbol-window canvas, .symbol-window svg, .symbol-window img.symbol-img { display: block; }
-.symbol-window:hover .symbol-inner { transform: scale(2); }
+.symbol-window canvas, .symbol-window svg, .symbol-window img.symbol-img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.symbol-window:hover .symbol-inner { transform: scale(1); }
 .chip-list { display: flex; flex-direction: column; gap: 0.35rem; }
 .chip { border: 1px solid var(--border); border-radius: 8px; padding: 0.35rem 0.5rem; background: #111823; color: var(--text); font-weight: 600; cursor: pointer; }
 .chip.selectable-chip { display: flex; flex-direction: column; gap: 0.2rem; transition: border-color 0.15s ease, background 0.15s ease; }
