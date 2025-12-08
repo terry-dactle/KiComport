@@ -529,7 +529,13 @@
     if (!(target instanceof HTMLElement)) return;
     const win = target.closest('.symbol-window');
     if (!win) return;
-    win.classList.toggle('modal-open');
+    if (win.classList.contains('modal-open')) {
+      win.classList.remove('modal-open');
+      const inner = win.querySelector('.symbol-inner');
+      if (inner instanceof HTMLElement) inner.style.transform = "translate(0px, 0px)";
+    } else {
+      win.classList.add('modal-open');
+    }
   });
 
   // simple pan for modal-open symbol window (drag)
@@ -550,7 +556,7 @@
     translateX = e.clientX - startX;
     translateY = e.clientY - startY;
     document.querySelectorAll('.symbol-window.modal-open .symbol-inner').forEach((el) => {
-      (el as HTMLElement).style.transform = `translate(${translateX}px, ${translateY}px)`;
+      el.style.transform = `translate(${translateX}px, ${translateY}px)`;
     });
   });
   document.addEventListener('mouseup', () => {
