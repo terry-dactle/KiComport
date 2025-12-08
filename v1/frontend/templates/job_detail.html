@@ -325,20 +325,25 @@
       const note = noteRaw ? `<div class="muted small">${noteRaw}</div>` : "";
       const showNote = noteRaw && /fail|error|missing|unsupported/i.test(noteRaw);
       const content = `${img}${showNote ? note : ""}`;
+      if (type === "symbol") {
+        const wrapped = `
+          <div class="symbol-window">
+            <div class="symbol-inner">
+              ${img}
+            </div>
+          </div>
+          ${showNote ? note : ""}
+        `;
+        previewCache[id] = wrapped;
+        viewer.innerHTML = wrapped;
+        return;
+      }
       previewCache[id] = content;
       if (type === "model") {
         const noteEl = document.getElementById('model-preview-note');
         if (noteEl) noteEl.innerHTML = showNote ? noteRaw : "";
         const fallback = document.getElementById('model-fallback');
         if (fallback) fallback.innerHTML = content;
-      } else if (type === "symbol") {
-        viewer.innerHTML = `
-          <div class="symbol-window">
-            <div class="symbol-inner">
-              <img src="${body.image_data || ""}" alt="preview" class="symbol-img">
-            </div>
-          </div>
-        `;
       } else {
         viewer.innerHTML = content;
       }
@@ -523,11 +528,7 @@
     const target = e.target as HTMLElement;
     const win = target.closest('.symbol-window') as HTMLElement | null;
     if (!win) return;
-    if (win.classList.contains('modal-open')) {
-      win.classList.remove('modal-open');
-    } else {
-      win.classList.add('modal-open');
-    }
+    win.classList.toggle('modal-open');
   });
 
   document.getElementById('import-btn')?.addEventListener('click', async () => {
