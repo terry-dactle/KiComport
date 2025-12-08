@@ -299,21 +299,30 @@
   async function fetchPreview(type, btn) {
     const viewer = viewers[type];
     if (!viewer) return;
+    const isModel = type === "model";
+    const noteEl = isModel ? document.getElementById('model-preview-note') : null;
+    const fallbackEl = isModel ? document.getElementById('model-fallback') : null;
     if (!btn) {
-      viewer.innerHTML = `<div class="muted">Select an option to see its preview.</div>`;
-      return;
-    }
-    const id = btn.dataset.candId;
-    if (previewCache[id]) {
-      if (type === "model") {
-        const fallback = document.getElementById('model-fallback');
-        if (fallback) fallback.innerHTML = previewCache[id];
+      if (isModel) {
+        clearModelCanvas();
+        if (fallbackEl) fallbackEl.innerHTML = "";
+        if (noteEl) noteEl.textContent = "Select a model to see its preview.";
       } else {
-        viewer.innerHTML = previewCache[id];
+        viewer.innerHTML = `<div class="muted">Select an option to see its preview.</div>`;
       }
       return;
     }
-    viewer.innerHTML = "Loading preview...";
+    const id = btn.dataset.candId;
+    if (!isModel && previewCache[id]) {
+      viewer.innerHTML = previewCache[id];
+      return;
+    }
+    if (isModel) {
+      if (noteEl) noteEl.textContent = "Loading preview...";
+      if (fallbackEl) fallbackEl.innerHTML = "";
+    } else {
+      viewer.innerHTML = "Loading preview...";
+    }
     try {
       const resp = await fetch(`/api/jobs/candidates/${id}/render`);
       const body = await resp.json();
@@ -339,8 +348,7 @@
         return;
       }
       previewCache[id] = content;
-      if (type === "model") {
-        const noteEl = document.getElementById('model-preview-note');
+      if (isModel) {
         if (noteEl) {
           if (showNote) {
             noteEl.textContent = "Server render unavailable; using browser preview.";
@@ -348,15 +356,17 @@
             noteEl.textContent = "";
           }
         }
-        const fallback = document.getElementById('model-fallback');
-        // Keep model viewer clean; rely on browser render instead of server text previews.
-        if (fallback) fallback.innerHTML = "";
-        // Do not replace the model viewer structure; renderModel will paint into canvas area.
+        if (fallbackEl) fallbackEl.innerHTML = "";
+        // Keep model viewer structure intact; renderModel handles canvas painting.
       } else {
         viewer.innerHTML = content;
       }
     } catch (err) {
-      viewer.innerHTML = `<div class="muted">Preview unavailable: ${err?.message || err}</div>`;
+      if (isModel) {
+        if (noteEl) noteEl.textContent = `Preview unavailable: ${err?.message || err}`;
+      } else {
+        viewer.innerHTML = `<div class="muted">Preview unavailable: ${err?.message || err}</div>`;
+      }
       console.error("Preview fetch failed", { type, id, error: err });
     }
   }

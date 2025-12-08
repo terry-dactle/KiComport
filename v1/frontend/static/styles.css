@@ -238,8 +238,10 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .option-stack::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; }
 .viewer-panel { margin-top: 0.4rem; padding: 0.5rem 0.6rem; border: 1px dashed var(--border); border-radius: 8px; background: rgba(255,255,255,0.02); color: var(--muted); min-height: 46px; white-space: normal; }
 .preview-image { max-width: 100%; height: auto; display: block; border: 1px solid var(--border); border-radius: 6px; background: #0f141b; }
-.viewer-panel #model-canvas { min-height: 240px; margin-top: 0.5rem; }
-.viewer-panel canvas { width: 100%; height: auto; display: block; border-radius: 6px; }
+.viewer-panel#viewer-model { display: flex; flex-direction: column; gap: 8px; }
+.viewer-panel #model-canvas { min-height: 280px; margin-top: 0.5rem; background: #0f141b; border: 1px solid #243043; border-radius: 8px; position: relative; overflow: hidden; }
+.viewer-panel #model-canvas canvas { width: 100%; height: 100%; display: block; border-radius: 6px; }
+.viewer-panel #model-preview-note { font-size: 14px; }
 .preview-window { width: 360px; height: 320px; max-width: 100%; overflow: hidden; border: 1px solid #444; background: #111; position: relative; margin: 0 auto; cursor: zoom-in; transition: box-shadow 0.2s ease; }
 .preview-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; transform-origin: center center; transition: transform 0.2s ease-out; }
 .preview-window canvas, .preview-window svg, .preview-window img.symbol-img { display: block; width: 100%; height: 100%; object-fit: contain; }
