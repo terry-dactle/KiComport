@@ -179,12 +179,6 @@ def _render_footprint_svg(path: Path) -> str:
     def ty(y): return (maxy - y) * scale  # flip y
     svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
     svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
-    # titles
-    title_cx = (body_minx + body_maxx) / 2 if body_minx is not None and body_maxx is not None else (minx + maxx) / 2
-    title_y_base = (body_maxy + 8) if body_maxy is not None else maxy - 18
-    ty_text = ty(title_y_base)
-    for i, (lbl, val) in enumerate(top_text[:2]):  # reference then value
-        svg.append(f'<text x="{tx(title_cx)}" y="{ty_text - i*14}" fill="#9fc4ff" font-size="12" text-anchor="middle">{val}</text>')
     for x, y, sx, sy, rot, pad_id in pads:
         cx = tx(x)
         cy = ty(y)
