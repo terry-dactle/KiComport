@@ -331,6 +331,14 @@
         if (noteEl) noteEl.innerHTML = showNote ? noteRaw : "";
         const fallback = document.getElementById('model-fallback');
         if (fallback) fallback.innerHTML = content;
+      } else if (type === "symbol") {
+        viewer.innerHTML = `
+          <div class="symbol-window">
+            <div class="symbol-inner">
+              <img src="${body.image_data || ""}" alt="preview" class="symbol-img">
+            </div>
+          </div>
+        `;
       } else {
         viewer.innerHTML = content;
       }

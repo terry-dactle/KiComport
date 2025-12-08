@@ -211,11 +211,10 @@ def _render_symbol_svg(path: Path) -> str:
     for ln in lines:
         stripped = ln.strip()
         if stripped.startswith("(property \"Value\"") or stripped.startswith("(property \"Reference\""):
-            # capture reference/value to show above
             try:
                 parts = stripped.split("\"")
                 if len(parts) >= 4:
-                    label = parts[1]  # e.g., Reference or Value
+                    label = parts[1]
                     value = parts[3]
                     top_text.append((label, value))
             except Exception:
@@ -254,7 +253,6 @@ def _render_symbol_svg(path: Path) -> str:
                 pins.append({"x": x, "y": y, "length": length, "rot": rot, "name": "", "number": "", "ptype": pin_type})
             except Exception:
                 continue
-        # Attach name/number to last pin when encountered
         if pins:
             if stripped.startswith("(name "):
                 try:
@@ -270,75 +268,90 @@ def _render_symbol_svg(path: Path) -> str:
                     pass
     if not pins:
         raise RuntimeError("No pins parsed")
-    xs = []
-    ys = []
-    label_gap = 8.0     # distance from body edge for pin name (inside)
-    num_gap = 10.0      # distance from pin origin along normal for number
-    type_gap = 20.0     # distance from pin origin opposite direction for type
+
+    # Scaling constants
+    SCALE = 10.0  # px per mm
+    INTERNAL_SIZE = 2000
+    TEXT_OFFSET_MM = 2.0
+
     import math
-    # Track body edges for placement reference
+    # Body bounds
     body_minx = body_maxx = None
     body_miny = body_maxy = None
     for poly in polys:
         for x, y in poly:
-            xs.append(x); ys.append(y)
             body_minx = x if body_minx is None else min(body_minx, x)
             body_maxx = x if body_maxx is None else max(body_maxx, x)
             body_miny = y if body_miny is None else min(body_miny, y)
             body_maxy = y if body_maxy is None else max(body_maxy, y)
-    # include title positions in bounds (centered later)
-    # we will place them relative to body; for now ensure arrays non-empty
-    for lbl, val in top_text:
-        xs.append(0); ys.append(0)
+
+    # Collect bounds in mm
+    xs = []
+    ys = []
+    if body_minx is not None:
+        xs.extend([body_minx, body_maxx]); ys.extend([body_miny, body_maxy])
     for p in pins:
         x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
         ang = math.radians(rot)
         dirx = math.cos(ang); diry = math.sin(ang)
         xs.append(x); ys.append(y)
-        endx = x + dirx * length
-        endy = y + diry * length
-        xs.append(endx); ys.append(endy)
-        # bounds: type far outside, number near origin, name at body edge
-        xs.extend([x - dirx * type_gap, x - dirx * num_gap, endx + dirx * 2])
-        ys.extend([y - diry * type_gap, y - diry * num_gap, endy + diry * 2])
-    minx, maxx = min(xs) - 12, max(xs) + 12
-    miny, maxy = min(ys) - 32, max(ys) + 36  # extra headroom for titles
-    width = maxx - minx
-    height = maxy - miny
-    scale = 400.0 / max(width, height)
-    def tx(x): return (x - minx) * scale
-    def ty(y): return (maxy - y) * scale
-    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="420" height="420" viewBox="0 0 420 420" style="background:#0f141b;">']
-    svg.append('<rect x="0" y="0" width="420" height="420" fill="#0f141b" stroke="#243043" />')
+        xs.append(x + dirx * length); ys.append(y + diry * length)
+        xs.append(x + dirx * (length + TEXT_OFFSET_MM)); ys.append(y + diry * (length + TEXT_OFFSET_MM))
+    if not xs:
+        return _encode_svg(_build_svg(["Empty symbol"]))
+
+    minx_mm, maxx_mm = min(xs) - 2, max(xs) + 2
+    miny_mm, maxy_mm = min(ys) - 6, max(ys) + 12
+
+    def tx_mm(x): return x * SCALE
+    def ty_mm(y): return -y * SCALE
+
+    # Centering
+    cx_mm = (minx_mm + maxx_mm) / 2
+    cy_mm = (miny_mm + maxy_mm) / 2
+    def tx(x): return tx_mm(x - cx_mm) + INTERNAL_SIZE / 2
+    def ty(y): return ty_mm(y - cy_mm) + INTERNAL_SIZE / 2
+
+    svg = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{INTERNAL_SIZE}" height="{INTERNAL_SIZE}" viewBox="0 0 {INTERNAL_SIZE} {INTERNAL_SIZE}" style="background:#0f141b;">']
+    svg.append(f'<rect x="0" y="0" width="{INTERNAL_SIZE}" height="{INTERNAL_SIZE}" fill="#0f141b" stroke="#243043" />')
+
     for poly in polys:
         pts = " ".join(f"{tx(x)},{ty(y)}" for x, y in poly)
         svg.append(f'<polyline points="{pts}" fill="none" stroke="#9aa6b7" stroke-width="2" />')
+
+    # Titles
+    if body_minx is not None:
+        title_cx = (body_minx + body_maxx) / 2
+        title_y_base = (body_maxy + 6)
+    else:
+        title_cx = cx_mm
+        title_y_base = maxy_mm
+    for i, (lbl, val) in enumerate(top_text[:2]):  # Reference then Value
+        svg.append(f'<text x="{tx(title_cx)}" y="{ty(title_y_base) - i*16}" fill="#9fc4ff" font-size="16" text-anchor="middle">{val}</text>')
+
+    # Pins
     for p in pins:
-        x = p["x"]; y = p["y"]; length = p["length"]; rot = p["rot"]
-        ang = math.radians(rot)
+        x_mm = p["x"]; y_mm = p["y"]; length_mm = p["length"]; rot_deg = p["rot"]
+        ang = math.radians(rot_deg)
         dirx = math.cos(ang); diry = math.sin(ang)
-        x2 = x + dirx * length
-        y2 = y + diry * length
-        svg.append(f'<line x1="{tx(x)}" y1="{ty(y)}" x2="{tx(x2)}" y2="{ty(y2)}" stroke="#36c574" stroke-width="2" />')
-        svg.append(f'<circle cx="{tx(x)}" cy="{ty(y)}" r="3" fill="#2ea043" />')
-        num_txt = str(p.get("number") or "").strip()
+        x0 = tx(x_mm); y0 = ty(y_mm)
+        x1 = x0 + dirx * length_mm * SCALE
+        y1 = y0 - diry * length_mm * SCALE
+        svg.append(f'<line x1="{x0}" y1="{y0}" x2="{x1}" y2="{y1}" stroke="#36c574" stroke-width="2" />')
+        svg.append(f'<circle cx="{x0}" cy="{y0}" r="3" fill="#2ea043" />')
         name_txt = str(p.get("name") or "").strip()
-        type_txt = str(p.get("ptype") or "").strip()
-        # position type outside pin tail, number at pin start, name at body edge
-        if dirx >= 0:  # left side pins pointing right
-            if type_txt:
-                svg.append(f'<text x="{tx(x - type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="end" dy="4">{type_txt}</text>')
-            if num_txt:
-                svg.append(f'<text x="{tx(x)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{num_txt}</text>')
-            if name_txt:
-                svg.append(f'<text x="{tx(x2 - 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="end" dy="4">{name_txt}</text>')
-        else:  # right side pins pointing left
-            if type_txt:
-                svg.append(f'<text x="{tx(x + type_gap)}" y="{ty(y)}" fill="#8fa3c2" font-size="10" text-anchor="start" dy="4">{type_txt}</text>')
-            if num_txt:
-                svg.append(f'<text x="{tx(x)}" y="{ty(y)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{num_txt}</text>')
-            if name_txt:
-                svg.append(f'<text x="{tx(x2 + 2)}" y="{ty(y2)}" fill="#e9edf5" font-size="11" text-anchor="start" dy="4">{name_txt}</text>')
+        num_txt = str(p.get("number") or "").strip()
+        text_dist = (length_mm + TEXT_OFFSET_MM) * SCALE
+        name_x = x0 + dirx * text_dist
+        name_y = y0 - diry * text_dist
+        if name_txt:
+            anchor = "start" if dirx >= 0 else "end"
+            svg.append(f'<text x="{name_x}" y="{name_y}" fill="#e9edf5" font-size="12" text-anchor="{anchor}" dy="4">{name_txt}</text>')
+        if num_txt:
+            num_x = x0
+            num_y = y0
+            svg.append(f'<text x="{num_x}" y="{num_y}" fill="#e9edf5" font-size="11" text-anchor="middle" dy="4">{num_txt}</text>')
+
     svg.append('</svg>')
     data = "\n".join(svg).encode("utf-8")
     b64 = base64.b64encode(data).decode("ascii")
