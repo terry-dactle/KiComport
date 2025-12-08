@@ -151,7 +151,7 @@ def _render_footprint_svg(path: Path) -> str:
             # crude parse: pad "num" type shape (at x y rot?) (size sx sy)
             try:
                 parts = line.replace("(", " ").replace(")", " ").split()
-                pad_id = parts[1] if len(parts) > 1 else ""
+                pad_id = parts[1].strip('"') if len(parts) > 1 else ""
                 idx_at = parts.index("at") + 1
                 x = float(parts[idx_at])
                 y = float(parts[idx_at + 1])
@@ -342,8 +342,9 @@ def _render_symbol_svg(path: Path) -> str:
             anchor = "start" if dirx >= 0 else "end"
             svg.append(f'<text x="{name_x}" y="{name_y}" fill="#e9edf5" font-size="12" text-anchor="{anchor}" dy="4">{name_txt}</text>')
         if num_txt:
-            num_x = x0
-            num_y = y0
+            num_offset = 6
+            num_x = x0 - diry * num_offset
+            num_y = y0 - dirx * num_offset
             svg.append(f'<text x="{num_x}" y="{num_y}" fill="#e9edf5" font-size="12" font-weight="700" text-anchor="middle" dy="4">{num_txt}</text>')
 
     svg.append('</svg>')

@@ -344,6 +344,7 @@
         if (noteEl) noteEl.innerHTML = showNote ? noteRaw : "";
         const fallback = document.getElementById('model-fallback');
         if (fallback) fallback.innerHTML = content;
+        viewer.innerHTML = content || "<div class='muted'>Rendering in canvas...</div>";
       } else {
         viewer.innerHTML = content;
       }
