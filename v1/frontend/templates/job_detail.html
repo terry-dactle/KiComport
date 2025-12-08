@@ -525,8 +525,9 @@
 
   // click-to-toggle fullscreen for symbol window
   document.addEventListener('click', (e) => {
-    const target = e.target as HTMLElement;
-    const win = target.closest('.symbol-window') as HTMLElement | null;
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return;
+    const win = target.closest('.symbol-window');
     if (!win) return;
     win.classList.toggle('modal-open');
   });
