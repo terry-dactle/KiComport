@@ -518,6 +518,18 @@
   }
   initOptionTiles();
 
+  // click-to-toggle fullscreen for symbol window
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const win = target.closest('.symbol-window') as HTMLElement | null;
+    if (!win) return;
+    if (win.classList.contains('modal-open')) {
+      win.classList.remove('modal-open');
+    } else {
+      win.classList.add('modal-open');
+    }
+  });
+
   document.getElementById('import-btn')?.addEventListener('click', async () => {
     setActionStatus("Saving choices before import...");
     try {
