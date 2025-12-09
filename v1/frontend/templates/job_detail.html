@@ -479,7 +479,8 @@
           const occt = await factory({
             locateFile: (file) => `${base}${file}`,
           });
-          const result = occt.ReadStepFile(arrayBuf, undefined, { compress: true });
+          const uint8 = new Uint8Array(arrayBuf);
+          const result = occt.ReadStepFile(uint8, undefined, { compress: true });
           if (result && result.meshes && result.meshes.length) {
             const group = new THREE.Group();
             result.meshes.forEach((m) => {
