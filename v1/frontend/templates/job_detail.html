@@ -155,36 +155,20 @@
     </div>
 
     <div class="card dest-card">
-      <h4>Destination folders</h4>
+      <h4>Destination folder</h4>
       <div class="dest-grid">
         <label>
-          Symbols (root: {{ import_paths.symbol_root or 'not set' }})
-          <input type="text" id="symbol-subdir" list="symbol-folders" placeholder="Leave blank for root">
-          <datalist id="symbol-folders">
-            {% for d in import_paths.symbol_subdirs %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
-          </datalist>
-        </label>
-        <label>
-          Footprints (root: {{ import_paths.footprint_root or 'not set' }})
-          <input type="text" id="footprint-subdir" list="footprint-folders" placeholder="Leave blank for root">
-          <datalist id="footprint-folders">
-            {% for d in import_paths.footprint_subdirs %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
-          </datalist>
-        </label>
-        <label>
-          3D Models (root: {{ import_paths.model_root or 'not set' }})
-          <input type="text" id="model-subdir" list="model-folders" placeholder="Leave blank for root">
-          <datalist id="model-folders">
-            {% for d in import_paths.model_subdirs %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+          Subfolder name (applied to all roots)
+          {% set folder_suggestions = (import_paths.symbol_subdirs or []) + (import_paths.footprint_subdirs or []) + (import_paths.model_subdirs or []) %}
+          {% set uniq = folder_suggestions | unique %}
+          <input type="text" id="common-subdir" list="common-folders" placeholder="Leave blank for root">
+          <datalist id="common-folders">
+            {% for d in uniq %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
           </datalist>
         </label>
       </div>
-      <p class="muted small">Choose an existing subfolder or type a new one; it will be created under the root.</p>
-    </div>
-
-    <div class="card actions-card">
-      <h4>Import</h4>
-      <div class="actions">
+      <p class="muted small">This folder name will be used under each root (symbols/footprints/3D), e.g. symbols/Buzzer, footprints/Buzzer, 3d/Buzzer.</p>
+      <div class="actions" style="margin-top: 10px;">
         <button type="button" id="import-btn">Import</button>
       </div>
     </div>
@@ -192,6 +176,16 @@
 {% else %}
   <p>No components found.</p>
 {% endif %}
+</section>
+
+<section class="card">
+  <h4>Attach extra file to this job</h4>
+  <p class="muted small">Add an extra STEP/zip/symbol/footprint file to this job (e.g., standalone STEP). It will be scanned and added as additional candidates.</p>
+  <div class="attach-row">
+    <input type="file" id="attach-file-input" />
+    <button type="button" id="attach-file-btn">Add to job</button>
+  </div>
+  <p class="muted small" id="attach-status"></p>
 </section>
 
 <section class="card">
@@ -288,11 +282,7 @@
   };
 
   const previewCache = {};
-  const destInputs = {
-    symbol: document.getElementById('symbol-subdir'),
-    footprint: document.getElementById('footprint-subdir'),
-    model: document.getElementById('model-subdir'),
-  };
+  const commonDestInput = document.getElementById('common-subdir');
   let threeLoaded = null;
   let currentModelUrl = null;
 
@@ -313,6 +303,16 @@
       return;
     }
     const id = btn.dataset.candId;
+    if (!id) {
+      if (isModel) {
+        clearModelCanvas();
+        if (fallbackEl) fallbackEl.innerHTML = "";
+        if (noteEl) noteEl.textContent = "Select a model to see its preview.";
+      } else {
+        viewer.innerHTML = `<div class="muted">Select an option to see its preview.</div>`;
+      }
+      return;
+    }
     if (!isModel && previewCache[id]) {
       viewer.innerHTML = previewCache[id];
       return;
@@ -652,9 +652,9 @@
       if (!saved.ok) throw new Error(saved.message || "Failed to save choices");
       setActionStatus("Importing to KiCad...");
       const payload = {
-        symbol_subdir: destInputs.symbol?.value?.trim() || null,
-        footprint_subdir: destInputs.footprint?.value?.trim() || null,
-        model_subdir: destInputs.model?.value?.trim() || null,
+        symbol_subdir: commonDestInput?.value?.trim() || null,
+        footprint_subdir: commonDestInput?.value?.trim() || null,
+        model_subdir: commonDestInput?.value?.trim() || null,
       };
       const resp = await fetch(`/api/jobs/${jobId}/import`, {
         method: "POST",
@@ -667,6 +667,30 @@
       alert("Import complete.");
     } catch (err) {
       setActionStatus(`Import failed: ${err?.message || err}`);
+    }
+  });
+
+  // attach extra file to job
+  const attachBtn = document.getElementById('attach-file-btn');
+  const attachInput = document.getElementById('attach-file-input');
+  const attachStatus = document.getElementById('attach-status');
+  attachBtn?.addEventListener('click', async () => {
+    if (!attachInput?.files?.length) {
+      if (attachStatus) attachStatus.textContent = "Choose a file first.";
+      return;
+    }
+    const file = attachInput.files[0];
+    const fd = new FormData();
+    fd.append("file", file);
+    if (attachStatus) attachStatus.textContent = "Uploading and scanning...";
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}/attach-file`, { method: "POST", body: fd });
+      const body = await resp.json();
+      if (!resp.ok) throw new Error(body.detail || resp.statusText);
+      if (attachStatus) attachStatus.textContent = "Attached. Reloading...";
+      window.location.reload();
+    } catch (err) {
+      if (attachStatus) attachStatus.textContent = `Attach failed: ${err?.message || err}`;
     }
   });
 </script>

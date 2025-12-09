@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, File, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,8 @@ from ..db.models import CandidateFile, CandidateType, Component, Job, JobStatus
 from ..services import importer, jobs as job_service, ranking
 from ..services import extract, scan as scan_service
 from ..services import preview as preview_service
+from ..services import uploads as upload_service
+from .uploads_routes import ALLOWED_EXTS, _persist_components, _validate_zip_or_raise
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
@@ -36,6 +38,41 @@ def job_detail(job_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return _serialize_job(job, include_components=True, include_logs=True)
+
+
+@router.post("/{job_id}/attach-file")
+async def attach_file_to_job(
+    job_id: int,
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+) -> Dict[str, Any]:
+    job = db.get(Job, job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    config = get_config(request)
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in ALLOWED_EXTS:
+        raise HTTPException(status_code=400, detail=f"Unsupported extension {suffix}")
+
+    try:
+        stored_path, md5 = upload_service.save_upload(file.file, Path(config.uploads_dir), file.filename)
+        _validate_zip_or_raise(stored_path, suffix)
+        extracted_dir = extract.extract_if_needed(stored_path, Path(config.temp_dir))
+        candidates = scan_service.scan_candidates(Path(extracted_dir))
+        if not candidates:
+            raise HTTPException(status_code=400, detail="No candidates detected in attached file")
+        comp_objs, response_components = _persist_components(db, job.id, candidates)
+        job_service.log_job(db, job, f"Attached file {file.filename} to job")
+        return {
+          "job_id": job.id,
+          "components_added": [c.id for c in comp_objs],
+          "component_details": response_components,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Attach failed: {exc}") from exc
 
 
 @router.post("/{job_id}/select")

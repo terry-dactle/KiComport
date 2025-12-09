@@ -267,6 +267,8 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .dest-card .dest-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
 .dest-card label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
 .dest-card input { width: 100%; }
+.attach-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.attach-row input[type="file"] { max-width: 360px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 @media (max-width: 768px) {
