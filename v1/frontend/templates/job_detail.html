@@ -385,6 +385,23 @@
   }
 
   let occtLoaded = null;
+  function loadOcctViaScript(url) {
+    return new Promise((resolve, reject) => {
+      if (window.occtimportjs) return resolve({ factory: window.occtimportjs, base: url.slice(0, url.lastIndexOf('/') + 1) });
+      const script = document.createElement('script');
+      script.src = url;
+      script.onload = () => {
+        if (window.occtimportjs && typeof window.occtimportjs === 'function') {
+          resolve({ factory: window.occtimportjs, base: url.slice(0, url.lastIndexOf('/') + 1) });
+        } else {
+          reject(new Error('occtimportjs not found after script load'));
+        }
+      };
+      script.onerror = () => reject(new Error(`Failed to load script ${url}`));
+      document.head.appendChild(script);
+    });
+  }
+
   async function loadOcct() {
     if (occtLoaded) return occtLoaded;
     const urls = [
@@ -398,21 +415,25 @@
     ];
     for (const url of urls) {
       try {
-        const mod = await import(url);
-        // If we loaded from /static, base needs the absolute path.
-        const base = url.startsWith('/') ? `${new URL(window.location.href).origin}${url.slice(0, url.lastIndexOf('/') + 1)}` : url.slice(0, url.lastIndexOf('/') + 1);
-        const factory = mod?.default || mod?.occtimportjs || mod;
-        if (typeof factory !== 'function') {
-          console.warn("OCCT import did not expose a callable factory", url, Object.keys(mod || {}));
-          continue;
+        let mod = null;
+        if (url.endsWith('.js')) {
+          mod = await import(url).catch(() => null);
         }
-        occtLoaded = { factory, base };
+        let base = url.startsWith('/') ? `${new URL(window.location.href).origin}${url.slice(0, url.lastIndexOf('/') + 1)}` : url.slice(0, url.lastIndexOf('/') + 1);
+        let factory = mod?.default || mod?.occtimportjs || mod;
+        if (factory && typeof factory === 'function') {
+          occtLoaded = { factory, base };
+          return occtLoaded;
+        }
+        // fallback to script tag/global
+        const viaScript = await loadOcctViaScript(url);
+        occtLoaded = viaScript;
         return occtLoaded;
       } catch (e) {
         console.warn("OCCT import failed for", url, e);
       }
     }
-    throw new Error("Could not load OCCT importer from CDN");
+    throw new Error("Could not load OCCT importer (all sources)");
   }
 
   function clearModelCanvas(msg = "") {
