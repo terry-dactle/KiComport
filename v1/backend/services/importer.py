@@ -67,7 +67,11 @@ def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
     if candidate.type == CandidateType.footprint:
         if rel.suffix != ".kicad_mod":
             return target_root / rel
-        pretty_dir = rel.parent if rel.parent.name.endswith(".pretty") else rel.parent.with_suffix(".pretty")
+        if rel.parent and rel.parent.name:
+            pretty_dir = rel.parent if rel.parent.name.endswith(".pretty") else rel.parent.with_suffix(".pretty")
+        else:
+            # no parent info; fall back to a generic .pretty folder
+            pretty_dir = Path(f"{candidate.name}.pretty")
         return target_root / pretty_dir / rel.name
     if candidate.type == CandidateType.model:
         return target_root / rel
