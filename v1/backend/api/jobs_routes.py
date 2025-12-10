@@ -131,14 +131,20 @@ async def import_job(job_id: int, request: Request, db: Session = Depends(get_db
     symbol_root = Path(config.kicad_symbol_dir)
     footprint_root = Path(config.kicad_footprint_dir)
     model_root = Path(config.kicad_3d_dir)
-    counts = importer.import_job_selection(
+    counts, destinations = importer.import_job_selection(
         db,
         job,
         symbol_dir=_safe_target(symbol_root, payload.get("symbol_subdir")),
         footprint_dir=_safe_target(footprint_root, payload.get("footprint_subdir")),
         model_dir=_safe_target(model_root, payload.get("model_subdir")),
     )
-    return {"job_id": job.id, "status": job.status.value, "imported": counts, "request_id": getattr(request.state, "request_id", None)}
+    return {
+        "job_id": job.id,
+        "status": job.status.value,
+        "imported": counts,
+        "destinations": destinations,
+        "request_id": getattr(request.state, "request_id", None),
+    }
 
 
 def _serialize_job(job: Job, include_components: bool = False, include_logs: bool = False) -> Dict[str, Any]:
