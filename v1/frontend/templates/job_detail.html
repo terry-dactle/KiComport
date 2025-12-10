@@ -15,6 +15,27 @@
 </section>
 
 <section class="card">
+  <div class="card-header">
+    <div>
+      <h3>Attach files or folders to this job</h3>
+      <p class="muted small">Drop archives or raw KiCad assets; they will be scanned and added as new candidates for Job #{{ job.id }}.</p>
+    </div>
+  </div>
+  <form id="attach-form">
+    <div id="attach-drop-zone" class="drop-zone">
+      <input type="file" id="attach-file-input" name="file" hidden multiple webkitdirectory directory>
+      <p><strong>Drop files or folders here</strong> or click to browse</p>
+      <p class="muted">Supports zips, symbols, footprints, 3D models. Folders upload their files individually.</p>
+    </div>
+    <div class="attach-actions">
+      <button type="button" id="attach-browse">Browse</button>
+      <label class="muted small" style="margin-left: 10px;"><input type="checkbox" id="attach-reload" checked> Reload after attach</label>
+    </div>
+    <p class="muted small" id="attach-status"></p>
+  </form>
+</section>
+
+<section class="card">
   <h3>Components & Candidates</h3>
 {% if job.components %}
   {% set symbols = namespace(options=[]) %}
@@ -179,16 +200,6 @@
 </section>
 
 <section class="card">
-  <h4>Attach extra file to this job</h4>
-  <p class="muted small">Add an extra STEP/zip/symbol/footprint file to this job (e.g., standalone STEP). It will be scanned and added as additional candidates.</p>
-  <div class="attach-row">
-    <input type="file" id="attach-file-input" />
-    <button type="button" id="attach-file-btn">Add to job</button>
-  </div>
-  <p class="muted small" id="attach-status"></p>
-</section>
-
-<section class="card">
   <h3>Logs</h3>
   {% if job.logs %}
   <ul class="logs">
@@ -259,6 +270,106 @@
     });
     const body = await resp.json();
     return { ok: resp.ok, body, message: body.detail || "" };
+  }
+
+  // attach extra files/folders to the job (uses the richer upload UI)
+  const attachDropZone = document.getElementById('attach-drop-zone');
+  const attachInput = document.getElementById('attach-file-input');
+  const attachStatus = document.getElementById('attach-status');
+  const attachBrowse = document.getElementById('attach-browse');
+  const attachReloadToggle = document.getElementById('attach-reload');
+
+  async function safeJson(resp) {
+    try {
+      return await resp.json();
+    } catch (err) {
+      return { detail: resp.statusText || "Non-JSON response" };
+    }
+  }
+
+  function setAttachStatus(message, detail = "", loading = false) {
+    if (!attachStatus) return;
+    attachStatus.innerHTML = "";
+    if (loading) {
+      const span = document.createElement('span');
+      span.className = 'upload-progress';
+      span.innerHTML = '<span class="spinner"></span>' + message;
+      attachStatus.appendChild(span);
+      return;
+    }
+    if (!detail) {
+      attachStatus.textContent = message || "";
+      return;
+    }
+    const title = document.createElement('div');
+    title.textContent = message || "";
+    attachStatus.appendChild(title);
+    const pre = document.createElement('pre');
+    pre.className = 'status-detail';
+    const maxLen = 420;
+    const txt = String(detail || "");
+    pre.textContent = txt.length > maxLen ? txt.slice(0, maxLen) + "…" : txt;
+    attachStatus.appendChild(pre);
+  }
+
+  function attachHighlight(on) {
+    if (!attachDropZone) return;
+    attachDropZone.classList.toggle('dragover', !!on);
+  }
+
+  async function attachSingleFile(file) {
+    if (!file) return;
+    setAttachStatus(`Uploading ${file.name}...`, "", true);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const resp = await fetch(`/api/jobs/${jobId}/attach-file`, { method: "POST", body: fd });
+      const body = await safeJson(resp);
+      if (!resp.ok) {
+        throw new Error(body?.detail || resp.statusText);
+      }
+      setAttachStatus(`Attached ${file.name}.`, "");
+      return true;
+    } catch (err) {
+      setAttachStatus("Attach failed", err?.message || err);
+      return false;
+    }
+  }
+
+  async function handleAttachFiles(fileList) {
+    if (!fileList || !fileList.length) {
+      setAttachStatus("Choose a file or folder first.");
+      return;
+    }
+    for (const file of fileList) {
+      const ok = await attachSingleFile(file);
+      if (!ok) return;
+    }
+    if (attachReloadToggle?.checked) {
+      setAttachStatus("Reloading...");
+      window.location.reload();
+    }
+  }
+
+  attachBrowse?.addEventListener('click', () => attachInput?.click());
+  attachInput?.addEventListener('change', (e) => {
+    const files = e.target?.files;
+    handleAttachFiles(files);
+    attachInput.value = "";
+  });
+
+  if (attachDropZone) {
+    attachDropZone.addEventListener('click', () => attachInput?.click());
+    ['dragenter', 'dragover'].forEach(evt => attachDropZone.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation(); attachHighlight(true);
+    }));
+    ['dragleave', 'drop'].forEach(evt => attachDropZone.addEventListener(evt, (e) => {
+      e.preventDefault(); e.stopPropagation(); attachHighlight(false);
+    }));
+    attachDropZone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer?.files;
+      handleAttachFiles(files);
+    });
   }
 
   function applyTypeSelection(type, candId, compId) {
