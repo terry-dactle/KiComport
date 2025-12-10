@@ -53,11 +53,12 @@ def _copy_if_selected(db: Session, comp: Component, candidate_id: int | None, ex
 
 def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
     rel = Path(candidate.rel_path) if candidate.rel_path else Path("")
+    fallback_filename = rel.name or Path(candidate.path).name or f"{candidate.name}.kicad_mod"
 
     # Fallback when relative path is missing/empty
     if not rel.name:
         if candidate.type == CandidateType.footprint:
-            return target_root / f"{candidate.name}.kicad_mod"
+            return target_root / f"{candidate.name}.pretty" / fallback_filename
         if candidate.type == CandidateType.model:
             return target_root / Path(candidate.path).name
         if candidate.type == CandidateType.symbol:
@@ -69,10 +70,9 @@ def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
             return target_root / rel
         if rel.parent and rel.parent.name:
             pretty_dir = rel.parent if rel.parent.name.endswith(".pretty") else rel.parent.with_suffix(".pretty")
-        else:
-            # no parent info; fall back to a generic .pretty folder
-            pretty_dir = Path(f"{candidate.name}.pretty")
-        return target_root / pretty_dir / rel.name
+            return target_root / pretty_dir / rel.name
+        # no parent info; create a .pretty folder based on the footprint name
+        return target_root / f"{candidate.name}.pretty" / fallback_filename
     if candidate.type == CandidateType.model:
         return target_root / rel
     # Preserve relative path for symbols to avoid flattening collisions
