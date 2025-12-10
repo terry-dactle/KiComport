@@ -780,29 +780,5 @@
       setActionStatus(`Import failed: ${err?.message || err}`);
     }
   });
-
-  // attach extra file to job
-  const attachBtn = document.getElementById('attach-file-btn');
-  const attachInput = document.getElementById('attach-file-input');
-  const attachStatus = document.getElementById('attach-status');
-  attachBtn?.addEventListener('click', async () => {
-    if (!attachInput?.files?.length) {
-      if (attachStatus) attachStatus.textContent = "Choose a file first.";
-      return;
-    }
-    const file = attachInput.files[0];
-    const fd = new FormData();
-    fd.append("file", file);
-    if (attachStatus) attachStatus.textContent = "Uploading and scanning...";
-    try {
-      const resp = await fetch(`/api/jobs/${jobId}/attach-file`, { method: "POST", body: fd });
-      const body = await resp.json();
-      if (!resp.ok) throw new Error(body.detail || resp.statusText);
-      if (attachStatus) attachStatus.textContent = "Attached. Reloading...";
-      window.location.reload();
-    } catch (err) {
-      if (attachStatus) attachStatus.textContent = `Attach failed: ${err?.message || err}`;
-    }
-  });
 </script>
 {% endblock %}
