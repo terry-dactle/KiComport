@@ -41,10 +41,13 @@ def import_job_selection(
         if dest:
             destinations.append(str(dest))
 
-    if destinations:
+    total_copied = copied["symbols"] + copied["footprints"] + copied["models"]
+    if total_copied == 0:
+        log_job(db, job, "Import skipped: no selections to copy", level="WARNING")
+    elif destinations:
         log_job(db, job, f"Imported files: {', '.join(destinations)}")
 
-    update_status(db, job, JobStatus.imported, "Import completed")
+    update_status(db, job, JobStatus.imported if total_copied else JobStatus.waiting_for_import, "Import completed" if total_copied else "No selections to import")
     return copied, destinations
 
 
