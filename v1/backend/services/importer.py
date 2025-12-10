@@ -52,7 +52,17 @@ def _copy_if_selected(db: Session, comp: Component, candidate_id: int | None, ex
 
 
 def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
-    rel = Path(candidate.rel_path)
+    rel = Path(candidate.rel_path) if candidate.rel_path else Path("")
+
+    # Fallback when relative path is missing/empty
+    if not rel.name:
+        if candidate.type == CandidateType.footprint:
+            return target_root / f"{candidate.name}.kicad_mod"
+        if candidate.type == CandidateType.model:
+            return target_root / Path(candidate.path).name
+        if candidate.type == CandidateType.symbol:
+            return target_root / f"{candidate.name}.kicad_sym"
+
     # For footprints ensure .pretty directory preserved
     if candidate.type == CandidateType.footprint:
         if rel.suffix != ".kicad_mod":
