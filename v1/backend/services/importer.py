@@ -67,7 +67,7 @@ def _copy_if_selected(
     candidate.selected_count += 1
     apply_feedback(candidate)
     db.add(candidate)
-    return 1
+    return 1, dest
 
 
 def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
