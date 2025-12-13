@@ -15,6 +15,7 @@
     </div>
     <hr>
     <div class="settings-section">
+      <label>KiCad root dir (optional)<br><input type="text" id="kicad_root_dir" name="kicad_root_dir" value="{{ config.kicad_root_dir if config and config.kicad_root_dir else '' }}" placeholder="/kicad"></label><br>
       <label>Symbol dir<br><input type="text" id="kicad_symbol_dir" name="kicad_symbol_dir" value="{{ config.kicad_symbol_dir if config else '' }}"></label><br>
       <label>Footprint dir<br><input type="text" id="kicad_footprint_dir" name="kicad_footprint_dir" value="{{ config.kicad_footprint_dir if config else '' }}"></label><br>
       <label>3D dir<br><input type="text" id="kicad_3d_dir" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
@@ -67,6 +68,7 @@
   const modelStack = document.getElementById('ollama-model-stack');
   const ollamaTestStatus = document.getElementById('ollama-test-status');
   const dataDirInput = document.getElementById('data_dir');
+  const kicadRootInput = document.getElementById('kicad_root_dir');
   const symbolInput = document.getElementById('kicad_symbol_dir');
   const footprintInput = document.getElementById('kicad_footprint_dir');
   const modelDirInput = document.getElementById('kicad_3d_dir');
@@ -113,7 +115,8 @@
     if (!baseUrl) {
       modelHint.textContent = "Enter an Ollama base URL to load models.";
       modelList.innerHTML = "";
-      document.getElementById('model-list-display').innerHTML = "";
+      const modelListDisplay = document.getElementById('model-list-display');
+      if (modelListDisplay) modelListDisplay.innerHTML = "";
       modelSelect.innerHTML = "";
       modelStack.hidden = true;
       return;
@@ -197,11 +200,14 @@
   syncToggleLabel();
   enabledBox?.addEventListener('change', syncToggleLabel);
   document.getElementById('apply-kicad-root')?.addEventListener('click', () => {
-    const root = (dataDirInput?.value || "").trim().replace(/\/+$/, "");
+    const kicadRoot = (kicadRootInput?.value || "").trim().replace(/\/+$/, "");
+    const dataRoot = (dataDirInput?.value || "").trim().replace(/\/+$/, "");
+    const root = kicadRoot || dataRoot;
     if (!root) return;
-    if (symbolInput) symbolInput.value = `${root}/kicad/symbols`.replace(/\/+/, "/");
-    if (footprintInput) footprintInput.value = `${root}/kicad/footprints`.replace(/\/+/, "/");
-    if (modelDirInput) modelDirInput.value = `${root}/kicad/3d`.replace(/\/+/, "/");
+    const base = kicadRoot ? root : `${root}/kicad`;
+    if (symbolInput) symbolInput.value = `${base}/symbols`.replace(/\/+/, "/");
+    if (footprintInput) footprintInput.value = `${base}/footprints`.replace(/\/+/, "/");
+    if (modelDirInput) modelDirInput.value = `${base}/3d`.replace(/\/+/, "/");
   });
 </script>
 {% endblock %}

@@ -95,6 +95,7 @@ class AppConfigUpdate(BaseModel):
     ollama_max_retries: Optional[int] = None
     admin_password: Optional[str] = None
     log_level: Optional[str] = None
+    log_file: Optional[Path] = None
 
     model_config = ConfigDict(extra="ignore")
 
@@ -106,6 +107,7 @@ class AppConfigUpdate(BaseModel):
         "kicad_symbol_dir",
         "kicad_footprint_dir",
         "kicad_3d_dir",
+        "log_file",
         mode="before",
     )
     @classmethod

@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
     @app.on_event("startup")
     async def load_app_config() -> None:
         app.state.config = load_config()
-        app.state.logger = setup_logging(app.state.config.log_level)
+        app.state.logger = setup_logging(app.state.config.log_level, app.state.config.log_file)
         engine = get_engine(app.state.config)
         Base.metadata.create_all(engine)
         app.state.db_session_factory = get_session_factory(app.state.config)

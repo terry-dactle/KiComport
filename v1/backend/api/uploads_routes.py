@@ -18,7 +18,7 @@ from ..services import extract, jobs as job_service, ollama as ollama_service, r
 
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
-ALLOWED_EXTS = {".zip", ".rar", ".kicad_sym", ".kicad_mod", ".stp", ".step", ".wrl", ".obj"}
+ALLOWED_EXTS = {".zip", ".kicad_sym", ".kicad_mod", ".stp", ".step", ".wrl", ".obj"}
 MAX_URL_DOWNLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
 REJECT_CONTENT_TYPES = {"text/html", "text/plain"}
 

@@ -17,3 +17,20 @@ services:
       - ../config:/app/config
       - ../../kicad:/kicad
     restart: unless-stopped
+
+  kicad:
+    image: lscr.io/linuxserver/kicad:latest
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ:-Etc/UTC}
+    ports:
+      - "${KICAD_WEB_PORT:-3000}:3000"
+    volumes:
+      - kicad_config:/config
+      - ../../kicad:/kicad
+    shm_size: "1gb"
+    restart: unless-stopped
+
+volumes:
+  kicad_config:

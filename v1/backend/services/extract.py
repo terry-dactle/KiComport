@@ -53,6 +53,7 @@ def _safe_extract_zip(zip_path: Path, target_dir: Path) -> None:
 
 def _safe_members(names: Iterable[str], target_dir: Path) -> list[Path]:
     cleaned: list[Path] = []
+    base = target_dir.resolve()
     for name in names:
         # drop directory entries
         if name.endswith("/"):
@@ -60,7 +61,9 @@ def _safe_members(names: Iterable[str], target_dir: Path) -> list[Path]:
         normalized = Path(name).as_posix().lstrip("/")
         candidate = Path(normalized)
         resolved = (target_dir / candidate).resolve()
-        if not str(resolved).startswith(str(target_dir.resolve())):
+        try:
+            resolved.relative_to(base)
+        except ValueError:
             raise ValueError(f"Unsafe path in archive: {name}")
         cleaned.append(candidate)
     return cleaned

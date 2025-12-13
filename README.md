@@ -17,11 +17,13 @@ Dockerised FastAPI service that ingests KiCad library contributions, scans uploa
 - `v1/` — all application code and assets  
   - `backend/` — FastAPI app, models, services  
   - `frontend/` — Jinja2 templates/static assets  
-- `docker/` — Dockerfile, docker-compose configs  
-- `config/` — default config templates  
-- `docs/` — architecture, config schema, quick start  
-- `scripts/` — helper scripts  
-- `data/` — runtime volume for DB/uploads/extracted data (untracked)
+  - `docker/` — Dockerfile, docker-compose configs  
+  - `config/` — default config templates  
+  - `docs/` — architecture, config schema, quick start  
+  - `scripts/` — helper scripts  
+- `data/` — runtime volume for DB/temp (untracked)
+- `uploads/` — runtime volume for raw uploads (untracked)
+- `kicad/` — shared KiCad library root (`symbols/`, `footprints/`, `3d/`) (untracked)
 
 See `v1/docs/QUICK_START.md` for running locally or via Docker.
 
@@ -46,3 +48,15 @@ docker run -d \
 ```
 
 The backend listens on port `8000` inside the container; map any host port you like (examples use `27888`). `/health` and `/` are safe endpoints for a quick status check; `/` redirects to the UI.
+
+## Docker Compose (KiCad + shared libraries)
+To run KiComport alongside a KiCad Docker container with a shared `/kicad` volume:
+```bash
+cd v1/docker
+docker compose -f docker-compose.kicad.yaml up -d --build
+```
+
+KiComport writes imports under `/kicad/*/kicomport/` (see `v1/config/app_settings.docker.yaml`). Configure KiCad to add libraries from:
+- `/kicad/symbols/kicomport/kicomport.kicad_sym`
+- `/kicad/footprints/kicomport/kicomport.pretty`
+- `/kicad/3d/kicomport/`

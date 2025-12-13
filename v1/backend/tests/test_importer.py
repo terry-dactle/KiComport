@@ -11,11 +11,11 @@ class DummyCandidate:
         self.name = name
 
 
-def test_destination_preserves_symbol_relpath():
+def test_destination_for_symbol_uses_single_library_file():
     target = Path("/target/symbols")
     cand = DummyCandidate(CandidateType.symbol, Path("lib/part.kicad_sym"), "part")
     dest = _destination_for(cand, target)
-    assert dest == target / "lib/part.kicad_sym"
+    assert dest == target / "kicomport.kicad_sym"
 
 
 def test_destination_for_footprint():

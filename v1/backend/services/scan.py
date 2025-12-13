@@ -23,7 +23,7 @@ class CandidateData:
 
 SYMBOL_EXTS = {".kicad_sym"}
 FOOTPRINT_EXTS = {".kicad_mod"}
-MODEL_EXTS = {".step", ".stp", ".wrl", ".obj", ".3dshapes", ".dcm"}
+MODEL_EXTS = {".step", ".stp", ".wrl", ".obj"}
 
 
 def scan_candidates(root: Path) -> List[CandidateData]:

@@ -52,10 +52,25 @@ docker compose up -d --build
 
 By default compose maps host `27888` to the container port `8000`. Override with `HOST_PORT` (host) or `KICOMPORT_PORT` (container listen port) environment variables as needed.
 
+Docker config defaults are loaded from `v1/config/app_settings.docker.yaml` via `KICOMPORT_CONFIG_PATH`.
+
 Mounted volumes (defaults):
-- `../data:/data` — SQLite DB, temp, extracted files
-- `../uploads:/uploads` — raw uploads
-- `../v1/config:/app/config` — config files
+- `../../data:/data` — SQLite DB, temp, extracted files
+- `../../uploads:/uploads` — raw uploads
+- `../../kicad:/kicad` — shared KiCad library root (`symbols/`, `footprints/`, `3d/`)
+- `../config:/app/config` — config files (`app_settings.yaml`, `app_settings.docker.yaml`)
+
+### Docker Compose (KiCad + shared libraries)
+If you run KiCad in Docker and want it to see imported libraries, run the bundled KiCad container too:
+```bash
+cd v1/docker
+docker compose -f docker-compose.kicad.yaml up -d --build
+```
+
+Both containers mount `../../kicad` as `/kicad`. Configure KiCad to add libraries from:
+- `/kicad/symbols/kicomport/kicomport.kicad_sym`
+- `/kicad/footprints/kicomport/kicomport.pretty`
+- `/kicad/3d/kicomport/`
 
 ## Makefile / scripts
 Helper scripts will be added under `v1/scripts` as the project evolves (dev server, lint, cleanup).
