@@ -29,15 +29,7 @@ MODEL_EXTS = {".step", ".stp", ".wrl", ".obj"}
 def scan_candidates(root: Path) -> List[CandidateData]:
     candidates: List[CandidateData] = []
     for path in root.rglob("*"):
-        if path.is_dir():
-            if path.suffix == ".pretty":
-                # include contained footprints
-                for mod in path.glob("*.kicad_mod"):
-                    candidates.append(_build_footprint(mod, root))
-            elif path.name.endswith(".3dshapes"):
-                for model in path.glob("*"):
-                    if model.is_file() and model.suffix.lower() in {".step", ".stp", ".wrl", ".obj"}:
-                        candidates.append(_build_model(model, root))
+        if not path.is_file():
             continue
         ext = path.suffix.lower()
         if ext in SYMBOL_EXTS:

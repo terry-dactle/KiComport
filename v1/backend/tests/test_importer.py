@@ -19,7 +19,7 @@ def test_destination_for_symbol_uses_single_library_file():
 
 
 def test_destination_for_footprint():
-    target = Path("/target/fps")
+    target = Path("/target/fps/kicomport.pretty")
     cand = DummyCandidate(CandidateType.footprint, Path("Foo.pretty/foot.kicad_mod"), "foot")
     dest = _destination_for(cand, target)
-    assert dest == target / "Foo.pretty/foot.kicad_mod"
+    assert dest == target / "foot.kicad_mod"

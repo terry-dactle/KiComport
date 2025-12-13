@@ -143,8 +143,8 @@ def create_app() -> FastAPI:
             base = Path(root)
             if not base.exists():
                 return []
-            subs = [str(p.relative_to(base)) for p in base.rglob("*") if p.is_dir()]
-            subs.sort()
+            subs = [p.name for p in base.iterdir() if p.is_dir()]
+            subs.sort(key=lambda s: s.casefold())
             return subs
         except Exception:
             return []

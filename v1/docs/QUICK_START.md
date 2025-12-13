@@ -31,9 +31,11 @@ docker run -d \
   --name kicomport \
   --restart unless-stopped \
   -p 27888:8000 \
+  -e KICOMPORT_CONFIG_PATH=/app/config/app_settings.docker.yaml \
   -v /path/to/KiComport-data:/data \
+  -v /path/to/KiComport-uploads:/uploads \
   -v /path/to/KiCad:/kicad \
-  -e KICOMPORT_CONFIG_PATH=/kicad/config/kicomport-config.yaml \
+  -v /path/to/KiComport-config:/app/config \
   # optional: change container listen port (defaults to 8000)
   # -e KICOMPORT_PORT=8000 \
   kicomport

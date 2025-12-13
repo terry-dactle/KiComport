@@ -96,21 +96,15 @@ def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
     # Fallback when relative path is missing/empty
     if not rel.name:
         if candidate.type == CandidateType.footprint:
-            return target_root / f"{candidate.name}.pretty" / fallback_filename
+            return target_root / fallback_filename
         if candidate.type == CandidateType.model:
             return target_root / fallback_filename
         if candidate.type == CandidateType.symbol:
             return target_root / (DEFAULT_SUBFOLDER + ".kicad_sym")
 
-    # For footprints ensure .pretty directory preserved
+    # For footprints flatten into the destination .pretty library folder.
     if candidate.type == CandidateType.footprint:
-        if rel.suffix != ".kicad_mod":
-            return target_root / rel
-        if rel.parent and rel.parent.name:
-            pretty_dir = rel.parent if rel.parent.name.endswith(".pretty") else rel.parent.with_suffix(".pretty")
-            return target_root / pretty_dir / rel.name
-        # no parent info; create a .pretty folder based on the footprint name
-        return target_root / f"{candidate.name}.pretty" / fallback_filename
+        return target_root / fallback_filename
     if candidate.type == CandidateType.model:
         return target_root / rel
     # Preserve relative path for symbols to avoid flattening collisions

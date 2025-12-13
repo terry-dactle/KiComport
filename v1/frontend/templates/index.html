@@ -81,6 +81,7 @@
 {% if libraries %}
 <section class="card">
   <h3>KiCad Libraries</h3>
+  <p class="muted small">KiCad does not auto-detect new libraries from folders. Add symbol/footprint libraries in KiCad Preferences (global library tables) to make imports appear.</p>
   <div class="grid three-col">
     {% for lib in libraries %}
     <div class="info-block">

@@ -29,7 +29,6 @@
     </div>
     <div class="attach-actions">
       <button type="button" id="attach-browse">Browse</button>
-      <label class="muted small" style="margin-left: 10px;"><input type="checkbox" id="attach-reload" checked> Reload after attach</label>
     </div>
     <p class="muted small" id="attach-status"></p>
   </form>
@@ -181,14 +180,22 @@
         <label>
           Subfolder name (applied to all roots)
           {% set folder_suggestions = (import_paths.symbol_subdirs or []) + (import_paths.footprint_subdirs or []) + (import_paths.model_subdirs or []) %}
-          {% set uniq = folder_suggestions | unique %}
-          <input type="text" id="common-subdir" list="common-folders" placeholder="Leave blank for root">
-          <datalist id="common-folders">
+          {% set uniq = folder_suggestions | unique | list | sort %}
+          <input type="text" id="common-subdir" placeholder="Leave blank for default (kicomport) or type a new folder">
+          {% if uniq %}
+          <select id="common-subdir-select" class="select-input">
+            <option value="">Pick an existing folder…</option>
             {% for d in uniq %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
-          </datalist>
+          </select>
+          {% endif %}
         </label>
       </div>
-      <p class="muted small">This folder name will be used under each root (symbols/footprints/3D), e.g. symbols/Buzzer, footprints/Buzzer, 3d/Buzzer.</p>
+      <p class="muted small">Leave blank to import into the default folder <span class="mono">kicomport</span> (recommended: add it to KiCad once). This folder name is used under each root (symbols/footprints/3D), e.g. symbols/Buzzer, footprints/Buzzer, 3d/Buzzer.</p>
+      <div class="muted small">
+        <div>Symbols root: <span class="mono">{{ import_paths.symbol_root }}</span></div>
+        <div>Footprints root: <span class="mono">{{ import_paths.footprint_root }}</span></div>
+        <div>3D root: <span class="mono">{{ import_paths.model_root }}</span></div>
+      </div>
       <div class="actions" style="margin-top: 10px;">
         <button type="button" id="import-btn">Import</button>
       </div>
@@ -277,7 +284,6 @@
   const attachInput = document.getElementById('attach-file-input');
   const attachStatus = document.getElementById('attach-status');
   const attachBrowse = document.getElementById('attach-browse');
-  const attachReloadToggle = document.getElementById('attach-reload');
 
   async function safeJson(resp) {
     try {
@@ -345,10 +351,8 @@
       const ok = await attachSingleFile(file);
       if (!ok) return;
     }
-    if (attachReloadToggle?.checked) {
-      setAttachStatus("Reloading...");
-      window.location.reload();
-    }
+    setAttachStatus("Reloading...");
+    window.location.reload();
   }
 
   attachBrowse?.addEventListener('click', () => attachInput?.click());
@@ -394,8 +398,20 @@
 
   const previewCache = {};
   const commonDestInput = document.getElementById('common-subdir');
+  const commonDestSelect = document.getElementById('common-subdir-select');
   let threeLoaded = null;
   let currentModelUrl = null;
+
+  commonDestSelect?.addEventListener('change', () => {
+    if (!commonDestInput) return;
+    commonDestInput.value = commonDestSelect.value || "";
+  });
+  commonDestInput?.addEventListener('input', () => {
+    if (!commonDestSelect) return;
+    const val = (commonDestInput.value || "").trim();
+    const has = Array.from(commonDestSelect.options).some((opt) => opt.value === val);
+    commonDestSelect.value = has ? val : "";
+  });
 
   async function fetchPreview(type, btn) {
     const viewer = viewers[type];
@@ -775,7 +791,10 @@
       const body = await resp.json();
       if (!resp.ok) throw new Error(body.detail || body.error || resp.statusText);
       setActionStatus("Import complete.");
-      alert("Import complete.");
+      const destinations = Array.isArray(body?.destinations) ? body.destinations : [];
+      const msg = destinations.length ? `Import complete.\n\nSaved to:\n${destinations.join("\n")}` : "Import complete.";
+      alert(msg);
+      window.location.reload();
     } catch (err) {
       setActionStatus(`Import failed: ${err?.message || err}`);
     }
