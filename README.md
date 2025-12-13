@@ -1,62 +1,95 @@
-# Global KiCad Library Import Server
+# KiComport – Global KiCad Library Import Server
 
-Dockerised FastAPI service that ingests KiCad library contributions, scans uploads for symbols/footprints/3D models, ranks candidates (heuristics + optional Ollama), and imports selected items into global KiCad library directories. A simple web UI guides uploads, review, and configuration.
+Dockerised FastAPI service that ingests KiCad library contributions, scans uploads for symbols/footprints/3D models, and imports selected items into global KiCad library directories. A simple web UI guides uploads, review, and configuration.
 
-## Highlights
-- One-file-at-a-time uploads with MD5 deduplication and per-job tracking.
-- Archive extraction, candidate discovery (`.kicad_sym`, `.kicad_mod`/`.pretty`, `.step`/`.stp`/`.wrl`, etc.).
-- Heuristic scoring plus optional Ollama-based ranking (advisory-only, optional).
-- UI for job list/detail, candidate selection per component, import to global KiCad libs.
-- Configurable paths for uploads/temp/global symbol/footprint/3D dirs; settings editable in the UI.
-- Docker Compose setup with SQLite stored under `/data` volume.
+## Features
+- Upload a zip or single library file (`.kicad_sym`, `.kicad_mod`, `.step/.stp/.wrl/.obj`)
+- Auto-extract + scan candidates (symbols/footprints/3D)
+- Review + select candidates per component; import into shared KiCad library folders
+- Optional Ollama scoring (advisory-only)
+- Configurable paths; settings editable in the UI
 
-## Layout
-- `README.md` — project overview.
-- `JOBS.md` — phased roadmap/checklist.
-- `.gitignore` — ignore common Python/build/data artifacts.
-- `v1/` — all application code and assets  
-  - `backend/` — FastAPI app, models, services  
-  - `frontend/` — Jinja2 templates/static assets  
-  - `docker/` — Dockerfile, docker-compose configs  
-  - `config/` — default config templates  
-  - `docs/` — architecture, config schema, quick start  
-  - `scripts/` — helper scripts  
-- `data/` — runtime volume for DB/temp (untracked)
-- `uploads/` — runtime volume for raw uploads (untracked)
-- `kicad/` — shared KiCad library root (`symbols/`, `footprints/`, `3d/`) (untracked)
-
-See `v1/docs/QUICK_START.md` for running locally or via Docker.
-
-## Docker Build/Run
-Build from the repo root:
+## Quick Start (Docker Compose)
+From the repo root:
 ```bash
-docker build -t kicomport -f v1/docker/Dockerfile .
+mkdir -p data uploads kicad
+cd v1/docker
+docker compose up -d --build
 ```
 
-Run the container:
-```bash
-docker run -d \
-  --name kicomport \
-  --restart unless-stopped \
-  -p 27888:8000 \
-  -v /path/to/KiComport-data:/data \
-  -v /path/to/KiCad:/kicad \
-  -e KICOMPORT_CONFIG_PATH=/kicad/config/kicomport-config.yaml \
-  # optional: change container listen port (defaults to 8000)
-  # -e KICOMPORT_PORT=8000 \
-  kicomport
-```
+Open the UI at `http://<host>:27888` (override with `HOST_PORT`).
 
-The backend listens on port `8000` inside the container; map any host port you like (examples use `27888`). `/health` and `/` are safe endpoints for a quick status check; `/` redirects to the UI.
-
-## Docker Compose (KiCad + shared libraries)
-To run KiComport alongside a KiCad Docker container with a shared `/kicad` volume:
+### Optional: Run KiCad in Docker (shared libraries)
+This starts both KiComport and the LinuxServer KiCad container with a shared `/kicad` mount:
 ```bash
 cd v1/docker
 docker compose -f docker-compose.kicad.yaml up -d --build
 ```
 
-KiComport writes imports under `/kicad/*/kicomport/` (see `v1/config/app_settings.docker.yaml`). Configure KiCad to add libraries from:
+KiCad will be available at `http://<host>:3000` (override with `KICAD_WEB_PORT`). Both containers mount `./kicad` as `/kicad`.
+
+KiComport writes imports under `/kicad/*/kicomport/`. In KiCad, add libraries from:
 - `/kicad/symbols/kicomport/kicomport.kicad_sym`
 - `/kicad/footprints/kicomport/kicomport.pretty`
 - `/kicad/3d/kicomport/`
+
+## Unraid / Manual Docker Run
+Build from the repo root:
+```bash
+docker build -t kicomport -f v1/docker/Dockerfile .
+```
+
+Example (stores everything under `/mnt/user/appdata/kicomport`):
+```bash
+docker rm -f kicomport 2>/dev/null || true
+mkdir -p /mnt/user/appdata/kicomport/{data,uploads,kicad,config}
+cat > /mnt/user/appdata/kicomport/config/app_settings.docker.yaml <<'YAML'
+app_name: Global KiCad Library Import Server
+host: 0.0.0.0
+port: 8000
+
+uploads_dir: /uploads
+temp_dir: /data/tmp
+data_dir: /data
+database_path: /data/app.db
+
+kicad_root_dir:
+kicad_symbol_dir: /kicad/symbols
+kicad_footprint_dir: /kicad/footprints
+kicad_3d_dir: /kicad/3d
+
+ollama_enabled: false
+ollama_base_url: http://localhost:11434
+ollama_model: qwen2.5:7b
+ollama_timeout_sec: 30
+ollama_max_retries: 2
+
+admin_password: ""
+log_level: INFO
+log_file:
+YAML
+docker run -d \
+  --name kicomport \
+  --restart unless-stopped \
+  -p 27888:8000 \
+  -e KICOMPORT_CONFIG_PATH=/app/config/app_settings.docker.yaml \
+  -v /mnt/user/appdata/kicomport/data:/data \
+  -v /mnt/user/appdata/kicomport/uploads:/uploads \
+  -v /mnt/user/appdata/kicomport/kicad:/kicad \
+  -v /mnt/user/appdata/kicomport/config:/app/config \
+  kicomport
+```
+
+## Configuration
+- Docker defaults: `v1/config/app_settings.docker.yaml`
+- Override config path: `KICOMPORT_CONFIG_PATH=/app/config/app_settings.docker.yaml`
+- Ports: container listens on `8000` (compose maps host `27888` by default)
+- Health check: `GET /health` (UI: `GET /` redirects to `/ui/jobs`)
+
+## Project Layout
+- `v1/backend/` — FastAPI app + services
+- `v1/frontend/` — Jinja2 templates + static assets
+- `v1/docker/` — Dockerfile + compose files
+- `v1/config/` — default config templates
+
+See `v1/docs/QUICK_START.md` for more details.
