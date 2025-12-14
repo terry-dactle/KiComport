@@ -10,7 +10,7 @@ from ..db.models import CandidateFile, CandidateType, Component, Job, JobStatus
 from .ranking import apply_feedback
 from .jobs import log_job, update_status
 
-DEFAULT_SUBFOLDER = "kicomport"
+DEFAULT_SUBFOLDER = "~KiComport"
 SYMBOL_HEADER = "(kicad_symbol_lib (version 20211014) (generator kicomport)\n"
 
 
@@ -23,8 +23,11 @@ def import_job_selection(
     destinations: list[str] = []
 
     safe_sub = _safe_segment(subfolder or DEFAULT_SUBFOLDER)
-    symbol_dir = symbol_dir / safe_sub
-    footprint_dir = footprint_dir / safe_sub / f"{safe_sub}.pretty"
+    # Keep a single stable library at the root of each KiCad library folder.
+    # - symbols: <symbol_dir>/~KiComport.kicad_sym
+    # - footprints: <footprint_dir>/~KiComport.pretty/<name>.kicad_mod
+    # - 3d: <model_dir>/~KiComport/<file>
+    footprint_dir = footprint_dir / f"{safe_sub}.pretty"
     model_dir = model_dir / safe_sub
 
     for comp in job.components:
@@ -114,7 +117,7 @@ def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
 
 
 def _safe_segment(name: str) -> str:
-    cleaned = "".join(ch for ch in name if ch.isalnum() or ch in "-_").strip("-_")
+    cleaned = "".join(ch for ch in name if ch.isalnum() or ch in "-_~").strip("-_")
     return cleaned or DEFAULT_SUBFOLDER
 
 

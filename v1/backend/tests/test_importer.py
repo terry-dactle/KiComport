@@ -15,11 +15,11 @@ def test_destination_for_symbol_uses_single_library_file():
     target = Path("/target/symbols")
     cand = DummyCandidate(CandidateType.symbol, Path("lib/part.kicad_sym"), "part")
     dest = _destination_for(cand, target)
-    assert dest == target / "kicomport.kicad_sym"
+    assert dest == target / "~KiComport.kicad_sym"
 
 
 def test_destination_for_footprint():
-    target = Path("/target/fps/kicomport.pretty")
+    target = Path("/target/fps/~KiComport.pretty")
     cand = DummyCandidate(CandidateType.footprint, Path("Foo.pretty/foot.kicad_mod"), "foot")
     dest = _destination_for(cand, target)
     assert dest == target / "foot.kicad_mod"

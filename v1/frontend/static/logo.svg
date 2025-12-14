@@ -1,0 +1,21 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="KiComport logo">
+  <defs>
+    <linearGradient id="g" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#66B3FF"/>
+      <stop offset="1" stop-color="#36C574"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="64" height="64" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="6" y="6" width="52" height="52" rx="14" fill="#111823" stroke="url(#g)" stroke-width="3"/>
+  </g>
+  <!-- Stylized K -->
+  <path d="M23 18V46" stroke="url(#g)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M23 32L40 18" stroke="url(#g)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M23 32L40 46" stroke="url(#g)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Import arrow -->
+  <path d="M46 24V38" stroke="url(#g)" stroke-width="4" stroke-linecap="round"/>
+  <path d="M41 33L46 38L51 33" stroke="url(#g)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

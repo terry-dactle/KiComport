@@ -70,9 +70,9 @@ docker compose -f docker-compose.kicad.yaml up -d --build
 ```
 
 Both containers mount `../../kicad` as `/kicad`. Configure KiCad to add libraries from:
-- `/kicad/symbols/kicomport/kicomport.kicad_sym`
-- `/kicad/footprints/kicomport/kicomport.pretty`
-- `/kicad/3d/kicomport/`
+- `/kicad/symbols/~KiComport.kicad_sym`
+- `/kicad/footprints/~KiComport.pretty`
+- `/kicad/3d/~KiComport/`
 
 ## Makefile / scripts
 Helper scripts will be added under `v1/scripts` as the project evolves (dev server, lint, cleanup).

@@ -109,17 +109,12 @@ async def import_job(job_id: int, request: Request, db: Session = Depends(get_db
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
-    payload: Dict[str, Any] = {}
-    try:
-        payload = await request.json()
-    except Exception:
-        payload = {}
     config = get_config(request)
     symbol_root = Path(config.kicad_symbol_dir)
     footprint_root = Path(config.kicad_footprint_dir)
     model_root = Path(config.kicad_3d_dir)
-    # Prefer a user-supplied subfolder, otherwise use a stable default for easier one-time KiCad mapping.
-    subfolder = payload.get("symbol_subdir") or payload.get("footprint_subdir") or payload.get("model_subdir") or "kicomport"
+    # Always import into a single stable library so KiCad only needs a one-time mapping.
+    subfolder = importer.DEFAULT_SUBFOLDER
     counts, destinations = importer.import_job_selection(
         db,
         job,

@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ app_name if app_name else "Global KiCad Library Import Server" }}</title>
+  <link rel="icon" href="{{ url_for('static', path='/favicon.svg') }}" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -13,9 +14,10 @@
   <header class="topbar">
     {% set current_path = request.url.path %}
     <div class="container topbar-row">
-      <div class="brand">
+      <a class="brand" href="/">
+        <img class="brand-logo" src="{{ url_for('static', path='/logo.svg') }}" alt="" width="34" height="34" aria-hidden="true">
         <h1>{{ app_name if app_name else "Global KiCad Library Import Server" }}</h1>
-      </div>
+      </a>
       <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">☰</button>
       <nav id="main-nav">
         <a class="{% if current_path == '/' or current_path.startswith('/ui/jobs') or current_path.startswith('/jobs') %}active{% endif %}" href="/">Jobs</a>

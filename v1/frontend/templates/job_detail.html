@@ -175,26 +175,12 @@
     </div>
 
     <div class="card dest-card">
-      <h4>Destination folder</h4>
-      <div class="dest-grid">
-        <label>
-          Subfolder name (applied to all roots)
-          {% set folder_suggestions = (import_paths.symbol_subdirs or []) + (import_paths.footprint_subdirs or []) + (import_paths.model_subdirs or []) %}
-          {% set uniq = folder_suggestions | unique | list | sort %}
-          <input type="text" id="common-subdir" placeholder="Leave blank for default (kicomport) or type a new folder">
-          {% if uniq %}
-          <select id="common-subdir-select" class="select-input">
-            <option value="">Pick an existing folder…</option>
-            {% for d in uniq %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
-          </select>
-          {% endif %}
-        </label>
-      </div>
-      <p class="muted small">Leave blank to import into the default folder <span class="mono">kicomport</span> (recommended: add it to KiCad once). This folder name is used under each root (symbols/footprints/3D), e.g. symbols/Buzzer, footprints/Buzzer, 3d/Buzzer.</p>
+      <h4>Destination library</h4>
+      <p class="muted small">Imports always go into the single shared library <span class="mono">~KiComport</span> (recommended: add it to KiCad once).</p>
       <div class="muted small">
-        <div>Symbols root: <span class="mono">{{ import_paths.symbol_root }}</span></div>
-        <div>Footprints root: <span class="mono">{{ import_paths.footprint_root }}</span></div>
-        <div>3D root: <span class="mono">{{ import_paths.model_root }}</span></div>
+        <div>Symbols: <span class="mono">{{ import_paths.symbol_root }}/~KiComport.kicad_sym</span></div>
+        <div>Footprints: <span class="mono">{{ import_paths.footprint_root }}/~KiComport.pretty</span></div>
+        <div>3D models: <span class="mono">{{ import_paths.model_root }}/~KiComport/</span></div>
       </div>
       <div class="actions" style="margin-top: 10px;">
         <button type="button" id="import-btn">Import</button>
@@ -397,21 +383,8 @@
   };
 
   const previewCache = {};
-  const commonDestInput = document.getElementById('common-subdir');
-  const commonDestSelect = document.getElementById('common-subdir-select');
   let threeLoaded = null;
   let currentModelUrl = null;
-
-  commonDestSelect?.addEventListener('change', () => {
-    if (!commonDestInput) return;
-    commonDestInput.value = commonDestSelect.value || "";
-  });
-  commonDestInput?.addEventListener('input', () => {
-    if (!commonDestSelect) return;
-    const val = (commonDestInput.value || "").trim();
-    const has = Array.from(commonDestSelect.options).some((opt) => opt.value === val);
-    commonDestSelect.value = has ? val : "";
-  });
 
   async function fetchPreview(type, btn) {
     const viewer = viewers[type];
@@ -778,15 +751,8 @@
       const saved = await saveSelections();
       if (!saved.ok) throw new Error(saved.message || "Failed to save choices");
       setActionStatus("Importing to KiCad...");
-      const payload = {
-        symbol_subdir: commonDestInput?.value?.trim() || null,
-        footprint_subdir: commonDestInput?.value?.trim() || null,
-        model_subdir: commonDestInput?.value?.trim() || null,
-      };
       const resp = await fetch(`/api/jobs/${jobId}/import`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
       });
       const body = await resp.json();
       if (!resp.ok) throw new Error(body.detail || body.error || resp.statusText);

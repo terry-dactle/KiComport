@@ -28,10 +28,10 @@ docker compose -f docker-compose.kicad.yaml up -d --build
 
 KiCad will be available at `http://<host>:3000` (override with `KICAD_WEB_PORT`). Both containers mount `./kicad` as `/kicad`.
 
-KiComport writes imports under `/kicad/*/kicomport/`. In KiCad, add libraries from:
-- `/kicad/symbols/kicomport/kicomport.kicad_sym`
-- `/kicad/footprints/kicomport/kicomport.pretty`
-- `/kicad/3d/kicomport/`
+KiComport imports into a single stable set of libraries. In KiCad, add libraries from:
+- `/kicad/symbols/~KiComport.kicad_sym`
+- `/kicad/footprints/~KiComport.pretty`
+- `/kicad/3d/~KiComport/`
 
 ## Unraid / Manual Docker Run
 Build from the repo root:
