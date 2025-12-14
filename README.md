@@ -6,6 +6,7 @@ Dockerised FastAPI service that ingests KiCad library contributions, scans uploa
 - Upload a zip or single library file (`.kicad_sym`, `.kicad_mod`, `.step/.stp/.wrl/.obj`)
 - Auto-extract + scan candidates (symbols/footprints/3D)
 - Review + select candidates per component; import into shared KiCad library folders
+- Optional rename on import to keep footprint/3D filenames consistent
 - Optional Ollama scoring (advisory-only)
 - Configurable paths; settings editable in the UI
 

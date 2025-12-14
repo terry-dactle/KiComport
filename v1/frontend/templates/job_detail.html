@@ -182,6 +182,13 @@
         <div>Footprints: <span class="mono">{{ import_paths.footprint_root }}/~KiComport.pretty</span></div>
         <div>3D models: <span class="mono">{{ import_paths.model_root }}/~KiComport/</span></div>
       </div>
+      <div class="dest-grid" style="margin-top: 10px;">
+        <label>
+          Rename imported footprint/model (optional)
+          <input type="text" id="import-rename" class="modern-input" placeholder="e.g. PKM22EPPH4001-B0">
+        </label>
+      </div>
+      <p class="muted small">If set, the selected footprint and 3D model will be saved using this base name (extensions preserved).</p>
       <div class="actions" style="margin-top: 10px;">
         <button type="button" id="import-btn">Import</button>
       </div>
@@ -383,6 +390,7 @@
   };
 
   const previewCache = {};
+  const renameInput = document.getElementById('import-rename');
   let threeLoaded = null;
   let currentModelUrl = null;
 
@@ -662,6 +670,9 @@
         applyTypeSelection(type, btn.dataset.candId || "", btn.dataset.compId || "");
         markSelected(type, btn);
         fetchPreview(type, btn);
+        if ((type === "footprint" || type === "model") && renameInput && !renameInput.value.trim() && btn.dataset.name) {
+          renameInput.value = btn.dataset.name;
+        }
         if (type === "model" && btn.dataset.candId) {
           renderModel(btn.dataset.candId, btn.dataset.file || "");
         }
@@ -704,6 +715,12 @@
     });
   }
   initOptionTiles();
+  if (renameInput && !renameInput.value.trim()) {
+    const fp = document.querySelector('.option-tile[data-type="footprint"].selected:not(.none)');
+    const md = document.querySelector('.option-tile[data-type="model"].selected:not(.none)');
+    const sym = document.querySelector('.option-tile[data-type="symbol"].selected:not(.none)');
+    renameInput.value = fp?.dataset?.name || md?.dataset?.name || sym?.dataset?.name || "";
+  }
 
   // click-to-toggle fullscreen for preview window (symbols/footprints)
   document.addEventListener('click', (e) => {
@@ -751,8 +768,11 @@
       const saved = await saveSelections();
       if (!saved.ok) throw new Error(saved.message || "Failed to save choices");
       setActionStatus("Importing to KiCad...");
+      const payload = { rename_to: renameInput?.value?.trim() || null };
       const resp = await fetch(`/api/jobs/${jobId}/import`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
       const body = await resp.json();
       if (!resp.ok) throw new Error(body.detail || body.error || resp.statusText);

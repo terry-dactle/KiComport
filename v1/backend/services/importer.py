@@ -12,10 +12,17 @@ from .jobs import log_job, update_status
 
 DEFAULT_SUBFOLDER = "~KiComport"
 SYMBOL_HEADER = "(kicad_symbol_lib (version 20211014) (generator kicomport)\n"
+KNOWN_RENAME_EXTS = (".kicad_mod", ".step", ".stp", ".wrl", ".obj", ".kicad_sym")
 
 
 def import_job_selection(
-    db: Session, job: Job, symbol_dir: Path, footprint_dir: Path, model_dir: Path, subfolder: str = DEFAULT_SUBFOLDER
+    db: Session,
+    job: Job,
+    symbol_dir: Path,
+    footprint_dir: Path,
+    model_dir: Path,
+    subfolder: str = DEFAULT_SUBFOLDER,
+    rename_to: str | None = None,
 ) -> Tuple[Dict[str, int], List[str]]:
     if job.status not in {JobStatus.waiting_for_import, JobStatus.waiting_for_user}:
         log_job(db, job, f"Import triggered from status {job.status.value}", level="WARNING")
@@ -23,6 +30,7 @@ def import_job_selection(
     destinations: list[str] = []
 
     safe_sub = _safe_segment(subfolder or DEFAULT_SUBFOLDER)
+    safe_rename = _safe_basename(_strip_known_ext(rename_to)) if rename_to else ""
     # Keep a single stable library at the root of each KiCad library folder.
     # - symbols: <symbol_dir>/~KiComport.kicad_sym
     # - footprints: <footprint_dir>/~KiComport.pretty/<name>.kicad_mod
@@ -32,21 +40,21 @@ def import_job_selection(
 
     for comp in job.components:
         count, dest = _copy_if_selected(
-            db, comp, comp.selected_symbol_id, CandidateType.symbol, symbol_dir
+            db, comp, comp.selected_symbol_id, CandidateType.symbol, symbol_dir, rename_to=None
         )
         copied["symbols"] += count
         if dest:
             destinations.append(str(dest))
 
         count, dest = _copy_if_selected(
-            db, comp, comp.selected_footprint_id, CandidateType.footprint, footprint_dir
+            db, comp, comp.selected_footprint_id, CandidateType.footprint, footprint_dir, rename_to=safe_rename or None
         )
         copied["footprints"] += count
         if dest:
             destinations.append(str(dest))
 
         count, dest = _copy_if_selected(
-            db, comp, comp.selected_model_id, CandidateType.model, model_dir
+            db, comp, comp.selected_model_id, CandidateType.model, model_dir, rename_to=safe_rename or None
         )
         copied["models"] += count
         if dest:
@@ -63,7 +71,12 @@ def import_job_selection(
 
 
 def _copy_if_selected(
-    db: Session, comp: Component, candidate_id: int | None, expected_type: CandidateType, target_root: Path
+    db: Session,
+    comp: Component,
+    candidate_id: int | None,
+    expected_type: CandidateType,
+    target_root: Path,
+    rename_to: str | None = None,
 ) -> Tuple[int, Optional[Path]]:
     if not candidate_id:
         return 0, None
@@ -72,7 +85,7 @@ def _copy_if_selected(
         log_job(db, comp.job, f"Candidate {candidate_id} missing or wrong type {expected_type.value}", level="WARNING")
         return 0, None
     src = Path(candidate.path)
-    dest = _destination_for(candidate, target_root)
+    dest = _destination_for(candidate, target_root, rename_to=rename_to)
     dest.parent.mkdir(parents=True, exist_ok=True)
     if candidate.type == CandidateType.symbol:
         merged = _merge_symbol_lib(src, dest)
@@ -82,7 +95,7 @@ def _copy_if_selected(
         db.add(candidate)
         return merged, dest
 
-    if dest.exists():
+    if dest.exists() and not rename_to:
         dest = dest.with_name(dest.stem + "_copy" + dest.suffix)
     shutil.copy(src, dest)
     log_job(db, comp.job, f"Imported {expected_type.value} {candidate.name} to {dest}")
@@ -92,23 +105,34 @@ def _copy_if_selected(
     return 1, dest
 
 
-def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
+def _destination_for(candidate: CandidateFile, target_root: Path, rename_to: str | None = None) -> Path:
     rel = Path(candidate.rel_path) if candidate.rel_path else Path("")
     fallback_filename = rel.name or Path(candidate.path).name or f"{candidate.name}.kicad_mod"
+    rename_clean = _safe_basename(_strip_known_ext(rename_to)) if rename_to else ""
 
     # Fallback when relative path is missing/empty
     if not rel.name:
         if candidate.type == CandidateType.footprint:
+            if rename_clean:
+                return target_root / f"{rename_clean}.kicad_mod"
             return target_root / fallback_filename
         if candidate.type == CandidateType.model:
+            if rename_clean:
+                ext = Path(candidate.path).suffix.lower()
+                return target_root / f"{rename_clean}{ext}"
             return target_root / fallback_filename
         if candidate.type == CandidateType.symbol:
             return target_root / (DEFAULT_SUBFOLDER + ".kicad_sym")
 
     # For footprints flatten into the destination .pretty library folder.
     if candidate.type == CandidateType.footprint:
+        if rename_clean:
+            return target_root / f"{rename_clean}.kicad_mod"
         return target_root / fallback_filename
     if candidate.type == CandidateType.model:
+        if rename_clean:
+            ext = Path(candidate.path).suffix.lower() or rel.suffix.lower()
+            return target_root / f"{rename_clean}{ext}"
         return target_root / rel
     # Preserve relative path for symbols to avoid flattening collisions
     if candidate.type == CandidateType.symbol:
@@ -119,6 +143,24 @@ def _destination_for(candidate: CandidateFile, target_root: Path) -> Path:
 def _safe_segment(name: str) -> str:
     cleaned = "".join(ch for ch in name if ch.isalnum() or ch in "-_~").strip("-_")
     return cleaned or DEFAULT_SUBFOLDER
+
+
+def _safe_basename(name: str | None) -> str:
+    if not name:
+        return ""
+    cleaned = "".join(ch for ch in str(name).strip() if ch.isalnum() or ch in "-_~.+").strip("-_")
+    return cleaned
+
+
+def _strip_known_ext(name: str | None) -> str:
+    if not name:
+        return ""
+    txt = str(name).strip()
+    lower = txt.lower()
+    for ext in KNOWN_RENAME_EXTS:
+        if lower.endswith(ext):
+            return txt[: -len(ext)]
+    return txt
 
 
 def _merge_symbol_lib(src: Path, dest: Path) -> int:

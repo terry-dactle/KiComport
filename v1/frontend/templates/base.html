@@ -14,7 +14,7 @@
   <header class="topbar">
     {% set current_path = request.url.path %}
     <div class="container topbar-row">
-      <a class="brand" href="/">
+      <a class="brand" href="/" style="display:flex; align-items:center; gap:0.65rem; text-decoration:none; color:var(--text, #e9edf5);">
         <img class="brand-logo" src="{{ url_for('static', path='/logo.svg') }}" alt="" width="34" height="34" aria-hidden="true">
         <h1>{{ app_name if app_name else "Global KiCad Library Import Server" }}</h1>
       </a>

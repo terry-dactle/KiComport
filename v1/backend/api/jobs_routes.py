@@ -109,12 +109,18 @@ async def import_job(job_id: int, request: Request, db: Session = Depends(get_db
     job = db.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    payload: Dict[str, Any] = {}
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
     config = get_config(request)
     symbol_root = Path(config.kicad_symbol_dir)
     footprint_root = Path(config.kicad_footprint_dir)
     model_root = Path(config.kicad_3d_dir)
     # Always import into a single stable library so KiCad only needs a one-time mapping.
     subfolder = importer.DEFAULT_SUBFOLDER
+    rename_to = payload.get("rename_to") if isinstance(payload, dict) else None
     counts, destinations = importer.import_job_selection(
         db,
         job,
@@ -122,6 +128,7 @@ async def import_job(job_id: int, request: Request, db: Session = Depends(get_db
         footprint_dir=footprint_root,
         model_dir=model_root,
         subfolder=subfolder,
+        rename_to=rename_to,
     )
     return {
         "job_id": job.id,

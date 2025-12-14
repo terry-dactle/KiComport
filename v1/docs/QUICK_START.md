@@ -74,5 +74,7 @@ Both containers mount `../../kicad` as `/kicad`. Configure KiCad to add librarie
 - `/kicad/footprints/~KiComport.pretty`
 - `/kicad/3d/~KiComport/`
 
+On the job page you can optionally set a rename value to save the selected footprint + 3D model under a consistent base filename.
+
 ## Makefile / scripts
 Helper scripts will be added under `v1/scripts` as the project evolves (dev server, lint, cleanup).
