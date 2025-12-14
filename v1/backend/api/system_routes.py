@@ -290,7 +290,53 @@ def _render_lib_block(*, name: str, uri: str, descr: str) -> str:
     return f'  (lib (name "{safe_name}") (type "KiCad") (uri "{safe_uri}") (options "") (descr "{safe_descr}"))'
 
 
-def _upsert_library_table(path: Path, *, expected_atom: str, name: str, uri: str, descr: str) -> Dict[str, Any]:
+def _uri_exists_in_kicomport_fs(uri: str) -> bool:
+    """
+    Best-effort existence check for a KiCad library URI from inside the KiComport container.
+
+    KiCad typically sees the shared volume as `/config`, while KiComport may see it as `/KiCad/config`.
+    We check both mappings so we can safely prune broken entries.
+    """
+    if not uri or not uri.startswith("/"):
+        return True
+    p = Path(uri)
+    if p.exists():
+        return True
+    if uri.startswith("/config/"):
+        alt = Path("/KiCad/config/" + uri[len("/config/") :])
+        return alt.exists()
+    if uri.startswith("/KiCad/config/"):
+        alt = Path("/config/" + uri[len("/KiCad/config/") :])
+        return alt.exists()
+    return False
+
+
+def _is_managed_kicad_uri(uri: str) -> bool:
+    """
+    Only prune URIs that should live on the shared KiCad config/data volume.
+
+    We intentionally avoid pruning arbitrary absolute paths like `/usr/share/...` because those may
+    exist in the KiCad container but not in the KiComport container.
+    """
+    prefixes = (
+        "/config/data/kicad/",
+        "/config/config/data/kicad/",
+        "/KiCad/config/data/kicad/",
+        "/KiCad/config/config/data/kicad/",
+        "/kicad/",
+    )
+    return bool(uri) and any(uri.startswith(p) for p in prefixes)
+
+
+def _upsert_library_table(
+    path: Path,
+    *,
+    expected_atom: str,
+    name: str,
+    uri: str,
+    descr: str,
+    prune_missing: bool = False,
+) -> Dict[str, Any]:
     text = ""
     if path.exists():
         text = path.read_text(encoding="utf-8", errors="ignore")
@@ -299,9 +345,18 @@ def _upsert_library_table(path: Path, *, expected_atom: str, name: str, uri: str
 
     kept: list[str] = []
     replaced = False
+    removed: list[dict[str, str]] = []
     for lib in existing_libs:
-        if _lib_name(lib) == name:
+        lib_name = _lib_name(lib)
+        lib_uri = _lib_uri(lib)
+        if lib_name == name:
             replaced = True
+            continue
+        if prune_missing and lib_name.casefold().startswith("kicomport"):
+            removed.append({"name": lib_name, "uri": lib_uri})
+            continue
+        if prune_missing and _is_managed_kicad_uri(lib_uri) and not _uri_exists_in_kicomport_fs(lib_uri):
+            removed.append({"name": lib_name, "uri": lib_uri})
             continue
         kept.append(lib.rstrip())
 
@@ -311,7 +366,7 @@ def _upsert_library_table(path: Path, *, expected_atom: str, name: str, uri: str
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(new_text, encoding="utf-8")
 
-    return {"path": str(path), "replaced": replaced, "table": atom}
+    return {"path": str(path), "replaced": replaced, "removed": removed, "table": atom}
 
 
 @router.get("/api/system/kicad-library-tables-status")
@@ -401,11 +456,25 @@ def install_kicad_library_tables(request: Request) -> Dict[str, Any]:
         updated: Dict[str, Any] = {"sym-lib-table": [], "fp-lib-table": []}
         for table in sym_tables:
             updated["sym-lib-table"].append(
-                _upsert_library_table(table, expected_atom="sym_lib_table", name=lib_name, uri=sym_uri, descr=descr)
+                _upsert_library_table(
+                    table,
+                    expected_atom="sym_lib_table",
+                    name=lib_name,
+                    uri=sym_uri,
+                    descr=descr,
+                    prune_missing=True,
+                )
             )
         for table in fp_tables:
             updated["fp-lib-table"].append(
-                _upsert_library_table(table, expected_atom="fp_lib_table", name=lib_name, uri=fp_uri, descr=descr)
+                _upsert_library_table(
+                    table,
+                    expected_atom="fp_lib_table",
+                    name=lib_name,
+                    uri=fp_uri,
+                    descr=descr,
+                    prune_missing=True,
+                )
             )
 
         return {
