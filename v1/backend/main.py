@@ -247,7 +247,13 @@ def create_app() -> FastAPI:
             ("Footprints", footprint_path),
             ("3D Models", model_path),
         ]:
-            entry = {"label": label, "path": str(path), "exists": False, "count": 0, "sample": [], "truncated": False}
+            raw_path = str(path)
+            kicad_path = None
+            if raw_path.startswith("/KiCad/config/"):
+                kicad_path = "/config/" + raw_path[len("/KiCad/config/") :]
+            elif raw_path.startswith("/config/") or raw_path.startswith("/kicad/"):
+                kicad_path = raw_path
+            entry = {"label": label, "path": raw_path, "kicad_path": kicad_path, "exists": False, "count": 0, "sample": [], "truncated": False}
             try:
                 p = Path(path)
                 entry["exists"] = p.exists()
@@ -311,10 +317,21 @@ def create_app() -> FastAPI:
         jobs, recent_logs = _fetch_jobs_and_logs()
         libraries = _library_snapshot(config)
         selected_job = _fetch_job_detail(job_id) if job_id else None
+        def _kicad_visible_path(value: object) -> str:
+            raw = str(value or "")
+            if raw.startswith("/KiCad/config/"):
+                return "/config/" + raw[len("/KiCad/config/") :]
+            return raw
+
         import_paths = {
-            "symbol_root": getattr(config, "kicad_symbol_dir", "") if config else "",
-            "footprint_root": getattr(config, "kicad_footprint_dir", "") if config else "",
-            "model_root": getattr(config, "kicad_3d_dir", "") if config else "",
+            "symbol_root": str(getattr(config, "kicad_symbol_dir", "")) if config else "",
+            "footprint_root": str(getattr(config, "kicad_footprint_dir", "")) if config else "",
+            "model_root": str(getattr(config, "kicad_3d_dir", "")) if config else "",
+        }
+        kicad_import_paths = {
+            "symbol_root": _kicad_visible_path(getattr(config, "kicad_symbol_dir", "")) if config else "",
+            "footprint_root": _kicad_visible_path(getattr(config, "kicad_footprint_dir", "")) if config else "",
+            "model_root": _kicad_visible_path(getattr(config, "kicad_3d_dir", "")) if config else "",
         }
         return templates.TemplateResponse(
             "index.html",
@@ -327,6 +344,7 @@ def create_app() -> FastAPI:
                 "libraries": libraries,
                 "selected_job": selected_job,
                 "import_paths": import_paths,
+                "kicad_import_paths": kicad_import_paths,
             },
         )
 

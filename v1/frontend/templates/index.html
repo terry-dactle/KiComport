@@ -137,13 +137,16 @@
   {% endif %}
   <div class="grid three-col">
     {% for lib in libraries %}
-    <div class="info-block">
-      <h4>{{ lib.label }}</h4>
-      <p class="muted mono">{{ lib.path }}</p>
-      <p class="muted">
-        {% if lib.exists %}
-          {% if lib.truncated %}
-            {{ lib.count }}+ items (capped)
+	    <div class="info-block">
+	      <h4>{{ lib.label }}</h4>
+	      <p class="muted mono">{{ lib.kicad_path if lib.kicad_path else lib.path }}</p>
+	      {% if lib.kicad_path and lib.kicad_path != lib.path %}
+	      <p class="muted small mono">Server path: {{ lib.path }}</p>
+	      {% endif %}
+	      <p class="muted">
+	        {% if lib.exists %}
+	          {% if lib.truncated %}
+	            {{ lib.count }}+ items (capped)
           {% else %}
             {{ lib.count }} item{{ 's' if lib.count != 1 else '' }} available
           {% endif %}

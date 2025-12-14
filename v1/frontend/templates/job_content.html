@@ -94,7 +94,7 @@
         <div class="option-stack" data-type="symbol">
           {% if symbols.options %}
             {% for opt in symbols.options | sort(attribute='score', reverse=True) %}
-              <button type="button" class="option-tile {% if opt.id == selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
+              <button type="button" class="option-tile {% if opt.id == selected_symbol.id %}selected{% endif %}" data-type="symbol" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-comp-name="{{ opt.comp_name }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
                 <div class="option-head">
                   <div class="option-name">{{ opt.name }}</div>
                   {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
@@ -125,7 +125,7 @@
         <div class="option-stack" data-type="footprint">
           {% if footprints.options %}
             {% for opt in footprints.options | sort(attribute='score', reverse=True) %}
-              <button type="button" class="option-tile {% if opt.id == selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
+              <button type="button" class="option-tile {% if opt.id == selected_footprint.id %}selected{% endif %}" data-type="footprint" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-comp-name="{{ opt.comp_name }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
                 <div class="option-head">
                   <div class="option-name">{{ opt.name }}</div>
                   {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
@@ -156,7 +156,7 @@
         <div class="option-stack" data-type="model">
           {% if models.options %}
             {% for opt in models.options | sort(attribute='score', reverse=True) %}
-              <button type="button" class="option-tile {% if opt.id == selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
+              <button type="button" class="option-tile {% if opt.id == selected_model.id %}selected{% endif %}" data-type="model" data-cand-id="{{ opt.id }}" data-comp-id="{{ opt.comp_id }}" data-comp-name="{{ opt.comp_name }}" data-path="{{ opt.path }}" data-file="{{ opt.file }}" data-name="{{ opt.name }}">
                 <div class="option-head">
                   <div class="option-name">{{ opt.name }}</div>
                   {% if opt.comp_name != opt.name %}<div class="option-tag">{{ opt.comp_name }}</div>{% endif %}
@@ -187,10 +187,14 @@
     <div class="card dest-card">
       <h4>Destination library</h4>
       <p class="muted small">Imports always go into the single shared library <span class="mono">~KiComport</span> (recommended: add it to KiCad once).</p>
+      {% set kicad_paths = kicad_import_paths if kicad_import_paths is defined else import_paths %}
       <div class="muted small">
-        <div>Symbols: <span class="mono">{{ import_paths.symbol_root }}/~KiComport.kicad_sym</span></div>
-        <div>Footprints: <span class="mono">{{ import_paths.footprint_root }}/~KiComport.pretty</span></div>
-        <div>3D models: <span class="mono">{{ import_paths.model_root }}/~KiComport/</span></div>
+        <div>Symbols: <span class="mono">{{ kicad_paths.symbol_root }}/~KiComport.kicad_sym</span></div>
+        <div>Footprints: <span class="mono">{{ kicad_paths.footprint_root }}/~KiComport.pretty</span></div>
+        <div>3D models: <span class="mono">{{ kicad_paths.model_root }}/~KiComport/</span></div>
+        {% if kicad_import_paths is defined and kicad_import_paths.symbol_root and kicad_import_paths.symbol_root != import_paths.symbol_root %}
+        <div class="muted small">Server: <span class="mono">{{ import_paths.symbol_root }}</span></div>
+        {% endif %}
       </div>
       <div class="actions" style="margin-top: 10px;">
         <button type="button" id="import-btn">Import</button>
@@ -676,21 +680,22 @@
     }
   }
 
-  function initOptionTiles() {
-    document.querySelectorAll('.option-tile').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const type = btn.dataset.type;
-        applyTypeSelection(type, btn.dataset.candId || "", btn.dataset.compId || "");
-        markSelected(type, btn);
-        fetchPreview(type, btn);
-        if ((type === "footprint" || type === "model") && renameInput && !renameInput.value.trim() && btn.dataset.name) {
-          renameInput.value = btn.dataset.name;
-        }
-        if (type === "model" && btn.dataset.candId) {
-          renderModel(btn.dataset.candId, btn.dataset.file || "");
-        }
-      });
-    });
+	  function initOptionTiles() {
+	    document.querySelectorAll('.option-tile').forEach((btn) => {
+	      btn.addEventListener('click', () => {
+	        const type = btn.dataset.type;
+	        applyTypeSelection(type, btn.dataset.candId || "", btn.dataset.compId || "");
+	        markSelected(type, btn);
+	        fetchPreview(type, btn);
+	        if ((type === "footprint" || type === "model") && renameInput && !renameInput.value.trim()) {
+	          const defaultName = btn.dataset.compName || btn.dataset.name || "";
+	          if (defaultName) renameInput.value = defaultName;
+	        }
+	        if (type === "model" && btn.dataset.candId) {
+	          renderModel(btn.dataset.candId, btn.dataset.file || "");
+	        }
+	      });
+	    });
     ["symbol", "footprint", "model"].forEach((type) => {
       const active = document.querySelector(`.option-tile[data-type="${type}"].selected`);
       if (active) {
@@ -727,13 +732,13 @@
       }
     });
   }
-  initOptionTiles();
-  if (renameInput && !renameInput.value.trim()) {
-    const fp = document.querySelector('.option-tile[data-type="footprint"].selected:not(.none)');
-    const md = document.querySelector('.option-tile[data-type="model"].selected:not(.none)');
-    const sym = document.querySelector('.option-tile[data-type="symbol"].selected:not(.none)');
-    renameInput.value = fp?.dataset?.name || md?.dataset?.name || sym?.dataset?.name || "";
-  }
+	  initOptionTiles();
+	  if (renameInput && !renameInput.value.trim()) {
+	    const fp = document.querySelector('.option-tile[data-type="footprint"].selected:not(.none)');
+	    const md = document.querySelector('.option-tile[data-type="model"].selected:not(.none)');
+	    const sym = document.querySelector('.option-tile[data-type="symbol"].selected:not(.none)');
+	    renameInput.value = fp?.dataset?.compName || fp?.dataset?.name || md?.dataset?.compName || md?.dataset?.name || sym?.dataset?.compName || sym?.dataset?.name || "";
+	  }
 
   // click-to-toggle fullscreen for preview window (symbols/footprints)
   document.addEventListener('click', (e) => {

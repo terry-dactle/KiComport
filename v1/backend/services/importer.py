@@ -215,7 +215,13 @@ def _safe_segment(name: str) -> str:
 def _safe_basename(name: str | None) -> str:
     if not name:
         return ""
-    cleaned = "".join(ch for ch in str(name).strip() if ch.isalnum() or ch in "-_~.+").strip("-_")
+    buf: list[str] = []
+    for ch in str(name).strip():
+        if ch.isalnum() or ch in "-_~.+":
+            buf.append(ch)
+        elif ch.isspace():
+            buf.append("_")
+    cleaned = "".join(buf).strip("-_")
     return cleaned
 
 
