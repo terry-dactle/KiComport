@@ -1,82 +1,126 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="card">
-  <div class="card-header">
-    <div>
-      <h2>Upload</h2>
-      <p class="muted">Drop a compressed archive or library file, or provide a URL. Upload starts automatically.</p>
+<div class="grid two-col">
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>New Component</h2>
+        <p class="muted">Drop a compressed archive or library file, or provide a URL. Upload starts automatically.</p>
+      </div>
     </div>
-  </div>
-  <form id="upload-form">
-    <div id="drop-zone" class="drop-zone">
-      <input type="file" id="file" name="file" hidden>
-      <p><strong>Drop file here</strong> or click to browse</p>
-      <p class="muted">Compressed, symbol, footprint, or 3D model files are supported.</p>
-    </div>
-    
-    <div class="url-row">
-      <input type="url" id="url-input" name="url" placeholder="https://example.com/library.zip">
-      <button type="button" id="fetch-url">Fetch URL</button>
-    </div>
-    <p id="upload-status" class="muted"></p>
-  </form>
-</section>
+    <form id="upload-form">
+      <div id="drop-zone" class="drop-zone">
+        <input type="file" id="file" name="file" hidden>
+        <p><strong>Drop file here</strong> or click to browse</p>
+        <p class="muted">Compressed, symbol, footprint, or 3D model files are supported.</p>
+      </div>
+      
+      <div class="url-row">
+        <input type="url" id="url-input" name="url" placeholder="https://example.com/library.zip">
+        <button type="button" id="fetch-url">Fetch URL</button>
+      </div>
+      <p id="upload-status" class="muted"></p>
+    </form>
+  </section>
 
-<section class="card">
-  <h3>Recent Jobs</h3>
-  <div class="table-actions">
-    <input type="search" id="job-filter" class="modern-input" placeholder="Filter by filename, md5, status">
-    <select id="status-filter" class="modern-input select">
-      <option value="">All statuses</option>
-      <option value="pending">Pending</option>
-      <option value="analyzing">Analyzing</option>
-      <option value="waiting_for_user">Waiting for user</option>
-      <option value="waiting_for_import">Waiting for import</option>
-      <option value="imported">Imported</option>
-      <option value="duplicate">Duplicate</option>
-      <option value="error">Error</option>
-    </select>
-  </div>
-  {% if jobs and jobs|length > 0 %}
-  <table class="job-table" id="jobs-table">
-    <thead>
-      <tr>
-        <th data-sort="id">ID</th>
-        <th data-sort="filename">Filename</th>
-        <th data-sort="status">Status</th>
-        <th data-sort="updated">Updated</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for job in jobs %}
-      <tr>
-        <td><a href="/jobs/{{ job.id }}">{{ job.id }}</a></td>
-        <td>{{ job.original_filename }}</td>
-        <td><span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace('_', ' ') }}</span></td>
-        <td class="updated-cell mono" data-updated="{{ job.updated_at.isoformat() if job.updated_at else '' }}">{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
-        <td><button class="danger delete-job" data-id="{{ job.id }}">Delete</button></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <p class="muted">No jobs yet. Upload a zip or library file to start.</p>
-  {% endif %}
-</section>
+  <section class="card">
+    <div class="card-header">
+      <div>
+        <h2>Add To Selected</h2>
+        {% if selected_job %}
+          <p class="muted">Drop files or folders here to attach them to Job #{{ selected_job.id }} and rescan candidates.</p>
+        {% else %}
+          <p class="muted">Select a job first, then drop files here to add more candidates.</p>
+        {% endif %}
+      </div>
+    </div>
+    <form id="attach-form">
+      <div id="attach-drop-zone" class="drop-zone {% if not selected_job %}disabled{% endif %}" {% if not selected_job %}aria-disabled="true"{% endif %}>
+        <input type="file" id="attach-file-input" name="file" hidden multiple webkitdirectory directory {% if not selected_job %}disabled{% endif %}>
+        <p><strong>Drop files or folders here</strong> or click to browse</p>
+        <p class="muted">Supports zips, symbols, footprints, 3D models. Folders upload their files individually.</p>
+      </div>
+      <div class="attach-actions">
+        <button type="button" id="attach-browse" {% if not selected_job %}disabled{% endif %}>Browse</button>
+      </div>
+      <p class="muted small" id="attach-status">{% if not selected_job %}Select a job from the list first.{% endif %}</p>
+    </form>
+  </section>
+</div>
 
-<section class="card">
-  <h3>Recent Job Logs</h3>
-  {% if recent_logs %}
-  <ul class="logs">
-    {% for log in recent_logs %}
-    <li><span class="mono">{{ log.created_at.strftime("%Y-%m-%d %H:%M") }}</span> [{{ log.level }}] Job {{ log.job_id }} - {{ log.message }}</li>
-    {% endfor %}
-  </ul>
-  {% else %}
-  <p class="muted">No logs yet.</p>
-  {% endif %}
-</section>
+<div class="grid two-col">
+  <div>
+    <section class="card">
+      <h3>Jobs</h3>
+      <div class="table-actions">
+        <input type="search" id="job-filter" class="modern-input" placeholder="Filter by filename, md5, status">
+        <select id="status-filter" class="modern-input select">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="analyzing">Analyzing</option>
+          <option value="waiting_for_user">Waiting for user</option>
+          <option value="waiting_for_import">Waiting for import</option>
+          <option value="imported">Imported</option>
+          <option value="duplicate">Duplicate</option>
+          <option value="error">Error</option>
+        </select>
+      </div>
+      {% if jobs and jobs|length > 0 %}
+      <table class="job-table" id="jobs-table">
+        <thead>
+          <tr>
+            <th data-sort="id">ID</th>
+            <th data-sort="filename">Filename</th>
+            <th data-sort="status">Status</th>
+            <th data-sort="updated">Updated</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for job in jobs %}
+          <tr {% if selected_job and selected_job.id == job.id %}class="selected-job-row"{% endif %}>
+            <td><a href="/ui/jobs?job_id={{ job.id }}">{{ job.id }}</a></td>
+            <td>{{ job.original_filename }}</td>
+            <td><span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace('_', ' ') }}</span></td>
+            <td class="updated-cell mono" data-updated="{{ job.updated_at.isoformat() if job.updated_at else '' }}">{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
+            <td><button class="danger delete-job" data-id="{{ job.id }}">Delete</button></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="muted">No jobs yet. Upload a zip or library file to start.</p>
+      {% endif %}
+    </section>
+
+    <section class="card">
+      <h3>Recent Job Logs</h3>
+      {% if recent_logs %}
+      <ul class="logs">
+        {% for log in recent_logs %}
+        <li><span class="mono">{{ log.created_at.strftime("%Y-%m-%d %H:%M") }}</span> [{{ log.level }}] Job {{ log.job_id }} - {{ log.message }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">No logs yet.</p>
+      {% endif %}
+    </section>
+  </div>
+
+  <div>
+    {% if selected_job %}
+      {% set job = selected_job %}
+      {% set show_attach = false %}
+      {% set show_job_header = true %}
+      {% include "job_content.html" %}
+    {% else %}
+      <section class="card">
+        <h3>Selected Job</h3>
+        <p class="muted">Pick a job from the list to review candidates and import into KiCad.</p>
+      </section>
+    {% endif %}
+  </div>
+</div>
 
 {% if libraries %}
 <section class="card">
@@ -95,7 +139,7 @@
             {{ lib.count }} item{{ 's' if lib.count != 1 else '' }} available
           {% endif %}
         {% else %}
-          Directory not found
+          Not found
         {% endif %}
       </p>
       {% if lib.sample %}
@@ -115,6 +159,7 @@
 {% endif %}
 
 <script>
+  const selectedJobId = {{ selected_job.id if selected_job else 'null' }};
   const dropZone = document.getElementById('drop-zone');
   const fileInput = document.getElementById('file');
   const urlInput = document.getElementById('url-input');
@@ -152,7 +197,7 @@
 
   async function uploadFile(file) {
     if (!file) return;
-    setStatus(`Uploading ${file.name}...`, true);
+    setStatus(`Uploading ${file.name}...`, "", true);
     const data = new FormData();
     data.append('file', file);
     try {
@@ -163,11 +208,11 @@
       }
       if (body.duplicate) {
         setStatus(`Duplicate upload detected. Opening job ${body.job_id}...`);
-        window.location.href = `/jobs/${body.job_id}`;
+        window.location.href = `/ui/jobs?job_id=${body.job_id}`;
         return;
       }
       setStatus(`Upload complete. Opening job ${body.job_id}...`);
-      window.location.href = `/jobs/${body.job_id}`;
+      window.location.href = `/ui/jobs?job_id=${body.job_id}`;
     } catch (err) {
       setStatus("Upload failed", err?.message || err);
     } finally {
@@ -181,7 +226,7 @@
       setStatus("Enter a valid http/https URL.");
       return;
     }
-    setStatus(`Fetching ${url}...`, true);
+    setStatus(`Fetching ${url}...`, "", true);
     try {
       const resp = await fetch("/api/uploads/from-url", {
         method: "POST",
@@ -196,11 +241,11 @@
       }
       if (body.duplicate) {
         setStatus(`Duplicate upload detected. Opening job ${body.job_id}...`);
-        window.location.href = `/jobs/${body.job_id}`;
+        window.location.href = `/ui/jobs?job_id=${body.job_id}`;
         return;
       }
       setStatus(`Download complete. Opening job ${body.job_id}...`);
-      window.location.href = `/jobs/${body.job_id}`;
+      window.location.href = `/ui/jobs?job_id=${body.job_id}`;
     } catch (err) {
       setStatus("URL fetch failed", err?.message || err);
     }
@@ -311,6 +356,9 @@
         }
         const row = btn.closest('tr');
         row?.remove();
+        if (selectedJobId !== null && Number(id) === Number(selectedJobId)) {
+          window.location.href = "/ui/jobs";
+        }
       } catch (err) {
         setStatus("Delete failed", err?.message || err);
       } finally {

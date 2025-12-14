@@ -19,10 +19,135 @@ from .config import load_config
 from .db.models import CandidateFile, Component, Job, JobLog, JobStatus
 from .db.models import Base
 from .db.session import get_engine, get_session_factory
+from .services import importer
 from .services.logger import setup_logging
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "frontend" / "templates"
 STATIC_DIR = Path(__file__).resolve().parents[1] / "frontend" / "static"
+
+MODEL_EXTS = {".step", ".stp", ".wrl", ".obj"}
+
+
+def _count_kicad_symbols(sym_path: Path, sample_limit: int = 8) -> tuple[int, list[str]]:
+    if not sym_path.exists():
+        return 0, []
+    try:
+        text = sym_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return 0, []
+
+    names: list[str] = []
+    depth = 0
+    in_string = False
+    escape = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            i += 1
+            continue
+
+        if ch == "(":
+            depth_before = depth
+            depth += 1
+            i += 1
+            # Only count top-level (kicad_symbol_lib ... (symbol "...") ...) entries.
+            if depth_before != 1:
+                continue
+
+            while i < len(text) and text[i].isspace():
+                i += 1
+            atom_start = i
+            while i < len(text) and (not text[i].isspace()) and text[i] not in "()":
+                i += 1
+            atom = text[atom_start:i]
+            if atom != "symbol":
+                continue
+
+            while i < len(text) and text[i].isspace():
+                i += 1
+            name = ""
+            if i < len(text) and text[i] == '"':
+                i += 1
+                buf: list[str] = []
+                esc2 = False
+                while i < len(text):
+                    ch2 = text[i]
+                    if esc2:
+                        buf.append(ch2)
+                        esc2 = False
+                    elif ch2 == "\\":
+                        esc2 = True
+                    elif ch2 == '"':
+                        break
+                    else:
+                        buf.append(ch2)
+                    i += 1
+                if i < len(text) and text[i] == '"':
+                    i += 1
+                name = "".join(buf).strip()
+            else:
+                name_start = i
+                while i < len(text) and (not text[i].isspace()) and text[i] not in "()":
+                    i += 1
+                name = text[name_start:i].strip()
+
+            if name:
+                names.append(name)
+            continue
+
+        if ch == ")":
+            depth = max(0, depth - 1)
+            i += 1
+            continue
+
+        i += 1
+
+    sample = sorted(set(names), key=lambda s: s.casefold())[:sample_limit]
+    return len(set(names)), sample
+
+
+def _count_files(root: Path, *, suffixes: set[str] | None = None, pattern: str | None = None, sample_limit: int = 8) -> tuple[int, list[str]]:
+    if not root.exists():
+        return 0, []
+    if not root.is_dir():
+        return 0, []
+
+    count = 0
+    sample: list[str] = []
+    try:
+        if pattern is not None:
+            iterator = root.rglob(pattern)
+        else:
+            iterator = root.rglob("*")
+
+        for path in iterator:
+            if not path.is_file():
+                continue
+            if suffixes is not None and path.suffix.lower() not in suffixes:
+                continue
+            count += 1
+            if len(sample) < sample_limit:
+                try:
+                    sample.append(str(path.relative_to(root)))
+                except Exception:
+                    sample.append(path.name)
+    except Exception:
+        return 0, []
+
+    sample.sort(key=lambda s: s.casefold())
+    return count, sample
 
 
 def create_app() -> FastAPI:
@@ -75,27 +200,33 @@ def create_app() -> FastAPI:
         if not cfg:
             return libraries
         logger = getattr(app.state, "logger", None)
-        max_scan = 500
+        lib_name = importer.DEFAULT_SUBFOLDER
+        symbol_path = Path(cfg.kicad_symbol_dir) / f"{lib_name}.kicad_sym"
+        footprint_path = Path(cfg.kicad_footprint_dir) / f"{lib_name}.pretty"
+        model_path = Path(cfg.kicad_3d_dir) / lib_name
+
         for label, path in [
-            ("Symbols", cfg.kicad_symbol_dir),
-            ("Footprints", cfg.kicad_footprint_dir),
-            ("3D Models", cfg.kicad_3d_dir),
+            ("Symbols", symbol_path),
+            ("Footprints", footprint_path),
+            ("3D Models", model_path),
         ]:
             entry = {"label": label, "path": str(path), "exists": False, "count": 0, "sample": [], "truncated": False}
             try:
                 p = Path(path)
                 entry["exists"] = p.exists()
-                if p.exists():
-                    sample: list[str] = []
-                    count = 0
-                    for count, child in enumerate(p.iterdir(), start=1):
-                        if len(sample) < 8:
-                            sample.append(child.name)
-                        if count >= max_scan:
-                            entry["truncated"] = True
-                            break
-                    entry["count"] = count
-                    entry["sample"] = sorted(sample)
+                if not p.exists():
+                    libraries.append(entry)
+                    continue
+
+                if label == "Symbols":
+                    count, sample = _count_kicad_symbols(p)
+                elif label == "Footprints":
+                    count, sample = _count_files(p, pattern="*.kicad_mod")
+                else:
+                    count, sample = _count_files(p, suffixes=MODEL_EXTS)
+
+                entry["count"] = count
+                entry["sample"] = sample
             except Exception:
                 if logger:
                     logger.exception("home.library_snapshot_failed", extra={"label": label, "path": str(path)})
@@ -121,11 +252,33 @@ def create_app() -> FastAPI:
     async def root():
         return RedirectResponse(url="/ui/jobs", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
+    def _fetch_job_detail(job_id: int) -> Job | None:
+        session = _get_session()
+        if not session:
+            return None
+        try:
+            job = session.get(Job, job_id)
+            if not job:
+                return None
+            session.refresh(job)
+            for comp in job.components:
+                _ = comp.candidates
+            _ = job.logs
+            return job
+        finally:
+            session.close()
+
     @app.get("/ui/jobs", response_class=HTMLResponse, include_in_schema=False)
-    async def index(request: Request):
+    async def index(request: Request, job_id: int | None = None):
         config = getattr(request.app.state, "config", None)
         jobs, recent_logs = _fetch_jobs_and_logs()
         libraries = _library_snapshot(config)
+        selected_job = _fetch_job_detail(job_id) if job_id else None
+        import_paths = {
+            "symbol_root": getattr(config, "kicad_symbol_dir", "") if config else "",
+            "footprint_root": getattr(config, "kicad_footprint_dir", "") if config else "",
+            "model_root": getattr(config, "kicad_3d_dir", "") if config else "",
+        }
         return templates.TemplateResponse(
             "index.html",
             {
@@ -135,6 +288,8 @@ def create_app() -> FastAPI:
                 "jobs": jobs,
                 "recent_logs": recent_logs,
                 "libraries": libraries,
+                "selected_job": selected_job,
+                "import_paths": import_paths,
             },
         )
 
@@ -149,40 +304,9 @@ def create_app() -> FastAPI:
         except Exception:
             return []
 
-    @app.get("/jobs/{job_id}", response_class=HTMLResponse)
-    async def job_detail(job_id: int, request: Request):
-        session = _get_session()
-        if not session:
-            raise HTTPException(status_code=500, detail="DB not initialized")
-        try:
-            job = session.get(Job, job_id)
-            if not job:
-                raise HTTPException(status_code=404, detail="Job not found")
-            session.refresh(job)
-            # eager-load relationships
-            for comp in job.components:
-                _ = comp.candidates
-            _ = job.logs
-        finally:
-            session.close()
-        cfg = getattr(request.app.state, "config", None)
-        import_paths = {
-            "symbol_root": getattr(cfg, "kicad_symbol_dir", ""),
-            "footprint_root": getattr(cfg, "kicad_footprint_dir", ""),
-            "model_root": getattr(cfg, "kicad_3d_dir", ""),
-            "symbol_subdirs": _list_subdirs(getattr(cfg, "kicad_symbol_dir", "")) if cfg else [],
-            "footprint_subdirs": _list_subdirs(getattr(cfg, "kicad_footprint_dir", "")) if cfg else [],
-            "model_subdirs": _list_subdirs(getattr(cfg, "kicad_3d_dir", "")) if cfg else [],
-        }
-        return templates.TemplateResponse(
-            "job_detail.html",
-            {
-                "request": request,
-                "job": job,
-                "app_name": cfg.app_name if cfg else "Global KiCad Library Import Server",
-                "import_paths": import_paths,
-            },
-        )
+    @app.get("/jobs/{job_id}", include_in_schema=False)
+    async def job_detail(job_id: int):
+        return RedirectResponse(url=f"/ui/jobs?job_id={job_id}", status_code=status.HTTP_307_TEMPORARY_REDIRECT)
 
     @app.get("/api-help", response_class=HTMLResponse)
     async def api_help(request: Request):

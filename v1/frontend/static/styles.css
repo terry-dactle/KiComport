@@ -87,6 +87,8 @@ main { padding: 1.4rem 0 2.2rem; }
 }
 .job-table th { color: var(--muted); font-weight: 700; letter-spacing: 0.01em; }
 .job-table tbody tr:hover { background: rgba(54,197,116,0.05); }
+.job-table tbody tr.selected-job-row { background: rgba(54,197,116,0.12); }
+.job-table tbody tr.selected-job-row:hover { background: rgba(54,197,116,0.16); }
 .badge {
   display: inline-flex;
   align-items: center;
@@ -121,6 +123,7 @@ button {
   box-shadow: 0 6px 20px rgba(54,197,116,0.25);
 }
 button:hover { opacity: 0.92; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
 .component { border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; background: rgba(255,255,255,0.01); }
 .candidate-group { margin-bottom: 0.5rem; }
 .candidate { display: block; padding: 0.15rem 0; }
@@ -184,6 +187,8 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .job-table.compact th, .job-table.compact td { padding: 0.25rem 0.4rem; }
 .drop-zone { border: 1px dashed var(--border); border-radius: 10px; padding: 1rem; text-align: center; cursor: pointer; background: #111823; transition: border-color 0.15s ease, background 0.15s ease; }
 .drop-zone.dragover { border-color: var(--accent); background: rgba(54, 197, 116, 0.08); }
+.drop-zone.disabled { opacity: 0.55; cursor: not-allowed; }
+.drop-zone.disabled.dragover { border-color: var(--border); background: #111823; }
 .url-row { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap; }
 .url-row button { margin-top: 0; }
 .grid.three-col { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
