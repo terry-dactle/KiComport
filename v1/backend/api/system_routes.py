@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict
@@ -71,6 +72,39 @@ def repair_kicad_library(request: Request) -> Dict[str, Any]:
         if not model_path.exists():
             model_path.mkdir(parents=True, exist_ok=True)
             created.append(str(model_path))
+
+        # Compatibility: some installs end up with a duplicated `/config/config/...` path (relative paths or
+        # incorrect host mappings). Create symlinks so both `/config/data/...` and `/config/config/data/...`
+        # resolve to the same shared library.
+        symbol_root_raw = str(cfg.kicad_symbol_dir)
+        config_root: Path | None = None
+        if symbol_root_raw.startswith("/KiCad/config/"):
+            config_root = Path("/KiCad/config")
+        elif symbol_root_raw.startswith("/config/"):
+            config_root = Path("/config")
+
+        if config_root:
+            legacy_base = config_root / "config" / "data" / "kicad"
+            legacy_sym_dir = legacy_base / "symbols"
+            legacy_fp_dir = legacy_base / "footprints"
+            legacy_3d_dir = legacy_base / "3d"
+            legacy_sym_dir.mkdir(parents=True, exist_ok=True)
+            legacy_fp_dir.mkdir(parents=True, exist_ok=True)
+            legacy_3d_dir.mkdir(parents=True, exist_ok=True)
+
+            def _symlink(link_path: Path, target_path: Path) -> None:
+                if link_path.exists() or link_path.is_symlink():
+                    return
+                try:
+                    rel = os.path.relpath(target_path, start=link_path.parent)
+                except Exception:
+                    rel = str(target_path)
+                link_path.symlink_to(rel)
+                created.append(str(link_path))
+
+            _symlink(legacy_sym_dir / f"{lib}.kicad_sym", sym_path)
+            _symlink(legacy_fp_dir / f"{lib}.pretty", fp_path)
+            _symlink(legacy_3d_dir / lib, model_path)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Repair failed: {exc}") from exc
 
