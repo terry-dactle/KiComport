@@ -23,28 +23,24 @@
     </form>
   </section>
 
-  {% if jobs and jobs|length > 0 %}
+  {% if selected_job %}
   <section class="card">
     <div class="card-header">
       <div>
         <h2>Add To Selected</h2>
-        {% if selected_job %}
-          <p class="muted">Drop files or folders here to attach them to Job #{{ selected_job.id }} and rescan candidates.</p>
-        {% else %}
-          <p class="muted">Select a job first, then drop files here to add more candidates.</p>
-        {% endif %}
+        <p class="muted">Drop files or folders here to attach them to Job #{{ selected_job.id }} and rescan candidates.</p>
       </div>
     </div>
     <form id="attach-form">
-      <div id="attach-drop-zone" class="drop-zone {% if not selected_job %}disabled{% endif %}" {% if not selected_job %}aria-disabled="true"{% endif %}>
-        <input type="file" id="attach-file-input" name="file" hidden multiple webkitdirectory directory {% if not selected_job %}disabled{% endif %}>
+      <div id="attach-drop-zone" class="drop-zone">
+        <input type="file" id="attach-file-input" name="file" hidden multiple webkitdirectory directory>
         <p><strong>Drop files or folders here</strong> or click to browse</p>
         <p class="muted">Supports zips, symbols, footprints, 3D models. Folders upload their files individually.</p>
       </div>
       <div class="attach-actions">
-        <button type="button" id="attach-browse" {% if not selected_job %}disabled{% endif %}>Browse</button>
+        <button type="button" id="attach-browse">Browse</button>
       </div>
-      <p class="muted small" id="attach-status">{% if not selected_job %}Select a job from the list first.{% endif %}</p>
+      <p class="muted small" id="attach-status"></p>
     </form>
   </section>
   {% endif %}
@@ -105,6 +101,7 @@
   </section>
 {% endif %}
 
+{% if not selected_job %}
 <section class="card">
   <h3>Recent Job Logs</h3>
   {% if recent_logs %}
@@ -117,6 +114,7 @@
   <p class="muted">No logs yet.</p>
   {% endif %}
 </section>
+{% endif %}
 
 {% if libraries %}
 <section class="card">
@@ -135,6 +133,15 @@
     </div>
   </div>
   {% endif %}
+  <div class="helper-row" style="justify-content: space-between; align-items: center;">
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <span class="muted small">Add <span class="mono">KiComport</span> to KiCad’s global library tables (one-time).</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <button type="button" id="install-kicad-lib">Install into KiCad</button>
+      <span id="install-kicad-status" class="muted small"></span>
+    </div>
+  </div>
   <div class="grid three-col">
     {% for lib in libraries %}
 	    <div class="info-block">
@@ -183,6 +190,8 @@
   const jobsTable = document.getElementById('jobs-table');
   const repairBtn = document.getElementById('repair-kicad-lib');
   const repairStatus = document.getElementById('repair-kicad-status');
+  const installBtn = document.getElementById('install-kicad-lib');
+  const installStatus = document.getElementById('install-kicad-status');
 
   function setStatus(message, detail = "", loading = false) {
     if (!statusEl) return;
@@ -277,6 +286,22 @@
     } catch (err) {
       if (repairStatus) repairStatus.textContent = `Repair failed: ${err?.message || err}`;
       repairBtn.disabled = false;
+    }
+  });
+
+  installBtn?.addEventListener('click', async () => {
+    if (!installBtn) return;
+    installBtn.disabled = true;
+    if (installStatus) installStatus.textContent = "Installing...";
+    try {
+      const resp = await fetch("/api/system/install-kicad-library-tables", { method: "POST" });
+      const body = await safeJson(resp);
+      if (!resp.ok) throw new Error(body?.detail || resp.statusText);
+      if (installStatus) installStatus.textContent = "Installed. Restart KiCad to refresh.";
+    } catch (err) {
+      if (installStatus) installStatus.textContent = `Install failed: ${err?.message || err}`;
+    } finally {
+      installBtn.disabled = false;
     }
   });
 

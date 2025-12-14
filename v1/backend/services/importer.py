@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import tempfile
 from contextlib import contextmanager
@@ -103,26 +104,32 @@ def import_job_selection(
     model_dir = model_dir / safe_sub
 
     for comp in job.components:
-        count, dest = _copy_if_selected(
-            db, comp, comp.selected_symbol_id, CandidateType.symbol, symbol_dir, rename_to=None
-        )
-        copied["symbols"] += count
-        if dest:
-            destinations.append(str(dest))
-
-        count, dest = _copy_if_selected(
-            db, comp, comp.selected_footprint_id, CandidateType.footprint, footprint_dir, rename_to=safe_rename or None
-        )
-        copied["footprints"] += count
-        if dest:
-            destinations.append(str(dest))
-
-        count, dest = _copy_if_selected(
+        count, model_dest = _copy_if_selected(
             db, comp, comp.selected_model_id, CandidateType.model, model_dir, rename_to=safe_rename or None
         )
         copied["models"] += count
-        if dest:
-            destinations.append(str(dest))
+        if model_dest:
+            destinations.append(str(model_dest))
+
+        count, fp_dest = _copy_if_selected(
+            db,
+            comp,
+            comp.selected_footprint_id,
+            CandidateType.footprint,
+            footprint_dir,
+            rename_to=safe_rename or None,
+            model_dest=model_dest,
+        )
+        copied["footprints"] += count
+        if fp_dest:
+            destinations.append(str(fp_dest))
+
+        count, sym_dest = _copy_if_selected(
+            db, comp, comp.selected_symbol_id, CandidateType.symbol, symbol_dir, rename_to=safe_rename or None
+        )
+        copied["symbols"] += count
+        if sym_dest:
+            destinations.append(str(sym_dest))
 
     total_copied = copied["symbols"] + copied["footprints"] + copied["models"]
     if total_copied == 0:
@@ -141,6 +148,7 @@ def _copy_if_selected(
     expected_type: CandidateType,
     target_root: Path,
     rename_to: str | None = None,
+    model_dest: Path | None = None,
 ) -> Tuple[int, Optional[Path]]:
     if not candidate_id:
         return 0, None
@@ -154,8 +162,12 @@ def _copy_if_selected(
     if candidate.type == CandidateType.symbol:
         lock_path = dest.with_name(dest.name + ".lock")
         with _file_lock(lock_path):
-            merged = _merge_symbol_lib(src, dest)
-        log_job(db, comp.job, f"Imported symbol {candidate.name} into {dest}")
+            merged = _merge_symbol_lib(src, dest, rename_to=rename_to, source_symbol_hint=candidate.name)
+        log_job(
+            db,
+            comp.job,
+            f"Imported symbol {candidate.name}{f' as {rename_to}' if rename_to else ''} into {dest}",
+        )
         candidate.selected_count += 1
         apply_feedback(candidate)
         db.add(candidate)
@@ -163,8 +175,20 @@ def _copy_if_selected(
 
     lock_path = target_root / ".kicomport.lock"
     with _file_lock(lock_path):
-        dest = _next_available_copy(dest)
-        _atomic_copy(src, dest)
+        if not rename_to:
+            dest = _next_available_copy(dest)
+        if candidate.type == CandidateType.footprint:
+            text = src.read_text(encoding="utf-8", errors="ignore")
+            model_rel = None
+            if model_dest:
+                try:
+                    model_rel = os.path.relpath(model_dest, start=dest.parent)
+                except Exception:
+                    model_rel = None
+            rewritten = _rewrite_footprint(text, new_name=dest.stem, model_path=model_rel)
+            _atomic_write(dest, rewritten)
+        else:
+            _atomic_copy(src, dest)
     log_job(db, comp.job, f"Imported {expected_type.value} {candidate.name} to {dest}")
     candidate.selected_count += 1
     apply_feedback(candidate)
@@ -236,12 +260,85 @@ def _strip_known_ext(name: str | None) -> str:
     return txt
 
 
-def _merge_symbol_lib(src: Path, dest: Path) -> int:
+_FOOTPRINT_NAME_RE = re.compile(r'\(footprint\s+"([^"]+)"')
+_MODULE_NAME_RE = re.compile(r"\(module\s+([^\s()]+)")
+_MODEL_PATH_RE = re.compile(r'\(model\s+"([^"]+)"')
+
+
+def _rewrite_footprint(text: str, *, new_name: str, model_path: str | None = None) -> str:
+    """Rewrite a `.kicad_mod` footprint to match the destination name and optional 3D model path."""
+    if new_name:
+        m = _FOOTPRINT_NAME_RE.search(text)
+        if m:
+            text = text[: m.start(1)] + new_name + text[m.end(1) :]
+        else:
+            m = _MODULE_NAME_RE.search(text)
+            if m:
+                text = text[: m.start(1)] + new_name + text[m.end(1) :]
+
+    if model_path:
+        normalized = model_path.replace("\\", "/")
+
+        def _replace_model(match: re.Match[str]) -> str:
+            return match.group(0).replace(match.group(1), normalized, 1)
+
+        text = _MODEL_PATH_RE.sub(_replace_model, text)
+    return text
+
+
+def _rename_symbol_block(symbol_block: str, new_name: str) -> str:
+    """Rename a KiCad symbol block (top-level and nested units) to a new base name."""
+    old_name = _symbol_name(symbol_block)
+    if not old_name or not new_name or old_name == new_name:
+        return symbol_block
+
+    def _quoted(match: re.Match[str]) -> str:
+        name = match.group(1)
+        if name == old_name:
+            updated = new_name
+        elif name.startswith(old_name + "_"):
+            updated = new_name + name[len(old_name) :]
+        else:
+            updated = name
+        return match.group(0).replace(name, updated, 1)
+
+    def _bare(match: re.Match[str]) -> str:
+        name = match.group(1)
+        if name == old_name:
+            updated = new_name
+        elif name.startswith(old_name + "_"):
+            updated = new_name + name[len(old_name) :]
+        else:
+            updated = name
+        return match.group(0).replace(name, updated, 1)
+
+    out = re.sub(r'\(symbol\s+"([^"]+)"', _quoted, symbol_block)
+    out = re.sub(r'\(symbol\s+([^\s()"]+)', _bare, out)
+    return out
+
+
+def _merge_symbol_lib(src: Path, dest: Path, *, rename_to: str | None = None, source_symbol_hint: str | None = None) -> int:
     """
     Merge symbols from src library into dest library file.
     Returns count of symbols added (duplicates by name are skipped).
     """
-    new_symbols = _extract_symbols(src.read_text(encoding="utf-8", errors="ignore"))
+    source_symbols = _extract_symbols(src.read_text(encoding="utf-8", errors="ignore"))
+    old_name_to_remove: str | None = None
+    did_rename = False
+    if rename_to:
+        chosen: str | None = None
+        if source_symbol_hint:
+            for sym in source_symbols:
+                if _symbol_name(sym) == source_symbol_hint:
+                    chosen = sym
+                    break
+        if not chosen and len(source_symbols) == 1:
+            chosen = source_symbols[0]
+        if chosen:
+            old_name_to_remove = _symbol_name(chosen)
+            source_symbols = [_rename_symbol_block(chosen, rename_to)]
+            did_rename = True
+    new_symbols = source_symbols
     if not dest.exists():
         content = SYMBOL_HEADER + "\n".join(new_symbols) + "\n)"
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -250,6 +347,11 @@ def _merge_symbol_lib(src: Path, dest: Path) -> int:
 
     existing_text = dest.read_text(encoding="utf-8", errors="ignore")
     existing_symbols = _extract_symbols(existing_text)
+    if did_rename:
+        removed_names = {rename_to}
+        if old_name_to_remove and old_name_to_remove != rename_to:
+            removed_names.add(old_name_to_remove)
+        existing_symbols = [s for s in existing_symbols if _symbol_name(s) not in removed_names]
     existing_names = {_symbol_name(s) for s in existing_symbols}
     added = []
     for sym in new_symbols:

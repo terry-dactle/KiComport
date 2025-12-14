@@ -110,7 +110,7 @@ main { padding: 1.4rem 0 2.2rem; }
 .badge.duplicate { background: #9aa6b7; color: #0f141b; }
 .badge.error { background: var(--error); color: #0f141b; }
 .muted { color: var(--muted); }
-.mono { font-family: "Space Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 0.9rem; }
+.mono { font-family: "Space Mono", ui-monospace, Menlo, Consolas, monospace; font-size: 0.9rem; overflow-wrap: anywhere; word-break: break-word; }
 button {
   background: linear-gradient(120deg, var(--accent), var(--accent-strong));
   color: #0f141b;

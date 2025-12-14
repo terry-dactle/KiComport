@@ -796,7 +796,13 @@
       if (!resp.ok) throw new Error(body.detail || body.error || resp.statusText);
       setActionStatus("Import complete.");
       const destinations = Array.isArray(body?.destinations) ? body.destinations : [];
-      const msg = destinations.length ? `Import complete.\n\nSaved to:\n${destinations.join("\n")}` : "Import complete.";
+      const toKiCadPath = (value) => {
+        const raw = String(value || "");
+        if (raw.startsWith("/KiCad/config/")) return "/config/" + raw.slice("/KiCad/config/".length);
+        return raw;
+      };
+      const shown = destinations.map(toKiCadPath);
+      const msg = shown.length ? `Import complete.\n\nSaved to:\n${shown.join("\n")}` : "Import complete.";
       alert(msg);
       window.location.reload();
     } catch (err) {

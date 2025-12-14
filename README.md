@@ -6,7 +6,7 @@ Dockerised FastAPI service that ingests KiCad library contributions (zip, KiCad 
 - Upload a zip or single library file (`.kicad_sym`, `.kicad_mod`, `.step/.stp/.wrl/.obj`)
 - Auto-extract + scan candidates (symbols/footprints/3D)
 - Review + select candidates per component; import into one shared `~KiComport` library (add it to KiCad once)
-- Optional rename on import to keep footprint/3D filenames consistent
+- Optional `Name` on import to keep symbol/footprint/3D names consistent (and rewrites footprint 3D model paths)
 - Optional Ollama scoring (advisory-only)
 - Configurable paths; settings editable in the UI (plus retention cleanup)
 
@@ -30,6 +30,9 @@ KiCad does not auto-detect new libraries just because files exist on disk. Add t
 - Footprint library: `/config/data/kicad/footprints/~KiComport.pretty`
 
 3D models are saved under `/config/data/kicad/3d/~KiComport/`.
+
+**Easiest:** in the KiComport UI, use **KiCad Libraries → Install into KiCad** (writes `sym-lib-table` and `fp-lib-table`), then restart KiCad.
+If the button errors, open KiCad once to generate its config files, then try again.
 
 ## Standalone KiComport (no KiCad container)
 From the repo root:
