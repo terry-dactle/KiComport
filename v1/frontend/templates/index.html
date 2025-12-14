@@ -133,14 +133,17 @@
     </div>
   </div>
   {% endif %}
-  <div class="helper-row" style="justify-content: space-between; align-items: center;">
-    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-      <span class="muted small">Add <span class="mono">KiComport</span> to KiCad’s global library tables (one-time).</span>
+  <div id="install-kicad-row" style="display:none;">
+    <div class="helper-row" style="justify-content: space-between; align-items: center;">
+      <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <span class="muted small">Add <span class="mono">KiComport</span> to KiCad’s global library tables (one-time).</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+        <button type="button" id="install-kicad-lib">Install into KiCad</button>
+        <span id="install-kicad-status" class="muted small"></span>
+      </div>
     </div>
-    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
-      <button type="button" id="install-kicad-lib">Install into KiCad</button>
-      <span id="install-kicad-status" class="muted small"></span>
-    </div>
+    <pre id="install-kicad-debug" class="status-detail" style="display:none; margin: 8px 0 0;"></pre>
   </div>
   <div class="grid three-col">
     {% for lib in libraries %}
@@ -192,6 +195,8 @@
   const repairStatus = document.getElementById('repair-kicad-status');
   const installBtn = document.getElementById('install-kicad-lib');
   const installStatus = document.getElementById('install-kicad-status');
+  const installRow = document.getElementById('install-kicad-row');
+  const installDebug = document.getElementById('install-kicad-debug');
 
   function setStatus(message, detail = "", loading = false) {
     if (!statusEl) return;
@@ -289,20 +294,70 @@
     }
   });
 
+  async function loadKiCadInstallStatus() {
+    if (!installRow) return;
+    try {
+      const resp = await fetch("/api/system/kicad-library-tables-status");
+      const body = await safeJson(resp);
+      if (!resp.ok) {
+        const detail = body?.detail;
+        const msg =
+          typeof detail === "string"
+            ? detail
+            : (detail && typeof detail === "object" && detail.error)
+              ? String(detail.error)
+              : (detail ? JSON.stringify(detail) : "");
+        throw new Error(msg || resp.statusText);
+      }
+      if (body?.installed) {
+        installRow.style.display = "none";
+        return;
+      }
+      installRow.style.display = "";
+    } catch (err) {
+      // If we can't determine status, show the option and include the error for debugging.
+      installRow.style.display = "";
+      if (installStatus) installStatus.textContent = `Status check failed: ${err?.message || err}`;
+    }
+  }
+
+  loadKiCadInstallStatus();
+
   installBtn?.addEventListener('click', async () => {
     if (!installBtn) return;
+    const originalText = installBtn.textContent || "Install into KiCad";
     installBtn.disabled = true;
-    if (installStatus) installStatus.textContent = "Installing...";
+    installBtn.textContent = "Installing…";
+    if (installStatus) installStatus.textContent = "Installing…";
+    if (installDebug) { installDebug.style.display = "none"; installDebug.textContent = ""; }
+    let debugBody = null;
     try {
       const resp = await fetch("/api/system/install-kicad-library-tables", { method: "POST" });
-      const body = await safeJson(resp);
-      if (!resp.ok) throw new Error(body?.detail || resp.statusText);
-      if (installStatus) installStatus.textContent = "Installed. Reloading…";
-      window.location.reload();
+      debugBody = await safeJson(resp);
+      if (!resp.ok) {
+        const detail = debugBody?.detail;
+        const msg =
+          typeof detail === "string"
+            ? detail
+            : (detail && typeof detail === "object" && detail.error)
+              ? String(detail.error)
+              : (detail ? JSON.stringify(detail) : "");
+        throw new Error(msg || resp.statusText);
+      }
+      if (installStatus) installStatus.textContent = "Installed. Restart KiCad to refresh libraries.";
+      setTimeout(() => {
+        if (installRow) installRow.style.display = "none";
+      }, 1500);
     } catch (err) {
-      if (installStatus) installStatus.textContent = `Install failed: ${err?.message || err}`;
+      const msg = `Install failed: ${err?.message || err}`;
+      if (installStatus) installStatus.textContent = msg;
+      if (installDebug) {
+        installDebug.textContent = debugBody ? JSON.stringify(debugBody, null, 2) : String(err?.message || err);
+        installDebug.style.display = "block";
+      }
     } finally {
       installBtn.disabled = false;
+      installBtn.textContent = originalText;
     }
   });
 

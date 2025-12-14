@@ -270,10 +270,16 @@ def _extract_lib_blocks(text: str) -> list[str]:
 
 
 _LIB_NAME_RE = re.compile(r'\(name\s+"([^"]+)"')
+_LIB_URI_RE = re.compile(r'\(uri\s+"([^"]+)"')
 
 
 def _lib_name(lib_block: str) -> str:
     m = _LIB_NAME_RE.search(lib_block)
+    return (m.group(1) if m else "").strip()
+
+
+def _lib_uri(lib_block: str) -> str:
+    m = _LIB_URI_RE.search(lib_block)
     return (m.group(1) if m else "").strip()
 
 
@@ -308,6 +314,65 @@ def _upsert_library_table(path: Path, *, expected_atom: str, name: str, uri: str
     return {"path": str(path), "replaced": replaced, "table": atom}
 
 
+@router.get("/api/system/kicad-library-tables-status")
+def kicad_library_tables_status(request: Request) -> Dict[str, Any]:
+    """
+    Check whether KiCad's global library tables include the KiComport entries.
+
+    This is used by the UI to hide the "Install into KiCad" helper when not needed.
+    """
+    cfg = get_config(request)
+    lib_name = "KiComport"
+    lib_folder = importer.DEFAULT_SUBFOLDER
+    expected_sym_uri = _kicad_visible_path(str(Path(cfg.kicad_symbol_dir) / f"{lib_folder}.kicad_sym"))
+    expected_fp_uri = _kicad_visible_path(str(Path(cfg.kicad_footprint_dir) / f"{lib_folder}.pretty"))
+
+    kicad_cfg = _find_kicad_config_dir(cfg)
+    if not kicad_cfg:
+        return {
+            "installed": False,
+            "reason": "kicad_config_dir_not_found",
+            "expected": {"symbol_uri": expected_sym_uri, "footprint_uri": expected_fp_uri},
+        }
+
+    dirs = _candidate_kicad_table_dirs(kicad_cfg)
+    sym_tables = [p for p in (d / "sym-lib-table" for d in dirs) if p.exists() and p.is_file()]
+    fp_tables = [p for p in (d / "fp-lib-table" for d in dirs) if p.exists() and p.is_file()]
+
+    sym_hits: list[dict[str, str]] = []
+    fp_hits: list[dict[str, str]] = []
+    for table in sym_tables:
+        try:
+            text = table.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        for lib in _extract_lib_blocks(text):
+            if _lib_name(lib) != lib_name:
+                continue
+            sym_hits.append({"path": str(table), "uri": _lib_uri(lib)})
+
+    for table in fp_tables:
+        try:
+            text = table.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        for lib in _extract_lib_blocks(text):
+            if _lib_name(lib) != lib_name:
+                continue
+            fp_hits.append({"path": str(table), "uri": _lib_uri(lib)})
+
+    sym_ok = any(h.get("uri") == expected_sym_uri for h in sym_hits)
+    fp_ok = any(h.get("uri") == expected_fp_uri for h in fp_hits)
+
+    return {
+        "installed": bool(sym_ok and fp_ok),
+        "kicad_config_dir": str(kicad_cfg),
+        "expected": {"symbol_uri": expected_sym_uri, "footprint_uri": expected_fp_uri},
+        "found": {"symbols": sym_hits, "footprints": fp_hits},
+        "ok": {"symbols": sym_ok, "footprints": fp_ok},
+    }
+
+
 @router.post("/api/system/install-kicad-library-tables")
 def install_kicad_library_tables(request: Request) -> Dict[str, Any]:
     """
@@ -318,34 +383,49 @@ def install_kicad_library_tables(request: Request) -> Dict[str, Any]:
     - `fp-lib-table` with a `KiComport` entry pointing at `~KiComport.pretty`
     """
     cfg = get_config(request)
-    repair = repair_kicad_library(request)
-
     lib_name = "KiComport"
     lib_folder = importer.DEFAULT_SUBFOLDER
     sym_uri = _kicad_visible_path(str(Path(cfg.kicad_symbol_dir) / f"{lib_folder}.kicad_sym"))
     fp_uri = _kicad_visible_path(str(Path(cfg.kicad_footprint_dir) / f"{lib_folder}.pretty"))
     descr = "KiComport imports"
 
-    kicad_cfg = _ensure_kicad_config_dir(cfg)
+    kicad_cfg: Path | None = None
+    try:
+        repair = repair_kicad_library(request)
+        kicad_cfg = _ensure_kicad_config_dir(cfg)
 
-    target_dirs = _candidate_kicad_table_dirs(kicad_cfg)
-    sym_tables = sorted({d / "sym-lib-table" for d in target_dirs})
-    fp_tables = sorted({d / "fp-lib-table" for d in target_dirs})
+        target_dirs = _candidate_kicad_table_dirs(kicad_cfg)
+        sym_tables = sorted({d / "sym-lib-table" for d in target_dirs})
+        fp_tables = sorted({d / "fp-lib-table" for d in target_dirs})
 
-    updated: Dict[str, Any] = {"sym-lib-table": [], "fp-lib-table": []}
-    for table in sym_tables:
-        updated["sym-lib-table"].append(
-            _upsert_library_table(table, expected_atom="sym_lib_table", name=lib_name, uri=sym_uri, descr=descr)
-        )
-    for table in fp_tables:
-        updated["fp-lib-table"].append(
-            _upsert_library_table(table, expected_atom="fp_lib_table", name=lib_name, uri=fp_uri, descr=descr)
-        )
+        updated: Dict[str, Any] = {"sym-lib-table": [], "fp-lib-table": []}
+        for table in sym_tables:
+            updated["sym-lib-table"].append(
+                _upsert_library_table(table, expected_atom="sym_lib_table", name=lib_name, uri=sym_uri, descr=descr)
+            )
+        for table in fp_tables:
+            updated["fp-lib-table"].append(
+                _upsert_library_table(table, expected_atom="fp_lib_table", name=lib_name, uri=fp_uri, descr=descr)
+            )
 
-    return {
-        "repair": repair,
-        "kicad_config_dir": str(kicad_cfg),
-        "symbol_uri": sym_uri,
-        "footprint_uri": fp_uri,
-        "updated": updated,
-    }
+        return {
+            "repair": repair,
+            "kicad_config_dir": str(kicad_cfg),
+            "symbol_uri": sym_uri,
+            "footprint_uri": fp_uri,
+            "updated": updated,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(exc),
+                "kicad_config_dir": str(kicad_cfg) if kicad_cfg else None,
+                "kicad_symbol_dir": str(cfg.kicad_symbol_dir),
+                "kicad_footprint_dir": str(cfg.kicad_footprint_dir),
+                "kicad_3d_dir": str(cfg.kicad_3d_dir),
+                "expected": {"symbol_uri": sym_uri, "footprint_uri": fp_uri},
+            },
+        ) from exc
