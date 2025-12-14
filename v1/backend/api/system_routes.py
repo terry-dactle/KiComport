@@ -112,6 +112,68 @@ def _find_kicad_config_dir(cfg: AppConfig) -> Path | None:
     return None
 
 
+def _ensure_kicad_config_dir(cfg: AppConfig) -> Path:
+    """
+    Ensure KiCad's config directory exists and return it.
+
+    If KiCad hasn't been launched yet (so the folder doesn't exist), this will create it under the
+    shared config volume (typically `/config` or `/KiCad/config`).
+    """
+    existing = _find_kicad_config_dir(cfg)
+    if existing:
+        return existing
+
+    roots: list[Path] = []
+    for raw in [str(cfg.kicad_symbol_dir), str(cfg.kicad_footprint_dir), str(cfg.kicad_3d_dir)]:
+        if raw.startswith("/KiCad/config/"):
+            roots.append(Path("/KiCad/config"))
+        elif raw.startswith("/config/"):
+            roots.append(Path("/config"))
+
+    roots.extend([Path("/config"), Path("/KiCad/config")])
+    seen: set[Path] = set()
+    for root in roots:
+        if root in seen:
+            continue
+        seen.add(root)
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            continue
+        kicad_dir = root / ".config" / "kicad"
+        try:
+            kicad_dir.mkdir(parents=True, exist_ok=True)
+        except Exception:
+            continue
+        return kicad_dir
+
+    raise HTTPException(
+        status_code=400,
+        detail="KiCad config directory not found and could not be created. Ensure KiComport shares the KiCad /config volume (mounted as /config or /KiCad/config).",
+    )
+
+
+_KICAD_VERSION_DIR_RE = re.compile(r"^\d+\.\d+$")
+
+
+def _candidate_kicad_table_dirs(kicad_cfg: Path) -> list[Path]:
+    """Return directories to write KiCad library tables into (versioned + fallback)."""
+    version_dirs = []
+    try:
+        for p in kicad_cfg.iterdir():
+            if p.is_dir() and _KICAD_VERSION_DIR_RE.match(p.name):
+                version_dirs.append(p)
+    except Exception:
+        version_dirs = []
+
+    if version_dirs:
+        version_dirs.sort(key=lambda p: p.name)
+        return [kicad_cfg, *version_dirs]
+
+    # If KiCad hasn't been launched yet, pre-create common version dirs.
+    return [kicad_cfg, *(kicad_cfg / v for v in ("9.0", "8.0", "7.0", "6.0"))]
+
+
 def _table_atom(text: str) -> str | None:
     idx = text.find("(")
     if idx < 0:
@@ -264,15 +326,11 @@ def install_kicad_library_tables(request: Request) -> Dict[str, Any]:
     fp_uri = _kicad_visible_path(str(Path(cfg.kicad_footprint_dir) / f"{lib_folder}.pretty"))
     descr = "KiComport imports"
 
-    kicad_cfg = _find_kicad_config_dir(cfg)
-    if not kicad_cfg:
-        raise HTTPException(status_code=400, detail="KiCad config directory not found (expected something like /config/.config/kicad). Open KiCad once, then retry.")
+    kicad_cfg = _ensure_kicad_config_dir(cfg)
 
-    sym_tables = sorted({p for p in kicad_cfg.rglob("sym-lib-table") if p.is_file()})
-    fp_tables = sorted({p for p in kicad_cfg.rglob("fp-lib-table") if p.is_file()})
-
-    if not sym_tables and not fp_tables:
-        raise HTTPException(status_code=400, detail=f"No KiCad library tables found under {kicad_cfg}. Open KiCad once, then retry.")
+    target_dirs = _candidate_kicad_table_dirs(kicad_cfg)
+    sym_tables = sorted({d / "sym-lib-table" for d in target_dirs})
+    fp_tables = sorted({d / "fp-lib-table" for d in target_dirs})
 
     updated: Dict[str, Any] = {"sym-lib-table": [], "fp-lib-table": []}
     for table in sym_tables:

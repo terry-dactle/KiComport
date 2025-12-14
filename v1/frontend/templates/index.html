@@ -297,7 +297,8 @@
       const resp = await fetch("/api/system/install-kicad-library-tables", { method: "POST" });
       const body = await safeJson(resp);
       if (!resp.ok) throw new Error(body?.detail || resp.statusText);
-      if (installStatus) installStatus.textContent = "Installed. Restart KiCad to refresh.";
+      if (installStatus) installStatus.textContent = "Installed. Reloading…";
+      window.location.reload();
     } catch (err) {
       if (installStatus) installStatus.textContent = `Install failed: ${err?.message || err}`;
     } finally {
