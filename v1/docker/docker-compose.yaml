@@ -5,6 +5,7 @@ services:
     build:
       context: ../..
       dockerfile: v1/docker/Dockerfile
+    user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       - PYTHONUNBUFFERED=1
       - KICOMPORT_PORT=${KICOMPORT_PORT:-8000}

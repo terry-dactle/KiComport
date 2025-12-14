@@ -5,17 +5,18 @@ services:
     build:
       context: ../..
       dockerfile: v1/docker/Dockerfile
+    user: "${PUID:-1000}:${PGID:-1000}"
     environment:
       - PYTHONUNBUFFERED=1
       - KICOMPORT_PORT=${KICOMPORT_PORT:-8000}
-      - KICOMPORT_CONFIG_PATH=${KICOMPORT_CONFIG_PATH:-/app/config/app_settings.docker.yaml}
+      - KICOMPORT_CONFIG_PATH=${KICOMPORT_CONFIG_PATH:-/app/config/app_settings.kicad.yaml}
     ports:
       - "${HOST_PORT:-27888}:${KICOMPORT_PORT:-8000}"
     volumes:
       - ../../data:/data
       - ../../uploads:/uploads
       - ../config:/app/config
-      - ../../kicad:/kicad
+      - kicad_config:/config
     restart: unless-stopped
 
   kicad:
@@ -28,7 +29,6 @@ services:
       - "${KICAD_WEB_PORT:-3000}:3000"
     volumes:
       - kicad_config:/config
-      - ../../kicad:/kicad
     shm_size: "1gb"
     restart: unless-stopped
 

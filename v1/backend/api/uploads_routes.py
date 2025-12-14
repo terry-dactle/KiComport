@@ -5,9 +5,13 @@ from collections import Counter
 import zipfile
 from typing import Any, Dict
 
+import hashlib
+import ipaddress
 import httpx
 import os
+import socket
 import tempfile
+from urllib.parse import urljoin, urlparse
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy.orm import Session
 
@@ -19,7 +23,7 @@ from ..services import extract, jobs as job_service, ollama as ollama_service, r
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
 ALLOWED_EXTS = {".zip", ".kicad_sym", ".kicad_mod", ".stp", ".step", ".wrl", ".obj"}
-MAX_URL_DOWNLOAD_BYTES = 100 * 1024 * 1024  # 100 MB
+MAX_URL_DOWNLOAD_BYTES = int(os.getenv("KICOMPORT_MAX_URL_DOWNLOAD_BYTES", str(100 * 1024 * 1024)))  # 100 MB
 REJECT_CONTENT_TYPES = {"text/html", "text/plain"}
 
 
@@ -109,7 +113,12 @@ async def _process_upload(
     job = job_service.create_job(db, md5=md5, original_filename=original_filename, stored_path=stored_path, status=JobStatus.analyzing)
 
     try:
-        extracted_dir = extract.extract_if_needed(stored_path, Path(config.temp_dir))
+        extracted_dir = extract.extract_if_needed(
+            stored_path,
+            Path(config.temp_dir),
+            original_filename=original_filename,
+            target_dir=Path(config.temp_dir) / f"job_{job.id}",
+        )
         job_service.set_extracted_path(db, job, extracted_dir)
     except ValueError as exc:
         job_service.update_status(db, job, JobStatus.error, f"Extraction rejected: {exc}")
@@ -230,64 +239,112 @@ def _serialize_candidate(cf: CandidateFile) -> Dict[str, Any]:
 
 
 async def _download_url_to_uploads(url: str, destination_dir: Path) -> tuple[Path, str, str]:
-    async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
-        async with client.stream("GET", url) as resp:
-            resp.raise_for_status()
-            filename = _guess_filename(url, resp)
-            suffix = Path(filename).suffix.lower()
-            if not suffix:
-                filename = f"{filename}.zip"
-                suffix = ".zip"
-            if suffix not in ALLOWED_EXTS:
-                content_type = (resp.headers.get("content-type") or "").split(";")[0].lower()
-                if content_type == "application/zip":
-                    filename = f"{filename}.zip" if not filename.endswith(".zip") else filename
-                    suffix = ".zip"
-                elif content_type in REJECT_CONTENT_TYPES:
-                    raise ValueError(f"Rejected content type {content_type}")
-                else:
-                    raise ValueError(f"Unsupported extension {suffix}")
-            content_length = resp.headers.get("content-length")
-            if content_length and int(content_length) > MAX_URL_DOWNLOAD_BYTES:
-                raise ValueError("File too large to fetch")
-            content_type = (resp.headers.get("content-type") or "").split(";")[0].lower()
-            if suffix not in ALLOWED_EXTS and content_type in REJECT_CONTENT_TYPES:
-                preview = ""
-                try:
-                    preview = (await resp.aread())[:400].decode(errors="ignore")
-                except Exception:
-                    preview = ""
-                info = {
-                    "status": resp.status_code,
-                    "content_type": content_type,
-                    "content_length": content_length,
-                    "url": str(resp.url),
-                    "preview": preview,
-                }
-                raise ValueError(
-                    f"URL returned HTML (likely a login/SSO page) instead of a zip. "
-                    f"Download the file manually and upload it here, or provide a direct zip download link. "
-                    f"Details: {info}"
-                )
-            destination_dir.mkdir(parents=True, exist_ok=True)
-            fd, tmp_path = tempfile.mkstemp(prefix="upload_url_", dir=destination_dir)
-            written = 0
+    allow_private = os.getenv("KICOMPORT_ALLOW_PRIVATE_URL_FETCH", "").strip().lower() in {"1", "true", "yes", "on"}
+
+    def _is_forbidden_ip(ip: ipaddress._BaseAddress) -> bool:
+        if ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_reserved or ip.is_unspecified:
+            return True
+        if not allow_private and getattr(ip, "is_private", False):
+            return True
+        return False
+
+    def _validate_fetch_url(candidate_url: str) -> None:
+        parsed = urlparse(candidate_url)
+        if parsed.scheme not in {"http", "https"}:
+            raise ValueError("Only http/https URLs are supported")
+        if parsed.username or parsed.password:
+            raise ValueError("Credentials in URL are not supported")
+        host = parsed.hostname
+        if not host:
+            raise ValueError("URL must include a hostname")
+        host_lower = host.lower()
+        if host_lower == "localhost" or host_lower.endswith(".localhost"):
+            raise ValueError("Refusing to fetch from localhost")
+        try:
+            ip = ipaddress.ip_address(host)
+            if _is_forbidden_ip(ip):
+                raise ValueError("Refusing to fetch from a local/invalid address")
+            return
+        except ValueError:
+            pass
+        try:
+            port = parsed.port or (443 if parsed.scheme == "https" else 80)
+            infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+        except Exception as exc:
+            raise ValueError(f"Could not resolve hostname {host}") from exc
+        for info in infos:
+            addr = info[4][0]
             try:
-                with os.fdopen(fd, "wb") as out_file:
-                    async for chunk in resp.aiter_bytes(chunk_size=8192):
-                        if chunk:
+                ip = ipaddress.ip_address(addr)
+            except ValueError:
+                continue
+            if _is_forbidden_ip(ip):
+                raise ValueError("Refusing to fetch from a local/invalid address")
+
+    async with httpx.AsyncClient(timeout=30, follow_redirects=False, trust_env=False) as client:
+        next_url = url
+        for _ in range(10):
+            _validate_fetch_url(next_url)
+            async with client.stream("GET", next_url) as resp:
+                if resp.status_code in {301, 302, 303, 307, 308}:
+                    location = resp.headers.get("location")
+                    if not location:
+                        raise ValueError(f"Redirect ({resp.status_code}) missing Location header")
+                    next_url = urljoin(str(resp.url), location)
+                    continue
+
+                resp.raise_for_status()
+
+                filename = _guess_filename(str(resp.url), resp)
+                suffix = Path(filename).suffix.lower()
+                content_type = (resp.headers.get("content-type") or "").split(";")[0].lower()
+
+                if not suffix:
+                    # default to zip when the server doesn't provide a filename
+                    filename = f"{filename}.zip"
+                    suffix = ".zip"
+
+                if suffix not in ALLOWED_EXTS:
+                    if content_type == "application/zip":
+                        filename = f"{filename}.zip" if not filename.endswith(".zip") else filename
+                        suffix = ".zip"
+                    elif content_type in REJECT_CONTENT_TYPES:
+                        raise ValueError(f"Rejected content type {content_type}")
+                    else:
+                        raise ValueError(f"Unsupported extension {suffix}")
+
+                content_length = resp.headers.get("content-length")
+                if content_length:
+                    try:
+                        length_int = int(content_length)
+                    except (TypeError, ValueError):
+                        length_int = None
+                    if length_int is not None and length_int > MAX_URL_DOWNLOAD_BYTES:
+                        raise ValueError("File too large to fetch")
+
+                destination_dir.mkdir(parents=True, exist_ok=True)
+                fd, tmp_path = tempfile.mkstemp(prefix="upload_url_", dir=destination_dir)
+                written = 0
+                md5 = hashlib.md5()
+                try:
+                    with os.fdopen(fd, "wb") as out_file:
+                        async for chunk in resp.aiter_bytes(chunk_size=8192):
+                            if not chunk:
+                                continue
                             written += len(chunk)
                             if written > MAX_URL_DOWNLOAD_BYTES:
                                 raise ValueError("File too large to fetch")
+                            md5.update(chunk)
                             out_file.write(chunk)
-                stored_path = Path(destination_dir) / f"{Path(tmp_path).name}_{upload_service.sanitize_filename(filename)}"
-                Path(tmp_path).rename(stored_path)
-                _validate_zip_or_raise(stored_path, suffix, content_type, source_url=str(resp.url))
-                md5 = upload_service.compute_md5(stored_path)
-                return stored_path, md5, filename
-            except Exception:
-                Path(tmp_path).unlink(missing_ok=True)
-                raise
+                    stored_path = Path(destination_dir) / f"{Path(tmp_path).name}_{upload_service.sanitize_filename(filename)}"
+                    Path(tmp_path).rename(stored_path)
+                    _validate_zip_or_raise(stored_path, suffix, content_type, source_url=str(resp.url))
+                    return stored_path, md5.hexdigest(), filename
+                except Exception:
+                    Path(tmp_path).unlink(missing_ok=True)
+                    raise
+
+        raise ValueError("Too many redirects while fetching URL")
 
 
 def _guess_filename(url: str, response: httpx.Response) -> str:

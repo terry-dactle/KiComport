@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+import os
 import shutil
+import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy.orm import Session
+
+try:
+    import fcntl  # type: ignore
+except Exception:  # pragma: no cover
+    fcntl = None
 
 from ..db.models import CandidateFile, CandidateType, Component, Job, JobStatus
 from .ranking import apply_feedback
@@ -13,6 +21,62 @@ from .jobs import log_job, update_status
 DEFAULT_SUBFOLDER = "~KiComport"
 SYMBOL_HEADER = "(kicad_symbol_lib (version 20211014) (generator kicomport)\n"
 KNOWN_RENAME_EXTS = (".kicad_mod", ".step", ".stp", ".wrl", ".obj", ".kicad_sym")
+
+@contextmanager
+def _file_lock(lock_path: Path):
+    if fcntl is None:
+        yield
+        return
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(lock_path, "a", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(prefix=path.name + ".", dir=str(path.parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, path)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
+def _atomic_copy(src: Path, dest: Path) -> None:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(prefix=dest.name + ".", dir=str(dest.parent))
+    try:
+        os.close(fd)
+        shutil.copy2(src, tmp_path)
+        os.replace(tmp_path, dest)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
+
+
+def _next_available_copy(dest: Path) -> Path:
+    if not dest.exists():
+        return dest
+    base = dest.stem
+    suffix = dest.suffix
+    parent = dest.parent
+    for i in range(1, 10_000):
+        candidate = parent / f"{base}_copy{i}{suffix}"
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"Could not find available destination for {dest}")
 
 
 def import_job_selection(
@@ -88,16 +152,19 @@ def _copy_if_selected(
     dest = _destination_for(candidate, target_root, rename_to=rename_to)
     dest.parent.mkdir(parents=True, exist_ok=True)
     if candidate.type == CandidateType.symbol:
-        merged = _merge_symbol_lib(src, dest)
+        lock_path = dest.with_name(dest.name + ".lock")
+        with _file_lock(lock_path):
+            merged = _merge_symbol_lib(src, dest)
         log_job(db, comp.job, f"Imported symbol {candidate.name} into {dest}")
         candidate.selected_count += 1
         apply_feedback(candidate)
         db.add(candidate)
         return merged, dest
 
-    if dest.exists() and not rename_to:
-        dest = dest.with_name(dest.stem + "_copy" + dest.suffix)
-    shutil.copy(src, dest)
+    lock_path = target_root / ".kicomport.lock"
+    with _file_lock(lock_path):
+        dest = _next_available_copy(dest)
+        _atomic_copy(src, dest)
     log_job(db, comp.job, f"Imported {expected_type.value} {candidate.name} to {dest}")
     candidate.selected_count += 1
     apply_feedback(candidate)
@@ -168,14 +235,14 @@ def _merge_symbol_lib(src: Path, dest: Path) -> int:
     Merge symbols from src library into dest library file.
     Returns count of symbols added (duplicates by name are skipped).
     """
-    new_symbols = _extract_symbols(src.read_text())
+    new_symbols = _extract_symbols(src.read_text(encoding="utf-8", errors="ignore"))
     if not dest.exists():
         content = SYMBOL_HEADER + "\n".join(new_symbols) + "\n)"
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_text(content)
+        _atomic_write(dest, content)
         return len(new_symbols)
 
-    existing_text = dest.read_text()
+    existing_text = dest.read_text(encoding="utf-8", errors="ignore")
     existing_symbols = _extract_symbols(existing_text)
     existing_names = {_symbol_name(s) for s in existing_symbols}
     added = []
@@ -185,38 +252,119 @@ def _merge_symbol_lib(src: Path, dest: Path) -> int:
             added.append(sym)
             existing_names.add(name)
     merged_symbols = existing_symbols + added
-    dest.write_text(SYMBOL_HEADER + "\n".join(merged_symbols) + "\n)")
+    _atomic_write(dest, SYMBOL_HEADER + "\n".join(merged_symbols) + "\n)")
     return len(added)
 
 
 def _extract_symbols(text: str) -> List[str]:
     symbols: List[str] = []
-    idx = 0
-    while True:
-        start = text.find("(symbol ", idx)
-        if start == -1:
-            break
-        depth = 0
-        end = start
-        while end < len(text):
-            ch = text[end]
-            if ch == "(":
-                depth += 1
-            elif ch == ")":
-                depth -= 1
-                if depth == 0:
-                    symbols.append(text[start : end + 1])
-                    idx = end + 1
-                    break
-            end += 1
-        else:
-            break
+    depth = 0
+    in_string = False
+    escape = False
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            i += 1
+            continue
+
+        if ch == "(":
+            depth_before = depth
+            depth += 1
+            if depth_before == 1:
+                # candidate top-level entry in kicad_symbol_lib
+                j = i + 1
+                while j < len(text) and text[j].isspace():
+                    j += 1
+                atom_start = j
+                while j < len(text) and (not text[j].isspace()) and text[j] not in "()":
+                    j += 1
+                atom = text[atom_start:j]
+                if atom == "symbol":
+                    end = _find_matching_paren(text, i)
+                    if end != -1:
+                        symbols.append(text[i : end + 1])
+                        i = end + 1
+                        depth = depth_before
+                        continue
+            i += 1
+            continue
+
+        if ch == ")":
+            depth = max(0, depth - 1)
+            i += 1
+            continue
+
+        i += 1
     return symbols
 
 
+def _find_matching_paren(text: str, start: int) -> int:
+    if start < 0 or start >= len(text) or text[start] != "(":
+        return -1
+    depth = 0
+    in_string = False
+    escape = False
+    for idx in range(start, len(text)):
+        ch = text[idx]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        if ch == '"':
+            in_string = True
+            continue
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0:
+                return idx
+    return -1
+
+
 def _symbol_name(symbol_block: str) -> str:
-    first_line = symbol_block.strip().splitlines()[0]
-    parts = first_line.strip("()").split()
-    if len(parts) >= 2 and parts[0] == "symbol":
-        return parts[1]
-    return ""
+    text = symbol_block.lstrip()
+    if not text.startswith("(symbol"):
+        return ""
+    i = len("(symbol")
+    while i < len(text) and text[i].isspace():
+        i += 1
+    if i >= len(text):
+        return ""
+    if text[i] == '"':
+        i += 1
+        buf: list[str] = []
+        esc = False
+        while i < len(text):
+            ch = text[i]
+            if esc:
+                buf.append(ch)
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                break
+            else:
+                buf.append(ch)
+            i += 1
+        return "".join(buf).strip()
+    start = i
+    while i < len(text) and (not text[i].isspace()) and text[i] not in "()":
+        i += 1
+    return text[start:i].strip()

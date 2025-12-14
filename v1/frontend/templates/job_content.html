@@ -62,11 +62,11 @@
     {% endif %}
     {% for cand in comp.candidates | sort(attribute='combined_score', reverse=True) %}
       {% if cand.type.value == 'symbol' %}
-        {% set _ = symbols.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pins": cand.pin_count, "path": cand.rel_path, "file": cand.rel_path.name if cand.rel_path else cand.name}) %}
+        {% set _ = symbols.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pins": cand.pin_count, "path": cand.rel_path, "file": (cand.rel_path|basename) if cand.rel_path else cand.name}) %}
       {% elif cand.type.value == 'footprint' %}
-        {% set _ = footprints.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pads": cand.pad_count, "path": cand.rel_path, "file": cand.rel_path.name if cand.rel_path else cand.name}) %}
+        {% set _ = footprints.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "pads": cand.pad_count, "path": cand.rel_path, "file": (cand.rel_path|basename) if cand.rel_path else cand.name}) %}
       {% elif cand.type.value == 'model' %}
-        {% set _ = models.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "desc": cand.description, "path": cand.rel_path, "file": cand.rel_path.name if cand.rel_path else cand.name}) %}
+        {% set _ = models.options.append({"id": cand.id, "name": cand.name, "comp_id": comp.id, "comp_name": comp.name, "score": cand.combined_score, "desc": cand.description, "path": cand.rel_path, "file": (cand.rel_path|basename) if cand.rel_path else cand.name}) %}
       {% endif %}
     {% endfor %}
   {% endfor %}
@@ -482,18 +482,28 @@
     }
   }
 
-  async function loadThree() {
-    if (threeLoaded) return threeLoaded;
-    const threeBase = 'https://unpkg.com/three@0.160.0';
-    threeLoaded = Promise.all([
-      import(`${threeBase}/build/three.module.js?module`),
-      import(`${threeBase}/examples/jsm/controls/OrbitControls.js?module`),
-      import(`${threeBase}/examples/jsm/loaders/OBJLoader.js?module`),
-      import(`${threeBase}/examples/jsm/loaders/STLLoader.js?module`),
-      import(`${threeBase}/examples/jsm/loaders/VRMLLoader.js?module`),
-    ]).then(([THREE, { OrbitControls }, { OBJLoader }, { STLLoader }, { VRMLLoader }]) => ({ THREE, OrbitControls, OBJLoader, STLLoader, VRMLLoader }));
-    return threeLoaded;
-  }
+	  async function loadThree() {
+	    if (threeLoaded) return threeLoaded;
+	    const local = () => Promise.all([
+	      import('three'),
+	      import(`/static/three/examples/jsm/controls/OrbitControls.js`),
+	      import(`/static/three/examples/jsm/loaders/OBJLoader.js`),
+	      import(`/static/three/examples/jsm/loaders/STLLoader.js`),
+	      import(`/static/three/examples/jsm/loaders/VRMLLoader.js`),
+	    ]).then(([THREE, { OrbitControls }, { OBJLoader }, { STLLoader }, { VRMLLoader }]) => ({ THREE, OrbitControls, OBJLoader, STLLoader, VRMLLoader }));
+
+	    const threeBase = 'https://unpkg.com/three@0.160.0';
+	    const cdn = () => Promise.all([
+	      import(`${threeBase}/build/three.module.js?module`),
+	      import(`${threeBase}/examples/jsm/controls/OrbitControls.js?module`),
+	      import(`${threeBase}/examples/jsm/loaders/OBJLoader.js?module`),
+	      import(`${threeBase}/examples/jsm/loaders/STLLoader.js?module`),
+	      import(`${threeBase}/examples/jsm/loaders/VRMLLoader.js?module`),
+	    ]).then(([THREE, { OrbitControls }, { OBJLoader }, { STLLoader }, { VRMLLoader }]) => ({ THREE, OrbitControls, OBJLoader, STLLoader, VRMLLoader }));
+
+	    threeLoaded = local().catch(() => cdn());
+	    return threeLoaded;
+	  }
 
   let occtLoaded = null;
   function loadOcctViaScript(url) {

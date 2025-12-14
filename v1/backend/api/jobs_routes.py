@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -55,10 +56,24 @@ async def attach_file_to_job(
     if suffix not in ALLOWED_EXTS:
         raise HTTPException(status_code=400, detail=f"Unsupported extension {suffix}")
 
+    stored_path: Path | None = None
     try:
         stored_path, md5 = upload_service.save_upload(file.file, Path(config.uploads_dir), file.filename)
         _validate_zip_or_raise(stored_path, suffix)
-        extracted_dir = extract.extract_if_needed(stored_path, Path(config.temp_dir))
+        base_dir = Path(job.extracted_path) if job.extracted_path else (Path(config.temp_dir) / f"job_{job.id}")
+        base_dir.mkdir(parents=True, exist_ok=True)
+        if not job.extracted_path:
+            job.extracted_path = str(base_dir)
+            db.add(job)
+            db.flush()
+
+        attach_dir = base_dir / f"attach_{uuid.uuid4().hex}"
+        extracted_dir = extract.extract_if_needed(
+            stored_path,
+            Path(config.temp_dir),
+            original_filename=file.filename,
+            target_dir=attach_dir,
+        )
         candidates = scan_service.scan_candidates(Path(extracted_dir))
         if not candidates:
             raise HTTPException(status_code=400, detail="No candidates detected in attached file")
@@ -69,10 +84,18 @@ async def attach_file_to_job(
           "components_added": [c.id for c in comp_objs],
           "component_details": response_components,
         }
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except HTTPException:
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Attach failed: {exc}") from exc
+    finally:
+        if stored_path:
+            try:
+                stored_path.unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 @router.post("/{job_id}/select")
@@ -198,7 +221,12 @@ def retry_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> D
     job_service.reset_job_selection(db, job)
     job_service.update_status(db, job, JobStatus.analyzing, "Retry triggered")
     try:
-        extracted_dir = extract.extract_if_needed(Path(job.stored_path), Path(config.temp_dir))
+        extracted_dir = extract.extract_if_needed(
+            Path(job.stored_path),
+            Path(config.temp_dir),
+            original_filename=job.original_filename,
+            target_dir=Path(config.temp_dir) / f"job_{job.id}",
+        )
         job_service.set_extracted_path(db, job, extracted_dir)
     except Exception as exc:
         job_service.update_status(db, job, JobStatus.error, f"Retry extraction failed: {exc}")

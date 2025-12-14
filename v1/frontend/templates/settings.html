@@ -12,6 +12,7 @@
         <button type="button" id="apply-kicad-root">Change paths</button>
       </div>
       <label>DB path<br><input type="text" id="database_path" name="database_path" value="{{ config.database_path if config else '' }}"></label><br>
+      <label>Retention days (0 = keep forever)<br><input type="number" min="0" id="retention_days" name="retention_days" value="{{ config.retention_days if config else 30 }}"></label><br>
     </div>
     <hr>
     <div class="settings-section">

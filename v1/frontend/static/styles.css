@@ -170,6 +170,7 @@ hr { border: 0; border-top: 1px solid var(--border); margin: 0.5rem 0; }
 .grid { display: grid; gap: 1rem; }
 .grid.two-col { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
 .info-block { border: 1px solid var(--border); background: #111823; padding: 0.75rem; border-radius: 10px; }
+.info-block .mono { white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
 .kv-list { display: grid; grid-template-columns: 1fr; row-gap: 0.35rem; column-gap: 1rem; }
 .kv-list dt { font-weight: 700; color: var(--muted); font-size: 0.9rem; }
 .kv-list dd { margin: 0; word-break: break-all; }

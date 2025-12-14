@@ -69,12 +69,16 @@ cd v1/docker
 docker compose -f docker-compose.kicad.yaml up -d --build
 ```
 
-Both containers mount `../../kicad` as `/kicad`. Configure KiCad to add libraries from:
-- `/kicad/symbols/~KiComport.kicad_sym`
-- `/kicad/footprints/~KiComport.pretty`
-- `/kicad/3d/~KiComport/`
+Both containers share the KiCad `/config` volume. Configure KiCad to add libraries from:
+- `/config/data/kicad/symbols/~KiComport.kicad_sym`
+- `/config/data/kicad/footprints/~KiComport.pretty`
+- `/config/data/kicad/3d/~KiComport/`
 
 On the job page you can optionally set a rename value to save the selected footprint + 3D model under a consistent base filename.
+
+Notes:
+- If you use LinuxServer-style UID/GID mapping, set `PUID`/`PGID` so KiComport writes to the shared volume with the same ownership.
+- Safety limits can be tuned via env vars like `KICOMPORT_MAX_UPLOAD_BYTES` and `KICOMPORT_MAX_EXTRACT_BYTES`.
 
 ## Makefile / scripts
 Helper scripts will be added under `v1/scripts` as the project evolves (dev server, lint, cleanup).

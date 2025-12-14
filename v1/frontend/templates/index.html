@@ -23,6 +23,7 @@
     </form>
   </section>
 
+  {% if jobs and jobs|length > 0 %}
   <section class="card">
     <div class="card-header">
       <div>
@@ -46,86 +47,94 @@
       <p class="muted small" id="attach-status">{% if not selected_job %}Select a job from the list first.{% endif %}</p>
     </form>
   </section>
+  {% endif %}
 </div>
 
-<div class="grid two-col">
-  <div>
-    <section class="card">
-      <h3>Jobs</h3>
-      <div class="table-actions">
-        <input type="search" id="job-filter" class="modern-input" placeholder="Filter by filename, md5, status">
-        <select id="status-filter" class="modern-input select">
-          <option value="">All statuses</option>
-          <option value="pending">Pending</option>
-          <option value="analyzing">Analyzing</option>
-          <option value="waiting_for_user">Waiting for user</option>
-          <option value="waiting_for_import">Waiting for import</option>
-          <option value="imported">Imported</option>
-          <option value="duplicate">Duplicate</option>
-          <option value="error">Error</option>
-        </select>
-      </div>
-      {% if jobs and jobs|length > 0 %}
-      <table class="job-table" id="jobs-table">
-        <thead>
-          <tr>
-            <th data-sort="id">ID</th>
-            <th data-sort="filename">Filename</th>
-            <th data-sort="status">Status</th>
-            <th data-sort="updated">Updated</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for job in jobs %}
-          <tr {% if selected_job and selected_job.id == job.id %}class="selected-job-row"{% endif %}>
-            <td><a href="/ui/jobs?job_id={{ job.id }}">{{ job.id }}</a></td>
-            <td>{{ job.original_filename }}</td>
-            <td><span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace('_', ' ') }}</span></td>
-            <td class="updated-cell mono" data-updated="{{ job.updated_at.isoformat() if job.updated_at else '' }}">{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
-            <td><button class="danger delete-job" data-id="{{ job.id }}">Delete</button></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-      {% else %}
-      <p class="muted">No jobs yet. Upload a zip or library file to start.</p>
-      {% endif %}
-    </section>
-
-    <section class="card">
-      <h3>Recent Job Logs</h3>
-      {% if recent_logs %}
-      <ul class="logs">
-        {% for log in recent_logs %}
-        <li><span class="mono">{{ log.created_at.strftime("%Y-%m-%d %H:%M") }}</span> [{{ log.level }}] Job {{ log.job_id }} - {{ log.message }}</li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="muted">No logs yet.</p>
-      {% endif %}
-    </section>
+<section class="card">
+  <h3>Jobs</h3>
+  <div class="table-actions">
+    <input type="search" id="job-filter" class="modern-input" placeholder="Filter by filename, md5, status">
+    <select id="status-filter" class="modern-input select">
+      <option value="">All statuses</option>
+      <option value="pending">Pending</option>
+      <option value="analyzing">Analyzing</option>
+      <option value="waiting_for_user">Waiting for user</option>
+      <option value="waiting_for_import">Waiting for import</option>
+      <option value="imported">Imported</option>
+      <option value="duplicate">Duplicate</option>
+      <option value="error">Error</option>
+    </select>
   </div>
+  {% if jobs and jobs|length > 0 %}
+  <table class="job-table" id="jobs-table">
+    <thead>
+      <tr>
+        <th data-sort="id">ID</th>
+        <th data-sort="filename">Filename</th>
+        <th data-sort="status">Status</th>
+        <th data-sort="updated">Updated</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for job in jobs %}
+      <tr data-md5="{{ job.md5 }}" {% if selected_job and selected_job.id == job.id %}class="selected-job-row"{% endif %}>
+        <td><a href="/ui/jobs?job_id={{ job.id }}">{{ job.id }}</a></td>
+        <td>{{ job.original_filename }}</td>
+        <td><span class="badge {{ job.status.value }}"><span class="badge-dot"></span>{{ job.status.value.replace('_', ' ') }}</span></td>
+        <td class="updated-cell mono" data-updated="{{ job.updated_at.isoformat() if job.updated_at else '' }}">{{ job.updated_at.strftime("%Y-%m-%d %H:%M") if job.updated_at else "" }}</td>
+        <td><button class="danger delete-job" data-id="{{ job.id }}">Delete</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">No jobs yet. Upload a zip or library file to start.</p>
+  {% endif %}
+</section>
 
-  <div>
-    {% if selected_job %}
-      {% set job = selected_job %}
-      {% set show_attach = false %}
-      {% set show_job_header = true %}
-      {% include "job_content.html" %}
-    {% else %}
-      <section class="card">
-        <h3>Selected Job</h3>
-        <p class="muted">Pick a job from the list to review candidates and import into KiCad.</p>
-      </section>
-    {% endif %}
-  </div>
-</div>
+{% if selected_job %}
+  {% set job = selected_job %}
+  {% set show_attach = false %}
+  {% set show_job_header = true %}
+  {% include "job_content.html" %}
+{% else %}
+  <section class="card">
+    <h3>Selected Job</h3>
+    <p class="muted">Pick a job from the list to review candidates and import into KiCad.</p>
+  </section>
+{% endif %}
+
+<section class="card">
+  <h3>Recent Job Logs</h3>
+  {% if recent_logs %}
+  <ul class="logs">
+    {% for log in recent_logs %}
+    <li><span class="mono">{{ log.created_at.strftime("%Y-%m-%d %H:%M") }}</span> [{{ log.level }}] Job {{ log.job_id }} - {{ log.message }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">No logs yet.</p>
+  {% endif %}
+</section>
 
 {% if libraries %}
 <section class="card">
   <h3>KiCad Libraries</h3>
   <p class="muted small">KiCad does not auto-detect new libraries from folders. Add symbol/footprint libraries in KiCad Preferences (global library tables) to make imports appear.</p>
+  {% set missing_libs = libraries | selectattr("exists", "equalto", false) | list %}
+  {% if missing_libs and missing_libs|length > 0 %}
+  <div class="helper-row" style="justify-content: space-between; align-items: center;">
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <span class="chip">Missing: {{ missing_libs | map(attribute="label") | join(", ") }}</span>
+      <span class="muted small">Click repair to create the <span class="mono">~KiComport</span> library paths.</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <button type="button" id="repair-kicad-lib">Repair</button>
+      <span id="repair-kicad-status" class="muted small"></span>
+    </div>
+  </div>
+  {% endif %}
   <div class="grid three-col">
     {% for lib in libraries %}
     <div class="info-block">
@@ -169,6 +178,8 @@
   const jobFilterInput = document.getElementById('job-filter');
   const statusFilter = document.getElementById('status-filter');
   const jobsTable = document.getElementById('jobs-table');
+  const repairBtn = document.getElementById('repair-kicad-lib');
+  const repairStatus = document.getElementById('repair-kicad-status');
 
   function setStatus(message, detail = "", loading = false) {
     if (!statusEl) return;
@@ -251,6 +262,21 @@
     }
   }
 
+  repairBtn?.addEventListener('click', async () => {
+    if (!repairBtn) return;
+    repairBtn.disabled = true;
+    if (repairStatus) repairStatus.textContent = "Repairing...";
+    try {
+      const resp = await fetch("/api/system/repair-kicad-library", { method: "POST" });
+      const body = await safeJson(resp);
+      if (!resp.ok) throw new Error(body?.detail || resp.statusText);
+      window.location.reload();
+    } catch (err) {
+      if (repairStatus) repairStatus.textContent = `Repair failed: ${err?.message || err}`;
+      repairBtn.disabled = false;
+    }
+  });
+
   dropZone.addEventListener('click', () => fileInput.click());
   dropZone.addEventListener('dragover', (e) => {
     e.preventDefault();
@@ -301,17 +327,17 @@
     if (!jobsTable) return;
     const term = (jobFilterInput?.value || "").toLowerCase();
     const statusVal = statusFilter?.value || "";
-    const rows = jobsTable.querySelectorAll("tbody tr");
-    rows.forEach((row) => {
-      const cells = row.querySelectorAll("td");
-      const filename = cells[1]?.textContent.toLowerCase() || "";
-      const statusText = cells[2]?.textContent.toLowerCase().replace(/\s+/g, "_") || "";
-      const md5 = cells[3]?.textContent.toLowerCase() || "";
-      const matchesTerm = !term || filename.includes(term) || md5.includes(term) || statusText.includes(term);
-      const matchesStatus = !statusVal || statusText === statusVal;
-      row.style.display = matchesTerm && matchesStatus ? "" : "none";
-    });
-  }
+      const rows = jobsTable.querySelectorAll("tbody tr");
+      rows.forEach((row) => {
+        const cells = row.querySelectorAll("td");
+        const filename = cells[1]?.textContent.toLowerCase() || "";
+        const statusText = cells[2]?.textContent.toLowerCase().replace(/\s+/g, "_") || "";
+        const md5 = (row.getAttribute('data-md5') || "").toLowerCase();
+        const matchesTerm = !term || filename.includes(term) || md5.includes(term) || statusText.includes(term);
+        const matchesStatus = !statusVal || statusText === statusVal;
+        row.style.display = matchesTerm && matchesStatus ? "" : "none";
+      });
+    }
 
   function sortJobs(columnIndex, numeric = false) {
     if (!jobsTable) return;

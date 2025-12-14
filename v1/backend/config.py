@@ -32,6 +32,7 @@ class AppConfig(BaseModel):
     temp_dir: Path = Path("./data/tmp")
     data_dir: Path = Path("./data")
     database_path: Path = Path("./data/app.db")
+    retention_days: int = 30
     kicad_root_dir: Optional[Path] = None
     kicad_symbol_dir: Path = Path("./data/kicad/symbols")
     kicad_footprint_dir: Path = Path("./data/kicad/footprints")
@@ -84,6 +85,7 @@ class AppConfigUpdate(BaseModel):
     temp_dir: Optional[Path] = None
     data_dir: Optional[Path] = None
     database_path: Optional[Path] = None
+    retention_days: Optional[int] = None
     kicad_symbol_dir: Optional[Path] = None
     kicad_footprint_dir: Optional[Path] = None
     kicad_3d_dir: Optional[Path] = None

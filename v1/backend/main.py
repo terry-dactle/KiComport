@@ -20,6 +20,7 @@ from .db.models import CandidateFile, Component, Job, JobLog, JobStatus
 from .db.models import Base
 from .db.session import get_engine, get_session_factory
 from .services import importer
+from .services import cleanup as cleanup_service
 from .services.logger import setup_logging
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "frontend" / "templates"
@@ -153,6 +154,11 @@ def _count_files(root: Path, *, suffixes: set[str] | None = None, pattern: str |
 def create_app() -> FastAPI:
     app = FastAPI(title="Global KiCad Library Import Server", version="0.1.0", docs_url="/docs")
     templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
+    try:
+        templates.env.globals["static_rev"] = int((STATIC_DIR / "styles.css").stat().st_mtime)
+    except Exception:
+        templates.env.globals["static_rev"] = int(time.time())
+    templates.env.filters["basename"] = lambda value: Path(str(value)).name if value else ""
 
     @app.on_event("startup")
     async def load_app_config() -> None:
@@ -162,6 +168,37 @@ def create_app() -> FastAPI:
         Base.metadata.create_all(engine)
         app.state.db_session_factory = get_session_factory(app.state.config)
         app.state.templates = templates
+        # Housekeeping: purge old jobs and clean orphaned files.
+        session = None
+        try:
+            session = app.state.db_session_factory()
+            purged = cleanup_service.purge_expired_jobs(session, app.state.config)
+            orphans = cleanup_service.cleanup_orphans(session, app.state.config)
+            session.commit()
+            logger = getattr(app.state, "logger", None)
+            if logger:
+                if purged:
+                    logger.info(f"startup.cleanup purged_jobs={purged}")
+                if orphans.get("removed_uploads") or orphans.get("removed_temp_dirs"):
+                    logger.info(
+                        "startup.cleanup orphans "
+                        f"uploads={orphans.get('removed_uploads')} temp_dirs={orphans.get('removed_temp_dirs')}"
+                    )
+        except Exception:
+            if session:
+                try:
+                    session.rollback()
+                except Exception:
+                    pass
+            logger = getattr(app.state, "logger", None)
+            if logger:
+                logger.exception("startup.cleanup_failed")
+        finally:
+            if session:
+                try:
+                    session.close()
+                except Exception:
+                    pass
 
     app.include_router(health_router)
     app.include_router(config_routes.router)

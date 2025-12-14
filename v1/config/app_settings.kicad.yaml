@@ -9,11 +9,11 @@ data_dir: /data
 database_path: /data/app.db
 retention_days: 30
 
-# Shared KiCad library root (mount this into your KiCad container too)
+# Shared KiCad libraries inside the LinuxServer KiCad container (/config volume)
 kicad_root_dir:
-kicad_symbol_dir: /kicad/symbols
-kicad_footprint_dir: /kicad/footprints
-kicad_3d_dir: /kicad/3d
+kicad_symbol_dir: /config/data/kicad/symbols
+kicad_footprint_dir: /config/data/kicad/footprints
+kicad_3d_dir: /config/data/kicad/3d
 
 ollama_enabled: false
 ollama_base_url: http://localhost:11434
@@ -24,3 +24,4 @@ ollama_max_retries: 2
 admin_password: ""
 log_level: INFO
 log_file:
+
