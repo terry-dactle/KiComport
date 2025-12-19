@@ -26,10 +26,12 @@ docker compose -f docker-compose.kicad.yaml up -d --build
 
 ### One-time KiCad setup (so imports appear)
 KiCad does not auto-detect new libraries just because files exist on disk. Add these once in KiCad Preferences:
-- Symbol library: `/config/data/kicad/symbols/~KiComport.kicad_sym`
-- Footprint library: `/config/data/kicad/footprints/~KiComport.pretty`
+- Symbol library: `/config/config/data/kicad/symbols/~KiComport.kicad_sym`
+- Footprint library: `/config/config/data/kicad/footprints/~KiComport.pretty`
 
-3D models are saved under `/config/data/kicad/3d/~KiComport/`.
+3D models are saved under `/config/config/data/kicad/3d/~KiComport/`.
+
+Note: Some KiCad containers use `/config/data/kicad` instead. Use the path that actually exists inside the KiCad container.
 
 **Easiest:** in the KiComport UI, use **KiCad Libraries → Install into KiCad** (writes `sym-lib-table` and `fp-lib-table`), then restart KiCad.
 If the button errors, ensure KiComport shares the same KiCad `/config` volume (mounted as `/config` or `/KiCad/config` in the KiComport container).
@@ -70,9 +72,9 @@ database_path: /data/app.db
 retention_days: 30
 
 kicad_root_dir:
-kicad_symbol_dir: /config/data/kicad/symbols
-kicad_footprint_dir: /config/data/kicad/footprints
-kicad_3d_dir: /config/data/kicad/3d
+kicad_symbol_dir: /config/config/data/kicad/symbols
+kicad_footprint_dir: /config/config/data/kicad/footprints
+kicad_3d_dir: /config/config/data/kicad/3d
 
 ollama_enabled: false
 ollama_base_url: http://localhost:11434
