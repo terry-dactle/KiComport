@@ -27,6 +27,98 @@ def get_config(request: Request) -> AppConfig:
     return cfg
 
 
+def _find_candidate_by_name(root: Path, name: str) -> Path | None:
+    if not name:
+        return None
+    try:
+        for match in root.rglob(name):
+            if match.is_file():
+                return match
+    except Exception:
+        return None
+    return None
+
+
+def _has_attach_dirs(root: Path) -> bool:
+    try:
+        return any(p.is_dir() and p.name.startswith("attach_") for p in root.iterdir())
+    except Exception:
+        return False
+
+
+def _ensure_candidate_path(
+    cand: CandidateFile,
+    cfg: AppConfig,
+    db: Session,
+) -> Path | None:
+    path = Path(cand.path)
+    if path.exists():
+        return path
+
+    job = cand.component.job if cand.component else None
+    if not job:
+        return None
+
+    rel_raw = (cand.rel_path or "").strip()
+    rel_path = Path(rel_raw) if rel_raw and rel_raw != "." else None
+    if rel_path and rel_path.is_absolute():
+        rel_path = None
+
+    def _resolve_in_root(root: Path) -> Path | None:
+        if rel_path:
+            candidate_path = root / rel_path
+            if candidate_path.exists():
+                cand.path = str(candidate_path)
+                db.add(cand)
+                db.flush()
+                return candidate_path
+        fallback_name = path.name or (rel_path.name if rel_path else "") or cand.name
+        candidate_path = _find_candidate_by_name(root, fallback_name)
+        if candidate_path:
+            cand.path = str(candidate_path)
+            try:
+                cand.rel_path = str(candidate_path.relative_to(root))
+            except Exception:
+                pass
+            db.add(cand)
+            db.flush()
+            return candidate_path
+        return None
+
+    extracted_root = Path(job.extracted_path) if job.extracted_path else None
+    if extracted_root and extracted_root.exists() and extracted_root.is_dir():
+        found = _resolve_in_root(extracted_root)
+        if found:
+            return found
+        if rel_path and "attach_" in rel_path.parts:
+            return None
+
+    stored_path = Path(job.stored_path) if job.stored_path else None
+    if not stored_path or not stored_path.exists():
+        return None
+
+    if extracted_root and extracted_root.exists() and _has_attach_dirs(extracted_root):
+        target_dir = Path(cfg.temp_dir) / f"job_{job.id}_rebuild_{uuid.uuid4().hex}"
+    else:
+        target_dir = extracted_root if extracted_root else (Path(cfg.temp_dir) / f"job_{job.id}")
+
+    try:
+        extracted_dir = extract.extract_if_needed(
+            stored_path,
+            Path(cfg.temp_dir),
+            original_filename=job.original_filename,
+            target_dir=target_dir,
+        )
+    except Exception:
+        return None
+
+    if not job.extracted_path or not Path(job.extracted_path).exists():
+        job.extracted_path = str(extracted_dir)
+        db.add(job)
+
+    return _resolve_in_root(extracted_dir)
+
+
 @router.get("")
 def list_jobs(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
     jobs = db.query(Job).order_by(Job.created_at.desc()).all()
@@ -264,20 +356,21 @@ def delete_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> 
 
 
 @router.get("/candidates/{candidate_id}/preview")
-def candidate_preview(candidate_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+def candidate_preview(candidate_id: int, request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
     cand = db.get(CandidateFile, candidate_id)
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found")
+    cfg = get_config(request)
     try:
-        path_obj = Path(cand.path)
-        if not path_obj.exists():
-            raise HTTPException(status_code=404, detail=f"File not found at {cand.path}")
+        path_obj = _ensure_candidate_path(cand, cfg, db)
+        if not path_obj or not path_obj.exists():
+            raise HTTPException(status_code=404, detail="Candidate file not found")
     except HTTPException:
         raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to access candidate path: {exc}") from exc
     try:
-        with open(cand.path, "r", encoding="utf-8", errors="ignore") as f:
+        with open(path_obj, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read(2000)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Failed to read candidate: {exc}") from exc
@@ -285,18 +378,21 @@ def candidate_preview(candidate_id: int, db: Session = Depends(get_db)) -> Dict[
         "id": cand.id,
         "type": cand.type.value,
         "name": cand.name,
-        "path": cand.path,
+        "path": str(path_obj),
         "rel_path": cand.rel_path,
         "content_preview": content,
     }
 
 
 @router.get("/candidates/{candidate_id}/render")
-def candidate_render(candidate_id: int, db: Session = Depends(get_db)) -> Dict[str, Any]:
+def candidate_render(candidate_id: int, request: Request, db: Session = Depends(get_db)) -> Dict[str, Any]:
     cand = db.get(CandidateFile, candidate_id)
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found")
+    cfg = get_config(request)
     try:
+        if not _ensure_candidate_path(cand, cfg, db):
+            raise FileNotFoundError(cand.path)
         image_data, note = preview_service.render_candidate_preview(cand)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Candidate file not found")
@@ -306,11 +402,12 @@ def candidate_render(candidate_id: int, db: Session = Depends(get_db)) -> Dict[s
 
 
 @router.get("/candidates/{candidate_id}/download")
-def candidate_download(candidate_id: int, db: Session = Depends(get_db)):
+def candidate_download(candidate_id: int, request: Request, db: Session = Depends(get_db)):
     cand = db.get(CandidateFile, candidate_id)
     if not cand:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    path = Path(cand.path)
-    if not path.exists():
+    cfg = get_config(request)
+    path = _ensure_candidate_path(cand, cfg, db)
+    if not path or not path.exists():
         raise HTTPException(status_code=404, detail="Candidate file not found")
     return FileResponse(path, filename=path.name, media_type="application/octet-stream")
