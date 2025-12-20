@@ -121,11 +121,26 @@
   <h3>KiCad Libraries</h3>
   <p class="muted small">KiCad does not auto-detect new libraries from folders. Add symbol/footprint libraries in KiCad Preferences (global library tables) to make imports appear.</p>
   {% set missing_libs = libraries | selectattr("exists", "equalto", false) | list %}
-  {% if missing_libs and missing_libs|length > 0 %}
+  {% set path_issues = libraries | selectattr("path_issue", "equalto", true) | list %}
+  {% set needs_repair = (missing_libs|length > 0) or (path_issues|length > 0) %}
+  {% if needs_repair %}
   <div class="helper-row" style="justify-content: space-between; align-items: center;">
     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      {% if missing_libs and missing_libs|length > 0 %}
       <span class="chip">Missing: {{ missing_libs | map(attribute="label") | join(", ") }}</span>
-      <span class="muted small">Click repair to create the <span class="mono">~KiComport</span> library paths.</span>
+      {% endif %}
+      {% if path_issues and path_issues|length > 0 %}
+      <span class="chip">Paths mismatch</span>
+      {% endif %}
+      <span class="muted small" id="repair-kicad-reason">
+        {% if missing_libs and missing_libs|length > 0 %}
+        Click repair to create the <span class="mono">~KiComport</span> library paths.
+        {% endif %}
+        {% if path_issues and path_issues|length > 0 %}
+        {% if missing_libs and missing_libs|length > 0 %} {% endif %}
+        Paths look inconsistent. Update Settings -> KiCad root dir to match your KiCad volume, then run Repair.
+        {% endif %}
+      </span>
     </div>
     <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
       <button type="button" id="repair-kicad-lib">Repair</button>
@@ -308,6 +323,13 @@
               ? String(detail.error)
               : (detail ? JSON.stringify(detail) : "");
         throw new Error(msg || resp.statusText);
+      }
+      if (body?.path_issue) {
+        installRow.style.display = "";
+        if (installStatus) {
+          installStatus.textContent = body.path_issue_message || "KiCad library paths look inconsistent. Update settings or reinstall.";
+        }
+        return;
       }
       if (body?.installed) {
         installRow.style.display = "none";

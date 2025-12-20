@@ -32,6 +32,7 @@ KiCad does not auto-detect new libraries just because files exist on disk. Add t
 3D models are saved under `/config/config/data/kicad/3d/~KiComport/`.
 
 Note: Some KiCad containers use `/config/data/kicad` instead. Use the path that actually exists inside the KiCad container.
+If you see paths like `/kicad/config/data/kicad`, update KiComport Settings -> KiCad root dir to the real library root (`/config/data/kicad` for bundled KiCad, `/kicad` for standalone).
 
 **Easiest:** in the KiComport UI, use **KiCad Libraries → Install into KiCad** (writes `sym-lib-table` and `fp-lib-table`), then restart KiCad.
 If the button errors, ensure KiComport shares the same KiCad `/config` volume (mounted as `/config` or `/KiCad/config` in the KiComport container).

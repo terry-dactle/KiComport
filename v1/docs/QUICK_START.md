@@ -73,6 +73,7 @@ Both containers share the KiCad `/config` volume. Configure KiCad to add librari
 - `/config/data/kicad/symbols/~KiComport.kicad_sym`
 - `/config/data/kicad/footprints/~KiComport.pretty`
 - `/config/data/kicad/3d/~KiComport/`
+If KiComport shows paths like `/kicad/config/data/kicad`, update Settings -> KiCad root dir to `/config/data/kicad` (bundled KiCad) or `/kicad` (standalone).
 
 On the job page you can optionally set a rename value to save the selected footprint + 3D model under a consistent base filename.
 

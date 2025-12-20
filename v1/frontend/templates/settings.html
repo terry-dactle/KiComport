@@ -68,7 +68,6 @@
   const modelSelect = document.getElementById('ollama-model-select');
   const modelStack = document.getElementById('ollama-model-stack');
   const ollamaTestStatus = document.getElementById('ollama-test-status');
-  const dataDirInput = document.getElementById('data_dir');
   const kicadRootInput = document.getElementById('kicad_root_dir');
   const symbolInput = document.getElementById('kicad_symbol_dir');
   const footprintInput = document.getElementById('kicad_footprint_dir');
@@ -202,10 +201,11 @@
   enabledBox?.addEventListener('change', syncToggleLabel);
   document.getElementById('apply-kicad-root')?.addEventListener('click', () => {
     const kicadRoot = (kicadRootInput?.value || "").trim().replace(/\/+$/, "");
-    const dataRoot = (dataDirInput?.value || "").trim().replace(/\/+$/, "");
-    const root = kicadRoot || dataRoot;
-    if (!root) return;
-    const base = kicadRoot ? root : `${root}/kicad`;
+    if (!kicadRoot) {
+      if (statusEl) statusEl.textContent = "Set a KiCad root dir (e.g. /config/data/kicad or /kicad) before applying paths.";
+      return;
+    }
+    const base = kicadRoot;
     if (symbolInput) symbolInput.value = `${base}/symbols`.replace(/\/+/, "/");
     if (footprintInput) footprintInput.value = `${base}/footprints`.replace(/\/+/, "/");
     if (modelDirInput) modelDirInput.value = `${base}/3d`.replace(/\/+/, "/");

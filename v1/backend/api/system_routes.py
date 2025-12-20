@@ -12,6 +12,7 @@ from ..config import AppConfig
 from ..db.deps import get_db
 from ..db.models import Job
 from ..services import importer
+from ..services.kicad_paths import find_kicad_config_dir, kicad_root_hint, map_kicad_visible_path
 
 router = APIRouter(tags=["system"])
 
@@ -53,6 +54,17 @@ def repair_kicad_library(request: Request) -> Dict[str, Any]:
     model_dir = Path(cfg.kicad_3d_dir)
 
     created: list[str] = []
+    warnings: list[str] = []
+    root_hint = kicad_root_hint(find_kicad_config_dir(cfg))
+    if root_hint == "/config":
+        if any(
+            str(path).startswith("/kicad/")
+            for path in (cfg.kicad_symbol_dir, cfg.kicad_footprint_dir, cfg.kicad_3d_dir)
+        ):
+            warnings.append(
+                "KiCad config appears under /config, but KiComport paths are under /kicad. "
+                "Update Settings -> KiCad root dir to /config/data/kicad for bundled KiCad."
+            )
     try:
         symbol_dir.mkdir(parents=True, exist_ok=True)
         footprint_dir.mkdir(parents=True, exist_ok=True)
@@ -108,42 +120,15 @@ def repair_kicad_library(request: Request) -> Dict[str, Any]:
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Repair failed: {exc}") from exc
 
-    return {"created": created}
+    return {"created": created, "warnings": warnings}
 
 
 def _kicad_visible_path(raw: str) -> str:
-    if raw.startswith("/KiCad/config/"):
-        return "/config/" + raw[len("/KiCad/config/") :]
-    return raw
+    return map_kicad_visible_path(raw)
 
 
 def _find_kicad_config_dir(cfg: AppConfig) -> Path | None:
-    """
-    Locate KiCad's config directory (the folder that contains version subfolders like `8.0/`).
-
-    For LinuxServer KiCad this is usually:
-    - `/config/.config/kicad`
-    """
-    candidates = [
-        Path(cfg.kicad_symbol_dir),
-        Path(cfg.kicad_footprint_dir),
-        Path(cfg.kicad_3d_dir),
-        Path.home(),
-        Path("/config"),
-        Path("/KiCad/config"),
-    ]
-    seen: set[Path] = set()
-    for base in candidates:
-        if not base:
-            continue
-        for anc in [base, *base.parents]:
-            if anc in seen:
-                continue
-            seen.add(anc)
-            kicad_dir = anc / ".config" / "kicad"
-            if kicad_dir.exists() and kicad_dir.is_dir():
-                return kicad_dir
-    return None
+    return find_kicad_config_dir(cfg)
 
 
 def _ensure_kicad_config_dir(cfg: AppConfig) -> Path:
@@ -206,6 +191,21 @@ def _candidate_kicad_table_dirs(kicad_cfg: Path) -> list[Path]:
 
     # If KiCad hasn't been launched yet, pre-create common version dirs.
     return [kicad_cfg, *(kicad_cfg / v for v in ("9.0", "8.0", "7.0", "6.0"))]
+
+
+def _path_issue_message(reasons: list[str], root_hint: str | None) -> str | None:
+    if root_hint == "/config" and any(
+        reason in reasons for reason in ("symbol_outside_kicad_root", "footprint_outside_kicad_root")
+    ):
+        return (
+            "KiCad config appears under /config, but library paths point to /kicad. "
+            "Update Settings -> KiCad root dir to /config/data/kicad and reinstall."
+        )
+    if any(reason in reasons for reason in ("symbol_path_missing", "footprint_path_missing")):
+        return "Expected library paths not found. Run Repair to create them."
+    if any(reason in reasons for reason in ("symbol_table_mismatch", "footprint_table_mismatch")):
+        return "KiCad library tables point to different paths. Reinstall into KiCad."
+    return None
 
 
 def _table_atom(text: str) -> str | None:
@@ -417,11 +417,32 @@ def kicad_library_tables_status(request: Request) -> Dict[str, Any]:
     expected_fp_uri = _kicad_visible_path(str(Path(cfg.kicad_footprint_dir) / f"{lib_folder}.pretty"))
 
     kicad_cfg = _find_kicad_config_dir(cfg)
+    root_hint = kicad_root_hint(kicad_cfg)
+    expected_exists = {
+        "symbols": Path(expected_sym_uri).exists(),
+        "footprints": Path(expected_fp_uri).exists(),
+    }
+    path_issue_reasons: list[str] = []
+    if root_hint == "/config":
+        if expected_sym_uri.startswith("/kicad/"):
+            path_issue_reasons.append("symbol_outside_kicad_root")
+        if expected_fp_uri.startswith("/kicad/"):
+            path_issue_reasons.append("footprint_outside_kicad_root")
+    if not expected_exists["symbols"]:
+        path_issue_reasons.append("symbol_path_missing")
+    if not expected_exists["footprints"]:
+        path_issue_reasons.append("footprint_path_missing")
+    path_issue_message = _path_issue_message(path_issue_reasons, root_hint)
     if not kicad_cfg:
         return {
             "installed": False,
             "reason": "kicad_config_dir_not_found",
             "expected": {"symbol_uri": expected_sym_uri, "footprint_uri": expected_fp_uri},
+            "expected_exists": expected_exists,
+            "kicad_root_hint": root_hint,
+            "path_issue": bool(path_issue_reasons),
+            "path_issue_reasons": path_issue_reasons,
+            "path_issue_message": path_issue_message,
         }
 
     dirs = _candidate_kicad_table_dirs(kicad_cfg)
@@ -452,13 +473,23 @@ def kicad_library_tables_status(request: Request) -> Dict[str, Any]:
 
     sym_ok = any(h.get("uri") == expected_sym_uri for h in sym_hits)
     fp_ok = any(h.get("uri") == expected_fp_uri for h in fp_hits)
+    if sym_hits and not sym_ok:
+        path_issue_reasons.append("symbol_table_mismatch")
+    if fp_hits and not fp_ok:
+        path_issue_reasons.append("footprint_table_mismatch")
+    path_issue_message = _path_issue_message(path_issue_reasons, root_hint)
 
     return {
         "installed": bool(sym_ok and fp_ok),
         "kicad_config_dir": str(kicad_cfg),
         "expected": {"symbol_uri": expected_sym_uri, "footprint_uri": expected_fp_uri},
+        "expected_exists": expected_exists,
         "found": {"symbols": sym_hits, "footprints": fp_hits},
         "ok": {"symbols": sym_ok, "footprints": fp_ok},
+        "kicad_root_hint": root_hint,
+        "path_issue": bool(path_issue_reasons),
+        "path_issue_reasons": path_issue_reasons,
+        "path_issue_message": path_issue_message,
     }
 
 

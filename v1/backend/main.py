@@ -21,6 +21,7 @@ from .db.models import Base
 from .db.session import get_engine, get_session_factory
 from .services import importer
 from .services import cleanup as cleanup_service
+from .services.kicad_paths import find_kicad_config_dir, kicad_root_hint, map_kicad_visible_path
 from .services.logger import setup_logging
 
 TEMPLATE_DIR = Path(__file__).resolve().parents[1] / "frontend" / "templates"
@@ -241,6 +242,8 @@ def create_app() -> FastAPI:
         symbol_path = Path(cfg.kicad_symbol_dir) / f"{lib_name}.kicad_sym"
         footprint_path = Path(cfg.kicad_footprint_dir) / f"{lib_name}.pretty"
         model_path = Path(cfg.kicad_3d_dir) / lib_name
+        kicad_cfg = find_kicad_config_dir(cfg)
+        root_hint = kicad_root_hint(kicad_cfg)
 
         for label, path in [
             ("Symbols", symbol_path),
@@ -248,15 +251,32 @@ def create_app() -> FastAPI:
             ("3D Models", model_path),
         ]:
             raw_path = str(path)
-            kicad_path = None
-            if raw_path.startswith("/KiCad/config/"):
-                kicad_path = "/config/" + raw_path[len("/KiCad/config/") :]
-            elif raw_path.startswith("/config/") or raw_path.startswith("/kicad/"):
-                kicad_path = raw_path
-            entry = {"label": label, "path": raw_path, "kicad_path": kicad_path, "exists": False, "count": 0, "sample": [], "truncated": False}
+            kicad_path = map_kicad_visible_path(raw_path, root_hint)
+            entry = {
+                "label": label,
+                "path": raw_path,
+                "kicad_path": kicad_path,
+                "kicad_path_exists": False,
+                "path_issue": False,
+                "issue_reason": None,
+                "exists": False,
+                "count": 0,
+                "sample": [],
+                "truncated": False,
+            }
+            kicad_root_exists = True
+            if kicad_path.startswith("/config/") or kicad_path == "/config":
+                kicad_root_exists = Path("/config").exists()
+            elif kicad_path.startswith("/kicad/") or kicad_path == "/kicad":
+                kicad_root_exists = Path("/kicad").exists()
+            if kicad_root_exists:
+                entry["kicad_path_exists"] = Path(kicad_path).exists()
             try:
                 p = Path(path)
                 entry["exists"] = p.exists()
+                if root_hint == "/config" and raw_path.startswith("/kicad/"):
+                    entry["path_issue"] = True
+                    entry["issue_reason"] = "kicad_root_mismatch"
                 if not p.exists():
                     libraries.append(entry)
                     continue
@@ -270,6 +290,14 @@ def create_app() -> FastAPI:
 
                 entry["count"] = count
                 entry["sample"] = sample
+                if (
+                    kicad_path
+                    and kicad_path != raw_path
+                    and kicad_root_exists
+                    and not entry["kicad_path_exists"]
+                ):
+                    entry["path_issue"] = True
+                    entry["issue_reason"] = "kicad_path_missing"
             except Exception:
                 if logger:
                     logger.exception("home.library_snapshot_failed", extra={"label": label, "path": str(path)})
@@ -317,11 +345,11 @@ def create_app() -> FastAPI:
         jobs, recent_logs = _fetch_jobs_and_logs()
         libraries = _library_snapshot(config)
         selected_job = _fetch_job_detail(job_id) if job_id else None
+        kicad_cfg = find_kicad_config_dir(config) if config else None
+        root_hint = kicad_root_hint(kicad_cfg)
         def _kicad_visible_path(value: object) -> str:
             raw = str(value or "")
-            if raw.startswith("/KiCad/config/"):
-                return "/config/" + raw[len("/KiCad/config/") :]
-            return raw
+            return map_kicad_visible_path(raw, root_hint)
 
         import_paths = {
             "symbol_root": str(getattr(config, "kicad_symbol_dir", "")) if config else "",
