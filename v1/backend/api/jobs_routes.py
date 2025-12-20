@@ -15,6 +15,7 @@ from ..services import importer, jobs as job_service, ranking
 from ..services import extract, scan as scan_service
 from ..services import preview as preview_service
 from ..services import uploads as upload_service
+from ..services import candidate_cache
 from .uploads_routes import ALLOWED_EXTS, _persist_components, _validate_zip_or_raise
 
 router = APIRouter(prefix="/api/jobs", tags=["jobs"])
@@ -148,25 +149,38 @@ def _ensure_candidate_path(
     if rel_path and rel_path.is_absolute():
         rel_path = None
 
+    def _cache_path(source: Path) -> Path | None:
+        try:
+            cache_dir = candidate_cache.cache_root(cfg, job.id)
+            cached = candidate_cache.cache_candidate_file(
+                source,
+                cache_dir,
+                cand.rel_path,
+                cand.name,
+            )
+        except Exception:
+            return None
+        if str(cached) != cand.path:
+            cand.path = str(cached)
+            db.add(cand)
+            db.flush()
+        return cached
+
     def _resolve_in_root(root: Path) -> Path | None:
         if rel_path:
             candidate_path = root / rel_path
             if candidate_path.exists():
-                cand.path = str(candidate_path)
-                db.add(cand)
-                db.flush()
-                return candidate_path
+                cached = _cache_path(candidate_path)
+                return cached or candidate_path
         fallback_name = path.name or (rel_path.name if rel_path else "") or cand.name
         candidate_path = _find_candidate_by_name(root, fallback_name)
         if candidate_path:
-            cand.path = str(candidate_path)
             try:
                 cand.rel_path = str(candidate_path.relative_to(root))
             except Exception:
                 pass
-            db.add(cand)
-            db.flush()
-            return candidate_path
+            cached = _cache_path(candidate_path)
+            return cached or candidate_path
         return None
 
     extracted_root = _resolve_extracted_root(job, cfg, db)
@@ -253,7 +267,12 @@ async def attach_file_to_job(
         candidates = scan_service.scan_candidates(Path(extracted_dir))
         if not candidates:
             raise HTTPException(status_code=400, detail="No candidates detected in attached file")
-        comp_objs, response_components = _persist_components(db, job.id, candidates)
+        comp_objs, response_components = _persist_components(
+            db,
+            job.id,
+            candidates,
+            cache_root=candidate_cache.cache_root(config, job.id),
+        )
         job_service.log_job(db, job, f"Attached file {file.filename} to job")
         return {
           "job_id": job.id,
@@ -413,7 +432,12 @@ def retry_job(job_id: int, request: Request, db: Session = Depends(get_db)) -> D
         job_service.update_status(db, job, JobStatus.error, "No candidates detected on retry")
         return {"job_id": job.id, "status": job.status.value, "message": job.message}
 
-    comp_objs, _ = _persist_components(db, job.id, candidates)
+    comp_objs, _ = _persist_components(
+        db,
+        job.id,
+        candidates,
+        cache_root=candidate_cache.cache_root(config, job.id),
+    )
     job_service.update_status(db, job, JobStatus.waiting_for_user, "Scan complete after retry")
     return {"job_id": job.id, "status": job.status.value}
 

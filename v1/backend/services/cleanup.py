@@ -8,6 +8,7 @@ from typing import Any, Dict
 from sqlalchemy.orm import Session
 
 from ..config import AppConfig
+from ..services import candidate_cache
 from ..db.models import Job
 
 _UPLOAD_PREFIXES = ("upload_", "upload_url_")
@@ -42,6 +43,7 @@ def purge_expired_jobs(db: Session, cfg: AppConfig) -> int:
             if not path_str:
                 continue
             _remove_path(Path(path_str))
+        _remove_path(candidate_cache.cache_root(cfg, job.id))
         db.delete(job)
     return len(expired)
 
@@ -50,12 +52,15 @@ def cleanup_orphans(db: Session, cfg: AppConfig) -> Dict[str, Any]:
     jobs: list[Job] = db.query(Job).all()
     referenced_files = {_norm(Path(j.stored_path)) for j in jobs if j.stored_path}
     referenced_dirs = {_norm(Path(j.extracted_path)) for j in jobs if j.extracted_path}
+    referenced_cache = {_norm(candidate_cache.cache_root(cfg, j.id)) for j in jobs}
 
     uploads_dir = Path(cfg.uploads_dir)
     temp_dir = Path(cfg.temp_dir)
+    cache_root = candidate_cache.cache_root(cfg, 0).parent
 
     removed_uploads = 0
     removed_temp_dirs = 0
+    removed_cache_dirs = 0
 
     try:
         if uploads_dir.exists():
@@ -85,4 +90,22 @@ def cleanup_orphans(db: Session, cfg: AppConfig) -> Dict[str, Any]:
     except Exception:
         pass
 
-    return {"removed_uploads": removed_uploads, "removed_temp_dirs": removed_temp_dirs}
+    try:
+        if cache_root.exists():
+            for p in cache_root.iterdir():
+                if not p.is_dir():
+                    continue
+                if not p.name.startswith("job_"):
+                    continue
+                if _norm(p) in referenced_cache:
+                    continue
+                if _remove_path(p):
+                    removed_cache_dirs += 1
+    except Exception:
+        pass
+
+    return {
+        "removed_uploads": removed_uploads,
+        "removed_temp_dirs": removed_temp_dirs,
+        "removed_cache_dirs": removed_cache_dirs,
+    }

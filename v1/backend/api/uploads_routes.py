@@ -19,6 +19,7 @@ from ..config import AppConfig
 from ..db.deps import get_db
 from ..db.models import CandidateFile, CandidateType, Component, JobStatus
 from ..services import extract, jobs as job_service, ollama as ollama_service, ranking, scan as scan_service, uploads as upload_service
+from ..services import candidate_cache
 
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
@@ -140,7 +141,12 @@ async def _process_upload(
         job_service.update_status(db, job, JobStatus.error, detail)
         return {"job_id": job.id, "status": job.status.value, "message": detail}
 
-    comp_objs, response_components = _persist_components(db, job.id, candidates)
+    comp_objs, response_components = _persist_components(
+        db,
+        job.id,
+        candidates,
+        cache_root=candidate_cache.cache_root(config, job.id),
+    )
 
     if config.ollama_enabled:
         try:
@@ -173,7 +179,12 @@ async def _process_upload(
     return {"job_id": job.id, "status": job.status.value, "components": response_components, "request_id": getattr(request.state, "request_id", None)}
 
 
-def _persist_components(db: Session, job_id: int, candidates: list[scan_service.CandidateData]) -> tuple[list[Component], list[Dict[str, Any]]]:
+def _persist_components(
+    db: Session,
+    job_id: int,
+    candidates: list[scan_service.CandidateData],
+    cache_root: Path | None = None,
+) -> tuple[list[Component], list[Dict[str, Any]]]:
     grouped: dict[str, list[scan_service.CandidateData]] = {}
     for cand in candidates:
         grouped.setdefault(cand.name, []).append(cand)
@@ -191,10 +202,21 @@ def _persist_components(db: Session, job_id: int, candidates: list[scan_service.
             if key in seen:
                 continue
             seen.add(key)
+            cached_path = None
+            if cache_root:
+                try:
+                    cached_path = candidate_cache.cache_candidate_file(
+                        Path(cand.path),
+                        cache_root,
+                        str(cand.rel_path) if cand.rel_path else None,
+                        cand.name,
+                    )
+                except Exception:
+                    cached_path = None
             cf = CandidateFile(
                 component_id=comp.id,
                 type=cand.type,
-                path=str(cand.path),
+                path=str(cached_path or cand.path),
                 rel_path=str(cand.rel_path),
                 name=cand.name,
                 description=cand.description,
