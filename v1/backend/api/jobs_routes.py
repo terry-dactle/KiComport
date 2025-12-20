@@ -39,6 +39,90 @@ def _find_candidate_by_name(root: Path, name: str) -> Path | None:
     return None
 
 
+def _latest_job_dir(temp_dir: Path, job_id: int) -> Path | None:
+    try:
+        matches = [
+            p
+            for p in temp_dir.iterdir()
+            if p.is_dir() and p.name.startswith(f"job_{job_id}")
+        ]
+    except Exception:
+        return None
+    if not matches:
+        return None
+    try:
+        matches.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    except Exception:
+        matches.sort()
+    return matches[0]
+
+
+def _resolve_extracted_root(job: Job, cfg: AppConfig, db: Session) -> Path | None:
+    extracted_root = Path(job.extracted_path) if job.extracted_path else None
+    if extracted_root and extracted_root.exists() and extracted_root.is_dir():
+        return extracted_root
+
+    temp_dir = Path(cfg.temp_dir)
+    candidate = temp_dir / f"job_{job.id}"
+    if candidate.exists() and candidate.is_dir():
+        job.extracted_path = str(candidate)
+        db.add(job)
+        db.flush()
+        return candidate
+
+    latest = _latest_job_dir(temp_dir, job.id)
+    if latest:
+        job.extracted_path = str(latest)
+        db.add(job)
+        db.flush()
+        return latest
+
+    return extracted_root
+
+
+def _resolve_stored_path(job: Job, cfg: AppConfig, db: Session) -> Path | None:
+    stored_path = Path(job.stored_path) if job.stored_path else None
+    if stored_path and stored_path.exists():
+        return stored_path
+
+    uploads_dir = Path(cfg.uploads_dir)
+    if not uploads_dir.exists() or not job.original_filename:
+        return stored_path
+
+    safe_name = upload_service.sanitize_filename(job.original_filename)
+    direct = uploads_dir / (stored_path.name if stored_path else "")
+    if direct and direct.exists():
+        job.stored_path = str(direct)
+        db.add(job)
+        db.flush()
+        return direct
+
+    matches = [
+        p
+        for p in uploads_dir.iterdir()
+        if p.is_file() and p.name.endswith(f"_{safe_name}")
+    ]
+    if not matches:
+        return stored_path
+    if len(matches) == 1:
+        job.stored_path = str(matches[0])
+        db.add(job)
+        db.flush()
+        return matches[0]
+
+    md5 = job.md5
+    for candidate in matches:
+        try:
+            if upload_service.compute_md5(candidate) == md5:
+                job.stored_path = str(candidate)
+                db.add(job)
+                db.flush()
+                return candidate
+        except Exception:
+            continue
+    return stored_path
+
+
 def _has_attach_dirs(root: Path) -> bool:
     try:
         return any(p.is_dir() and p.name.startswith("attach_") for p in root.iterdir())
@@ -85,7 +169,7 @@ def _ensure_candidate_path(
             return candidate_path
         return None
 
-    extracted_root = Path(job.extracted_path) if job.extracted_path else None
+    extracted_root = _resolve_extracted_root(job, cfg, db)
     if extracted_root and extracted_root.exists() and extracted_root.is_dir():
         found = _resolve_in_root(extracted_root)
         if found:
@@ -93,7 +177,7 @@ def _ensure_candidate_path(
         if rel_path and "attach_" in rel_path.parts:
             return None
 
-    stored_path = Path(job.stored_path) if job.stored_path else None
+    stored_path = _resolve_stored_path(job, cfg, db)
     if not stored_path or not stored_path.exists():
         return None
 
