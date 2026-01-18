@@ -37,6 +37,8 @@ class AppConfig(BaseModel):
     kicad_symbol_dir: Path = Path("./data/kicad/symbols")
     kicad_footprint_dir: Path = Path("./data/kicad/footprints")
     kicad_3d_dir: Path = Path("./data/kicad/3d")
+    symbol_name_strategy: str = "footprint"
+    symbol_dedupe_strategy: str = "auto"
     ollama_enabled: bool = False
     ollama_base_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
@@ -90,6 +92,8 @@ class AppConfigUpdate(BaseModel):
     kicad_footprint_dir: Optional[Path] = None
     kicad_3d_dir: Optional[Path] = None
     kicad_root_dir: Optional[Path] = None
+    symbol_name_strategy: Optional[str] = None
+    symbol_dedupe_strategy: Optional[str] = None
     ollama_enabled: Optional[bool] = None
     ollama_base_url: Optional[str] = None
     ollama_model: Optional[str] = None

@@ -347,6 +347,8 @@ async def import_job(job_id: int, request: Request, db: Session = Depends(get_db
         model_dir=model_root,
         subfolder=subfolder,
         rename_to=rename_to,
+        symbol_name_strategy=getattr(config, "symbol_name_strategy", "footprint"),
+        symbol_dedupe_strategy=getattr(config, "symbol_dedupe_strategy", "auto"),
     )
     return {
         "job_id": job.id,

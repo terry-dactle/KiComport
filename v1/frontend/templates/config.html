@@ -45,6 +45,8 @@
         <dt>Symbols</dt><dd class="mono">{{ safe_config.get("kicad_symbol_dir", "-") }}</dd>
         <dt>Footprints</dt><dd class="mono">{{ safe_config.get("kicad_footprint_dir", "-") }}</dd>
         <dt>3D Models</dt><dd class="mono">{{ safe_config.get("kicad_3d_dir", "-") }}</dd>
+        <dt>Symbol naming</dt><dd>{{ safe_config.get("symbol_name_strategy", "-") }}</dd>
+        <dt>Symbol dedupe</dt><dd>{{ safe_config.get("symbol_dedupe_strategy", "-") }}</dd>
       </dl>
     </div>
     <div class="info-block">

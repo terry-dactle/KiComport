@@ -16,6 +16,8 @@ Config is stored in `v1/config/app_settings.yaml` (or `.json`). On startup the a
 | `kicad_symbol_dir` | path | `./data/kicad/symbols` | Global symbol libs (`.kicad_sym`) |
 | `kicad_footprint_dir` | path | `./data/kicad/footprints` | `.pretty` / `.kicad_mod` storage |
 | `kicad_3d_dir` | path | `./data/kicad/3d` | 3D models (`.step/.stp/.wrl`, etc.) |
+| `symbol_name_strategy` | string | `footprint` | Symbol naming: `part_number`, `source_symbol_name`, or `footprint` |
+| `symbol_dedupe_strategy` | string | `auto` | Symbol conflict handling: `auto` (replace on rename), `skip`, or `replace` |
 | `ollama_enabled` | bool | `false` | Toggle AI scoring |
 | `ollama_base_url` | string | `http://localhost:11434` | Ollama endpoint |
 | `ollama_model` | string | `qwen2.5:7b` | Model name/tag |
@@ -56,6 +58,8 @@ kicad_root_dir:
 kicad_symbol_dir: ./data/kicad/symbols
 kicad_footprint_dir: ./data/kicad/footprints
 kicad_3d_dir: ./data/kicad/3d
+symbol_name_strategy: footprint
+symbol_dedupe_strategy: auto
 ollama_enabled: false
 ollama_base_url: http://localhost:11434
 ollama_model: qwen2.5:7b

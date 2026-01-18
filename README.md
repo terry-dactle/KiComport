@@ -76,6 +76,8 @@ kicad_root_dir:
 kicad_symbol_dir: /config/config/data/kicad/symbols
 kicad_footprint_dir: /config/config/data/kicad/footprints
 kicad_3d_dir: /config/config/data/kicad/3d
+symbol_name_strategy: footprint
+symbol_dedupe_strategy: auto
 
 ollama_enabled: false
 ollama_base_url: http://localhost:11434

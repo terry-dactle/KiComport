@@ -22,6 +22,8 @@ from .jobs import log_job, update_status
 DEFAULT_SUBFOLDER = "~KiComport"
 SYMBOL_HEADER = "(kicad_symbol_lib (version 20211014) (generator kicomport)\n"
 KNOWN_RENAME_EXTS = (".kicad_mod", ".step", ".stp", ".wrl", ".obj", ".kicad_sym")
+SYMBOL_NAME_STRATEGIES = {"part_number", "source_symbol_name", "footprint"}
+SYMBOL_DEDUPE_STRATEGIES = {"auto", "skip", "replace"}
 
 @contextmanager
 def _file_lock(lock_path: Path):
@@ -88,6 +90,8 @@ def import_job_selection(
     model_dir: Path,
     subfolder: str = DEFAULT_SUBFOLDER,
     rename_to: str | None = None,
+    symbol_name_strategy: str = "footprint",
+    symbol_dedupe_strategy: str = "auto",
 ) -> Tuple[Dict[str, int], List[str]]:
     if job.status not in {JobStatus.waiting_for_import, JobStatus.waiting_for_user}:
         log_job(db, job, f"Import triggered from status {job.status.value}", level="WARNING")
@@ -96,6 +100,8 @@ def import_job_selection(
 
     safe_sub = _safe_segment(subfolder or DEFAULT_SUBFOLDER)
     safe_rename = _safe_basename(_strip_known_ext(rename_to)) if rename_to else ""
+    symbol_name_strategy = _normalize_symbol_name_strategy(symbol_name_strategy)
+    symbol_dedupe_strategy = _normalize_symbol_dedupe_strategy(symbol_dedupe_strategy)
     # Keep a single stable library at the root of each KiCad library folder.
     # - symbols: <symbol_dir>/~KiComport.kicad_sym
     # - footprints: <footprint_dir>/~KiComport.pretty/<name>.kicad_mod
@@ -125,7 +131,14 @@ def import_job_selection(
             destinations.append(str(fp_dest))
 
         count, sym_dest = _copy_if_selected(
-            db, comp, comp.selected_symbol_id, CandidateType.symbol, symbol_dir, rename_to=safe_rename or None
+            db,
+            comp,
+            comp.selected_symbol_id,
+            CandidateType.symbol,
+            symbol_dir,
+            rename_to=safe_rename or None,
+            symbol_name_strategy=symbol_name_strategy,
+            symbol_dedupe_strategy=symbol_dedupe_strategy,
         )
         copied["symbols"] += count
         if sym_dest:
@@ -149,6 +162,8 @@ def _copy_if_selected(
     target_root: Path,
     rename_to: str | None = None,
     model_dest: Path | None = None,
+    symbol_name_strategy: str = "footprint",
+    symbol_dedupe_strategy: str = "auto",
 ) -> Tuple[int, Optional[Path]]:
     if not candidate_id:
         return 0, None
@@ -157,16 +172,30 @@ def _copy_if_selected(
         log_job(db, comp.job, f"Candidate {candidate_id} missing or wrong type {expected_type.value}", level="WARNING")
         return 0, None
     src = Path(candidate.path)
-    dest = _destination_for(candidate, target_root, rename_to=rename_to)
+    symbol_rename = rename_to
+    if candidate.type == CandidateType.symbol:
+        symbol_rename = _symbol_rename_for_strategy(
+            symbol_name_strategy,
+            comp_name=comp.name,
+            candidate_name=candidate.name,
+            rename_to=rename_to,
+        )
+    dest = _destination_for(candidate, target_root, rename_to=symbol_rename)
     dest.parent.mkdir(parents=True, exist_ok=True)
     if candidate.type == CandidateType.symbol:
         lock_path = dest.with_name(dest.name + ".lock")
         with _file_lock(lock_path):
-            merged = _merge_symbol_lib(src, dest, rename_to=rename_to, source_symbol_hint=candidate.name)
+            merged = _merge_symbol_lib(
+                src,
+                dest,
+                rename_to=symbol_rename,
+                source_symbol_hint=candidate.name,
+                conflict_policy=symbol_dedupe_strategy,
+            )
         log_job(
             db,
             comp.job,
-            f"Imported symbol {candidate.name}{f' as {rename_to}' if rename_to else ''} into {dest}",
+            f"Imported symbol {candidate.name}{f' as {symbol_rename}' if symbol_rename else ''} into {dest}",
         )
         candidate.selected_count += 1
         apply_feedback(candidate)
@@ -260,6 +289,38 @@ def _strip_known_ext(name: str | None) -> str:
     return txt
 
 
+def _normalize_symbol_name_strategy(value: str | None) -> str:
+    if not value:
+        return "footprint"
+    cleaned = str(value).strip().lower()
+    return cleaned if cleaned in SYMBOL_NAME_STRATEGIES else "footprint"
+
+
+def _normalize_symbol_dedupe_strategy(value: str | None) -> str:
+    if not value:
+        return "auto"
+    cleaned = str(value).strip().lower()
+    return cleaned if cleaned in SYMBOL_DEDUPE_STRATEGIES else "auto"
+
+
+def _symbol_rename_for_strategy(
+    strategy: str,
+    *,
+    comp_name: str,
+    candidate_name: str,
+    rename_to: str | None,
+) -> str | None:
+    if strategy == "part_number":
+        cleaned = _safe_basename(_strip_known_ext(comp_name))
+        return cleaned or None
+    if strategy == "source_symbol_name":
+        cleaned = _safe_basename(_strip_known_ext(candidate_name))
+        return cleaned or None
+    if strategy == "footprint":
+        return rename_to or None
+    return rename_to or None
+
+
 _FOOTPRINT_NAME_RE = re.compile(r'\(footprint\s+"([^"]+)"')
 _MODULE_NAME_RE = re.compile(r"\(module\s+([^\s()]+)")
 _MODEL_PATH_RE = re.compile(r'\(model\s+"([^"]+)"')
@@ -317,7 +378,14 @@ def _rename_symbol_block(symbol_block: str, new_name: str) -> str:
     return out
 
 
-def _merge_symbol_lib(src: Path, dest: Path, *, rename_to: str | None = None, source_symbol_hint: str | None = None) -> int:
+def _merge_symbol_lib(
+    src: Path,
+    dest: Path,
+    *,
+    rename_to: str | None = None,
+    source_symbol_hint: str | None = None,
+    conflict_policy: str = "auto",
+) -> int:
     """
     Merge symbols from src library into dest library file.
     Returns count of symbols added (duplicates by name are skipped).
@@ -347,10 +415,17 @@ def _merge_symbol_lib(src: Path, dest: Path, *, rename_to: str | None = None, so
 
     existing_text = dest.read_text(encoding="utf-8", errors="ignore")
     existing_symbols = _extract_symbols(existing_text)
-    if did_rename:
-        removed_names = {rename_to}
-        if old_name_to_remove and old_name_to_remove != rename_to:
-            removed_names.add(old_name_to_remove)
+    policy = _normalize_symbol_dedupe_strategy(conflict_policy)
+    if policy == "auto":
+        policy = "replace" if did_rename else "skip"
+    if policy == "replace":
+        removed_names = set()
+        if did_rename and rename_to:
+            removed_names.add(rename_to)
+            if old_name_to_remove and old_name_to_remove != rename_to:
+                removed_names.add(old_name_to_remove)
+        else:
+            removed_names.update(_symbol_name(s) for s in new_symbols if _symbol_name(s))
         existing_symbols = [s for s in existing_symbols if _symbol_name(s) not in removed_names]
     existing_names = {_symbol_name(s) for s in existing_symbols}
     added = []
