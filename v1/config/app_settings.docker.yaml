@@ -14,7 +14,7 @@ kicad_root_dir:
 kicad_symbol_dir: /kicad/symbols
 kicad_footprint_dir: /kicad/footprints
 kicad_3d_dir: /kicad/3d
-symbol_name_strategy: footprint
+symbol_name_strategy: component
 symbol_dedupe_strategy: auto
 
 ollama_enabled: false

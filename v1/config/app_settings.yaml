@@ -9,7 +9,7 @@ kicad_root_dir:
 kicad_symbol_dir: ./data/kicad/symbols
 kicad_footprint_dir: ./data/kicad/footprints
 kicad_3d_dir: ./data/kicad/3d
-symbol_name_strategy: footprint
+symbol_name_strategy: component
 symbol_dedupe_strategy: auto
 ollama_enabled: false
 ollama_base_url: http://localhost:11434

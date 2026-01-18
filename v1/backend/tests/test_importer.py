@@ -63,7 +63,17 @@ def test_destination_for_model_rename_strips_known_extension_from_input():
     assert dest == target / "MyPart.step"
 
 
-def test_symbol_rename_strategy_part_number():
+def test_symbol_rename_strategy_component():
+    rename = _symbol_rename_for_strategy(
+        "component",
+        comp_name="LT8390A",
+        candidate_name="SYM",
+        rename_to="SOP65P",
+    )
+    assert rename == "LT8390A"
+
+
+def test_symbol_rename_strategy_part_number_alias():
     rename = _symbol_rename_for_strategy(
         "part_number",
         comp_name="LT8390A",

@@ -76,7 +76,7 @@ kicad_root_dir:
 kicad_symbol_dir: /config/config/data/kicad/symbols
 kicad_footprint_dir: /config/config/data/kicad/footprints
 kicad_3d_dir: /config/config/data/kicad/3d
-symbol_name_strategy: footprint
+symbol_name_strategy: component
 symbol_dedupe_strategy: auto
 
 ollama_enabled: false
@@ -118,6 +118,17 @@ docker run -d \
 - SQLite tuning:
   - `KICOMPORT_SQLITE_WAL=0` to disable WAL mode (enabled by default)
   - `KICOMPORT_SQLITE_TIMEOUT_SEC` (default `30`)
+
+## Symbol naming
+`symbol_name_strategy` controls the symbol name written into the destination `.kicad_sym`:
+- `component` (recommended): use the component/part number (default)
+- `source_symbol_name`: keep the name from the source library
+- `footprint`: use the import Name value (often the package/footprint)
+Legacy configs using `part_number` are treated the same as `component`.
+
+Why this matters: if a library contains `(symbol "SOP65P640X120-29N" ...)` and properties like `Value=LT8390AEFE_PBF` and `MP=LT8390AEFE#PBF`, searching `LT8390` in KiCad's symbol chooser will not show it when symbols are named by footprint (you have to search by the package name).
+
+`symbol_dedupe_strategy` controls conflicts: `auto` (replace on rename), `skip`, or `replace`.
 
 ## Project Layout
 - `v1/backend/` — FastAPI app + services

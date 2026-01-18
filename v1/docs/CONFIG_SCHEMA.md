@@ -16,7 +16,7 @@ Config is stored in `v1/config/app_settings.yaml` (or `.json`). On startup the a
 | `kicad_symbol_dir` | path | `./data/kicad/symbols` | Global symbol libs (`.kicad_sym`) |
 | `kicad_footprint_dir` | path | `./data/kicad/footprints` | `.pretty` / `.kicad_mod` storage |
 | `kicad_3d_dir` | path | `./data/kicad/3d` | 3D models (`.step/.stp/.wrl`, etc.) |
-| `symbol_name_strategy` | string | `footprint` | Symbol naming: `part_number`, `source_symbol_name`, or `footprint` |
+| `symbol_name_strategy` | string | `component` | Symbol naming: `component`, `source_symbol_name`, or `footprint` (legacy `part_number` alias) |
 | `symbol_dedupe_strategy` | string | `auto` | Symbol conflict handling: `auto` (replace on rename), `skip`, or `replace` |
 | `ollama_enabled` | bool | `false` | Toggle AI scoring |
 | `ollama_base_url` | string | `http://localhost:11434` | Ollama endpoint |
@@ -32,6 +32,9 @@ Config is stored in `v1/config/app_settings.yaml` (or `.json`). On startup the a
 - Startup housekeeping purges expired jobs when `retention_days > 0`.
 - Paths are stored absolute after resolution to avoid surprises in Docker volumes.
 - Security (auth/edge protection) is expected to be handled outside the app (e.g. Cloudflare / reverse proxy).
+
+## Symbol Naming Notes
+If a library contains `(symbol "SOP65P640X120-29N" ...)` with properties like `Value=LT8390AEFE_PBF` and `MP=LT8390AEFE#PBF`, searching `LT8390` in KiCad's symbol chooser will not find it when symbols are named by footprint (you have to search by the package name). Use `symbol_name_strategy: component` to keep symbols searchable by part number.
 
 ## Environment Variables
 These are optional knobs for safety/performance:
@@ -58,7 +61,7 @@ kicad_root_dir:
 kicad_symbol_dir: ./data/kicad/symbols
 kicad_footprint_dir: ./data/kicad/footprints
 kicad_3d_dir: ./data/kicad/3d
-symbol_name_strategy: footprint
+symbol_name_strategy: component
 symbol_dedupe_strategy: auto
 ollama_enabled: false
 ollama_base_url: http://localhost:11434

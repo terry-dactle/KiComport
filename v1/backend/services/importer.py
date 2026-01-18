@@ -22,7 +22,7 @@ from .jobs import log_job, update_status
 DEFAULT_SUBFOLDER = "~KiComport"
 SYMBOL_HEADER = "(kicad_symbol_lib (version 20211014) (generator kicomport)\n"
 KNOWN_RENAME_EXTS = (".kicad_mod", ".step", ".stp", ".wrl", ".obj", ".kicad_sym")
-SYMBOL_NAME_STRATEGIES = {"part_number", "source_symbol_name", "footprint"}
+SYMBOL_NAME_STRATEGIES = {"component", "part_number", "source_symbol_name", "footprint"}
 SYMBOL_DEDUPE_STRATEGIES = {"auto", "skip", "replace"}
 
 @contextmanager
@@ -90,7 +90,7 @@ def import_job_selection(
     model_dir: Path,
     subfolder: str = DEFAULT_SUBFOLDER,
     rename_to: str | None = None,
-    symbol_name_strategy: str = "footprint",
+    symbol_name_strategy: str = "component",
     symbol_dedupe_strategy: str = "auto",
 ) -> Tuple[Dict[str, int], List[str]]:
     if job.status not in {JobStatus.waiting_for_import, JobStatus.waiting_for_user}:
@@ -162,7 +162,7 @@ def _copy_if_selected(
     target_root: Path,
     rename_to: str | None = None,
     model_dest: Path | None = None,
-    symbol_name_strategy: str = "footprint",
+    symbol_name_strategy: str = "component",
     symbol_dedupe_strategy: str = "auto",
 ) -> Tuple[int, Optional[Path]]:
     if not candidate_id:
@@ -291,9 +291,11 @@ def _strip_known_ext(name: str | None) -> str:
 
 def _normalize_symbol_name_strategy(value: str | None) -> str:
     if not value:
-        return "footprint"
+        return "component"
     cleaned = str(value).strip().lower()
-    return cleaned if cleaned in SYMBOL_NAME_STRATEGIES else "footprint"
+    if cleaned == "part_number":
+        return "component"
+    return cleaned if cleaned in SYMBOL_NAME_STRATEGIES else "component"
 
 
 def _normalize_symbol_dedupe_strategy(value: str | None) -> str:
@@ -310,7 +312,7 @@ def _symbol_rename_for_strategy(
     candidate_name: str,
     rename_to: str | None,
 ) -> str | None:
-    if strategy == "part_number":
+    if strategy in {"component", "part_number"}:
         cleaned = _safe_basename(_strip_known_ext(comp_name))
         return cleaned or None
     if strategy == "source_symbol_name":
@@ -388,7 +390,7 @@ def _merge_symbol_lib(
 ) -> int:
     """
     Merge symbols from src library into dest library file.
-    Returns count of symbols added (duplicates by name are skipped).
+    Returns count of symbols added (conflicts handled by policy).
     """
     source_symbols = _extract_symbols(src.read_text(encoding="utf-8", errors="ignore"))
     old_name_to_remove: str | None = None

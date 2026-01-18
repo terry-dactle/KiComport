@@ -22,9 +22,9 @@
       <label>3D dir<br><input type="text" id="kicad_3d_dir" name="kicad_3d_dir" value="{{ config.kicad_3d_dir if config else '' }}"></label><br>
       <label>Symbol naming strategy<br>
         <select id="symbol_name_strategy" name="symbol_name_strategy" class="select-input">
-          <option value="part_number" {% if config and config.symbol_name_strategy == "part_number" %}selected{% endif %}>part_number</option>
+          <option value="component" {% if not config or config.symbol_name_strategy == "component" %}selected{% endif %}>component</option>
           <option value="source_symbol_name" {% if config and config.symbol_name_strategy == "source_symbol_name" %}selected{% endif %}>source_symbol_name</option>
-          <option value="footprint" {% if not config or config.symbol_name_strategy == "footprint" %}selected{% endif %}>footprint</option>
+          <option value="footprint" {% if config and config.symbol_name_strategy == "footprint" %}selected{% endif %}>footprint</option>
         </select>
       </label><br>
       <label>Symbol dedupe strategy<br>

@@ -20,6 +20,28 @@ _PATH_FIELDS: Iterable[str] = (
     "kicad_footprint_dir",
     "kicad_3d_dir",
 )
+_SYMBOL_NAME_STRATEGIES = {"component", "source_symbol_name", "footprint", "part_number"}
+_SYMBOL_DEDUPE_STRATEGIES = {"auto", "skip", "replace"}
+
+
+def _normalize_symbol_name_strategy(value: Any, default: Optional[str]) -> Optional[str]:
+    if value is None:
+        return default
+    cleaned = str(value).strip().lower()
+    if cleaned == "part_number":
+        return "component"
+    if cleaned in _SYMBOL_NAME_STRATEGIES:
+        return cleaned
+    return default
+
+
+def _normalize_symbol_dedupe_strategy(value: Any, default: Optional[str]) -> Optional[str]:
+    if value is None:
+        return default
+    cleaned = str(value).strip().lower()
+    if cleaned in _SYMBOL_DEDUPE_STRATEGIES:
+        return cleaned
+    return default
 
 
 class AppConfig(BaseModel):
@@ -37,7 +59,7 @@ class AppConfig(BaseModel):
     kicad_symbol_dir: Path = Path("./data/kicad/symbols")
     kicad_footprint_dir: Path = Path("./data/kicad/footprints")
     kicad_3d_dir: Path = Path("./data/kicad/3d")
-    symbol_name_strategy: str = "footprint"
+    symbol_name_strategy: str = "component"
     symbol_dedupe_strategy: str = "auto"
     ollama_enabled: bool = False
     ollama_base_url: str = "http://localhost:11434"
@@ -75,6 +97,16 @@ class AppConfig(BaseModel):
             if isinstance(val, Path):
                 data[key] = str(val)
         return data
+
+    @field_validator("symbol_name_strategy", mode="before")
+    @classmethod
+    def _normalize_symbol_name(cls, value: Any) -> str:
+        return _normalize_symbol_name_strategy(value, "component") or "component"
+
+    @field_validator("symbol_dedupe_strategy", mode="before")
+    @classmethod
+    def _normalize_symbol_dedupe(cls, value: Any) -> str:
+        return _normalize_symbol_dedupe_strategy(value, "auto") or "auto"
 
 
 class AppConfigUpdate(BaseModel):
@@ -121,6 +153,16 @@ class AppConfigUpdate(BaseModel):
         if value is None or isinstance(value, Path):
             return value
         return Path(str(value))
+
+    @field_validator("symbol_name_strategy", mode="before")
+    @classmethod
+    def _normalize_symbol_name(cls, value: Any) -> Optional[str]:
+        return _normalize_symbol_name_strategy(value, None)
+
+    @field_validator("symbol_dedupe_strategy", mode="before")
+    @classmethod
+    def _normalize_symbol_dedupe(cls, value: Any) -> Optional[str]:
+        return _normalize_symbol_dedupe_strategy(value, None)
 
 
 def _resolve_path(path_value: Path, base: Path) -> Path:
