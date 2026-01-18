@@ -22,8 +22,27 @@ from .jobs import log_job, update_status
 DEFAULT_SUBFOLDER = "~KiComport"
 SYMBOL_HEADER = "(kicad_symbol_lib (version 20211014) (generator kicomport)\n"
 KNOWN_RENAME_EXTS = (".kicad_mod", ".step", ".stp", ".wrl", ".obj", ".kicad_sym")
-SYMBOL_NAME_STRATEGIES = {"component", "part_number", "source_symbol_name", "footprint"}
+SYMBOL_NAME_STRATEGIES = {"component", "part_number", "source_symbol_name", "footprint", "mp", "value", "properties"}
 SYMBOL_DEDUPE_STRATEGIES = {"auto", "skip", "replace"}
+SYMBOL_PART_NUMBER_KEYS = [
+    "MP",
+    "MPN",
+    "Mfr_PN",
+    "MFR_PN",
+    "Manufacturer_Part_Number",
+    "Manufacturer Part Number",
+    "DigiKey_Part_Number",
+    "Digi-Key_Part_Number",
+    "Mouser_Part_Number",
+    "Arrow_Part_Number",
+    "LCSC",
+    "LCSC_Part",
+    "JLCPCB Part",
+    "JLCPCB_Part",
+]
+SYMBOL_PROPERTY_KEYS = SYMBOL_PART_NUMBER_KEYS + ["Value"]
+_SYMBOL_PROPERTY_KEYS_LOWER = {key.lower() for key in SYMBOL_PROPERTY_KEYS}
+_SYMBOL_PROPERTY_RE = re.compile(r'\(property\s+"([^"]+)"\s+"([^"]*)"', re.IGNORECASE)
 
 @contextmanager
 def _file_lock(lock_path: Path):
@@ -41,6 +60,11 @@ def _file_lock(lock_path: Path):
 
 def _atomic_write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    prior_mode = None
+    try:
+        prior_mode = path.stat().st_mode & 0o777
+    except FileNotFoundError:
+        prior_mode = None
     fd, tmp_path = tempfile.mkstemp(prefix=path.name + ".", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -48,6 +72,14 @@ def _atomic_write(path: Path, content: str) -> None:
             f.flush()
             os.fsync(f.fileno())
         os.replace(tmp_path, path)
+        if prior_mode in (None, 0o600):
+            target_mode = 0o664
+        else:
+            target_mode = prior_mode
+        try:
+            os.chmod(path, target_mode)
+        except Exception:
+            pass
     finally:
         try:
             os.unlink(tmp_path)
@@ -173,12 +205,17 @@ def _copy_if_selected(
         return 0, None
     src = Path(candidate.path)
     symbol_rename = rename_to
+    symbol_hint = candidate.name
     if candidate.type == CandidateType.symbol:
+        symbol_hint = _symbol_source_name(candidate) or candidate.name
         symbol_rename = _symbol_rename_for_strategy(
             symbol_name_strategy,
             comp_name=comp.name,
             candidate_name=candidate.name,
             rename_to=rename_to,
+            candidate=candidate,
+            src=src,
+            source_symbol_hint=symbol_hint,
         )
     dest = _destination_for(candidate, target_root, rename_to=symbol_rename)
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -189,7 +226,7 @@ def _copy_if_selected(
                 src,
                 dest,
                 rename_to=symbol_rename,
-                source_symbol_hint=candidate.name,
+                source_symbol_hint=symbol_hint,
                 conflict_policy=symbol_dedupe_strategy,
             )
         log_job(
@@ -305,19 +342,168 @@ def _normalize_symbol_dedupe_strategy(value: str | None) -> str:
     return cleaned if cleaned in SYMBOL_DEDUPE_STRATEGIES else "auto"
 
 
+def _clean_symbol_rename(value: str | None) -> str | None:
+    cleaned = _safe_basename(_strip_known_ext(value)) if value else ""
+    return cleaned or None
+
+
+def _clean_property_value(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = str(value).strip()
+    if not cleaned or cleaned == "~":
+        return None
+    return cleaned
+
+
+def _candidate_metadata(candidate: CandidateFile | None) -> dict:
+    if not candidate or not isinstance(candidate.metadata_json, dict):
+        return {}
+    return candidate.metadata_json
+
+
+def _candidate_part_name(candidate: CandidateFile | None) -> str | None:
+    meta = _candidate_metadata(candidate)
+    return _clean_property_value(meta.get("part_name"))
+
+
+def _candidate_symbol_properties(candidate: CandidateFile | None) -> dict[str, str]:
+    meta = _candidate_metadata(candidate)
+    props = meta.get("symbol_properties")
+    if not isinstance(props, dict):
+        return {}
+    cleaned: dict[str, str] = {}
+    for key, value in props.items():
+        clean_val = _clean_property_value(value)
+        if clean_val:
+            cleaned[str(key)] = clean_val
+    return cleaned
+
+
+def _symbol_source_name(candidate: CandidateFile | None) -> str | None:
+    meta = _candidate_metadata(candidate)
+    name = meta.get("symbol_name")
+    cleaned = _clean_property_value(name)
+    return cleaned or None
+
+
+def _normalize_symbol_properties(props: dict[str, str]) -> dict[str, str]:
+    normalized: dict[str, str] = {}
+    for key, value in (props or {}).items():
+        clean_val = _clean_property_value(value)
+        if not clean_val:
+            continue
+        normalized[str(key).strip().lower()] = clean_val
+    return normalized
+
+
+def _pick_property_value(props_norm: dict[str, str], keys: list[str]) -> str | None:
+    if not props_norm:
+        return None
+    for key in keys:
+        value = props_norm.get(key.lower())
+        if value:
+            return value
+    return None
+
+
+def _pick_part_name_from_properties(props_norm: dict[str, str], *, include_value: bool) -> str | None:
+    value = _pick_property_value(props_norm, SYMBOL_PART_NUMBER_KEYS)
+    if value:
+        return value
+    if include_value:
+        return props_norm.get("value")
+    return None
+
+
+def _extract_symbol_properties(symbol_block: str) -> dict[str, str]:
+    props: dict[str, str] = {}
+    for match in _SYMBOL_PROPERTY_RE.finditer(symbol_block):
+        key = match.group(1).strip()
+        if not key or key.lower() not in _SYMBOL_PROPERTY_KEYS_LOWER:
+            continue
+        value = _clean_property_value(match.group(2))
+        if value:
+            props[key] = value
+    return props
+
+
+def _extract_symbol_blocks_from_text(text: str) -> list[str]:
+    symbols = _extract_symbols(text)
+    if symbols:
+        return symbols
+    stripped = text.lstrip()
+    if stripped.startswith("(symbol"):
+        start = text.find("(symbol", len(text) - len(stripped))
+        end = _find_matching_paren(text, start)
+        if end != -1:
+            return [text[start : end + 1]]
+    return []
+
+
+def _symbol_metadata_from_source(
+    src: Path | None,
+    source_symbol_hint: str | None = None,
+) -> tuple[dict[str, str], str | None]:
+    if not src:
+        return {}, None
+    try:
+        text = src.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return {}, None
+    blocks = _extract_symbol_blocks_from_text(text)
+    if not blocks:
+        return {}, None
+    chosen = None
+    if source_symbol_hint:
+        for block in blocks:
+            if _symbol_name(block) == source_symbol_hint:
+                chosen = block
+                break
+    if not chosen and len(blocks) == 1:
+        chosen = blocks[0]
+    if not chosen:
+        return {}, None
+    return _extract_symbol_properties(chosen), _symbol_name(chosen) or None
+
+
 def _symbol_rename_for_strategy(
     strategy: str,
     *,
     comp_name: str,
     candidate_name: str,
     rename_to: str | None,
+    candidate: CandidateFile | None = None,
+    src: Path | None = None,
+    source_symbol_hint: str | None = None,
 ) -> str | None:
+    props = _candidate_symbol_properties(candidate)
+    symbol_name = _symbol_source_name(candidate)
+    part_name = _candidate_part_name(candidate)
+    if (not props or not symbol_name or not part_name) and src:
+        src_props, src_symbol_name = _symbol_metadata_from_source(src, source_symbol_hint=source_symbol_hint)
+        if src_props:
+            if not props:
+                props = src_props
+            else:
+                for key, value in src_props.items():
+                    if key not in props:
+                        props[key] = value
+        if not symbol_name:
+            symbol_name = src_symbol_name
+        if not part_name:
+            part_name = _pick_part_name_from_properties(_normalize_symbol_properties(props), include_value=True)
+    props_norm = _normalize_symbol_properties(props)
     if strategy in {"component", "part_number"}:
-        cleaned = _safe_basename(_strip_known_ext(comp_name))
-        return cleaned or None
+        return _clean_symbol_rename(part_name or comp_name)
+    if strategy == "mp":
+        return _clean_symbol_rename(_pick_part_name_from_properties(props_norm, include_value=False))
+    if strategy == "value":
+        return _clean_symbol_rename(props_norm.get("value"))
+    if strategy == "properties":
+        return _clean_symbol_rename(_pick_part_name_from_properties(props_norm, include_value=True) or part_name)
     if strategy == "source_symbol_name":
-        cleaned = _safe_basename(_strip_known_ext(candidate_name))
-        return cleaned or None
+        return _clean_symbol_rename(symbol_name or candidate_name)
     if strategy == "footprint":
         return rename_to or None
     return rename_to or None

@@ -23,6 +23,9 @@
       <label>Symbol naming strategy<br>
         <select id="symbol_name_strategy" name="symbol_name_strategy" class="select-input">
           <option value="component" {% if not config or config.symbol_name_strategy == "component" %}selected{% endif %}>component</option>
+          <option value="properties" {% if config and config.symbol_name_strategy == "properties" %}selected{% endif %}>properties</option>
+          <option value="mp" {% if config and config.symbol_name_strategy == "mp" %}selected{% endif %}>mp</option>
+          <option value="value" {% if config and config.symbol_name_strategy == "value" %}selected{% endif %}>value</option>
           <option value="source_symbol_name" {% if config and config.symbol_name_strategy == "source_symbol_name" %}selected{% endif %}>source_symbol_name</option>
           <option value="footprint" {% if config and config.symbol_name_strategy == "footprint" %}selected{% endif %}>footprint</option>
         </select>

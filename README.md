@@ -121,7 +121,10 @@ docker run -d \
 
 ## Symbol naming
 `symbol_name_strategy` controls the symbol name written into the destination `.kicad_sym`:
-- `component` (recommended): use the component/part number (default)
+- `component` (recommended): use part-number properties when available, otherwise the component name (default)
+- `properties`: prefer MP (and other part-number properties), fallback to Value
+- `mp`: use the MP (and other part-number properties) only
+- `value`: use the Value property only
 - `source_symbol_name`: keep the name from the source library
 - `footprint`: use the import Name value (often the package/footprint)
 Legacy configs using `part_number` are treated the same as `component`.

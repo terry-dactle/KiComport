@@ -12,11 +12,12 @@ from v1.backend.services.importer import (
 
 
 class DummyCandidate:
-    def __init__(self, type_, rel_path, name, path=""):
+    def __init__(self, type_, rel_path, name, path="", metadata_json=None):
         self.type = type_
         self.rel_path = rel_path
         self.name = name
         self.path = path
+        self.metadata_json = metadata_json or {}
 
 
 def _symbol_block(name: str, marker: str) -> str:
@@ -81,6 +82,83 @@ def test_symbol_rename_strategy_part_number_alias():
         rename_to="SOP65P",
     )
     assert rename == "LT8390A"
+
+
+def test_symbol_rename_strategy_component_uses_part_name_metadata():
+    cand = DummyCandidate(
+        CandidateType.symbol,
+        Path("lib/part.kicad_sym"),
+        "SOP65P640X120-29N",
+        metadata_json={"part_name": "LT8390AEFE_PBF"},
+    )
+    rename = _symbol_rename_for_strategy(
+        "component",
+        comp_name="SOP65P640X120-29N",
+        candidate_name="SOP65P640X120-29N",
+        rename_to=None,
+        candidate=cand,
+    )
+    assert rename == "LT8390AEFE_PBF"
+
+
+def test_symbol_rename_strategy_properties_uses_mp_then_value():
+    cand = DummyCandidate(
+        CandidateType.symbol,
+        Path("lib/part.kicad_sym"),
+        "SOP65P640X120-29N",
+        metadata_json={"symbol_properties": {"MP": "LT8390AEFE_PBF", "Value": "LT8390AEFE"}},
+    )
+    mp = _symbol_rename_for_strategy(
+        "mp",
+        comp_name="SOP65P640X120-29N",
+        candidate_name="SOP65P640X120-29N",
+        rename_to=None,
+        candidate=cand,
+    )
+    value = _symbol_rename_for_strategy(
+        "value",
+        comp_name="SOP65P640X120-29N",
+        candidate_name="SOP65P640X120-29N",
+        rename_to=None,
+        candidate=cand,
+    )
+    props = _symbol_rename_for_strategy(
+        "properties",
+        comp_name="SOP65P640X120-29N",
+        candidate_name="SOP65P640X120-29N",
+        rename_to=None,
+        candidate=cand,
+    )
+    assert mp == "LT8390AEFE_PBF"
+    assert value == "LT8390AEFE"
+    assert props == "LT8390AEFE_PBF"
+
+
+def test_symbol_rename_strategy_component_reads_source_properties(tmp_path: Path):
+    src = tmp_path / "lib.kicad_sym"
+    content = (
+        SYMBOL_HEADER
+        + '(symbol "SOP65P640X120-29N" (property "MP" "LT8390AEFE_PBF"))\n'
+        + '(symbol "OTHER" (property "MP" "OTHER123"))\n'
+        + ")"
+    )
+    src.write_text(content, encoding="utf-8")
+    cand = DummyCandidate(
+        CandidateType.symbol,
+        Path("lib.kicad_sym"),
+        "SOP65P640X120-29N",
+        path=str(src),
+    )
+    rename = _symbol_rename_for_strategy(
+        "component",
+        comp_name="SOP65P640X120-29N",
+        candidate_name="SOP65P640X120-29N",
+        rename_to=None,
+        candidate=cand,
+        src=src,
+        source_symbol_hint="SOP65P640X120-29N",
+    )
+    assert rename == "LT8390AEFE_PBF"
 
 
 def test_merge_symbol_lib_conflict_skip_keeps_existing(tmp_path: Path):

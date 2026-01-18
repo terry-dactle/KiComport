@@ -20,7 +20,7 @@ _PATH_FIELDS: Iterable[str] = (
     "kicad_footprint_dir",
     "kicad_3d_dir",
 )
-_SYMBOL_NAME_STRATEGIES = {"component", "source_symbol_name", "footprint", "part_number"}
+_SYMBOL_NAME_STRATEGIES = {"component", "properties", "mp", "value", "source_symbol_name", "footprint", "part_number"}
 _SYMBOL_DEDUPE_STRATEGIES = {"auto", "skip", "replace"}
 
 
